@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import ActionDropdown from '../components/ActionDropdown';
-import { 
-  Plus, 
-  CreditCard, 
-  Check, 
-  X, 
-  Package, 
+import {
+  Plus,
+  CreditCard,
+  Check,
+  X,
+  Package,
   Users,
   ShieldCheck,
   Edit,
@@ -28,11 +28,11 @@ import { useConfirm } from '../context/ConfirmDialogContext';
 import Drawer from '../components/Drawer';
 
 import { useSelector, useDispatch } from 'react-redux';
-import { 
-  fetchSubscriptionsRequest, 
-  addSubscriptionRequest, 
-  updateSubscriptionRequest, 
-  deleteSubscriptionRequest 
+import {
+  fetchSubscriptionsRequest,
+  addSubscriptionRequest,
+  updateSubscriptionRequest,
+  deleteSubscriptionRequest
 } from '../store/slices/subscriptionsSlice';
 
 const Subscriptions = () => {
@@ -142,7 +142,7 @@ const Subscriptions = () => {
 
   const filteredPlans = subscriptions.filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         p.plan.toLowerCase().includes(searchTerm.toLowerCase());
+      p.plan.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPlan = planFilter === 'all' ? true : p.plan === planFilter;
     return matchesSearch && matchesPlan;
   });
@@ -178,10 +178,10 @@ const Subscriptions = () => {
       <div className="card allow-overflow" style={{ marginBottom: '32px', padding: '20px' }}>
         <div className="filter-row">
           <div className="search-wrapper">
-            <input 
-              type="text" 
-              className="form-control" 
-              placeholder="Search by plan name or type..." 
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search by plan name or type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ paddingLeft: '44px', borderRadius: '12px' }}
@@ -192,7 +192,7 @@ const Subscriptions = () => {
 
           <div className="filter-actions">
             <div className="filter-group">
-              <FilterSelect 
+              <FilterSelect
                 options={[
                   { value: 'all', label: 'All Plans' },
                   { value: 'Free', label: 'Free Plan', color: '#64748b' },
@@ -207,7 +207,7 @@ const Subscriptions = () => {
             </div>
             <div className="results-count">
               <span className="badge badge-primary">{filteredPlans.length}</span>
-              <span style={{ marginLeft: '8px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
+              <span style={{ marginLeft: '1px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
             </div>
 
             <div className="view-toggles">
@@ -217,7 +217,7 @@ const Subscriptions = () => {
               >
                 <LayoutGrid size={18} />
               </button>
-              <button 
+              <button
                 onClick={() => setView('list')}
                 className={`view-btn ${view === 'list' ? 'active' : ''}`}
               >
@@ -241,7 +241,7 @@ const Subscriptions = () => {
             <div key={sub._id} className="card" style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
               <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                 <div>
-                  <span style={{ 
+                  <span style={{
                     padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '800',
                     background: sub.plan === 'Free' ? '#f1f5f9' : '#dbeafe',
                     color: sub.plan === 'Free' ? '#64748b' : '#1e40af',
@@ -259,7 +259,7 @@ const Subscriptions = () => {
 
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px', minHeight: '40px', lineHeight: '1.5' }}>{sub.description}</p>
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '24px' }}>
                   <div style={{ background: 'var(--bg-main)', padding: '10px', borderRadius: '12px', border: '1px solid var(--border)', textAlign: 'center' }}>
                     <Users size={14} color="var(--primary)" style={{ marginBottom: '4px', margin: '0 auto' }} />
@@ -372,7 +372,7 @@ const Subscriptions = () => {
                       </div>
                     </td>
                     <td style={{ padding: '16px 24px' }}>
-                      <span style={{ 
+                      <span style={{
                         padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
                         background: (sub.isActive !== false) ? '#dcfce7' : '#fee2e2',
                         color: (sub.isActive !== false) ? '#166534' : '#b91c1c'
@@ -401,27 +401,27 @@ const Subscriptions = () => {
         </div>
       )}
 
-      <Drawer 
-        isOpen={showModal} 
+      <Drawer
+        isOpen={showModal}
         onClose={() => setShowModal(false)}
         title={modalType === 'add' ? 'Create Subscription Plan' : 'Edit Subscription Plan'}
       >
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Plan Name</label>
-            <input 
+            <input
               type="text" className="form-control" required placeholder="e.g. Platinum Plus"
               value={formData.title}
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             />
           </div>
 
           <div className="form-group">
             <label>Plan Type</label>
-            <select 
-              className="form-control" 
+            <select
+              className="form-control"
               value={formData.plan}
-              onChange={(e) => setFormData({...formData, plan: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
             >
               <option value="Free">Free</option>
               <option value="Basic">Basic</option>
@@ -433,29 +433,29 @@ const Subscriptions = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="form-group">
               <label>Price (₹)</label>
-              <input 
+              <input
                 type="number" className="form-control" required
                 value={formData.price}
-                onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
+                onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
               />
             </div>
             <div className="form-group">
               <label>Duration (Days)</label>
-              <input 
+              <input
                 type="number" className="form-control" required
                 value={formData.durationInDays}
-                onChange={(e) => setFormData({...formData, durationInDays: Number(e.target.value)})}
+                onChange={(e) => setFormData({ ...formData, durationInDays: Number(e.target.value) })}
               />
             </div>
           </div>
 
           <div className="form-group">
             <label>Short Description</label>
-            <textarea 
+            <textarea
               className="form-control" style={{ height: '70px', resize: 'none', padding: '12px' }}
               placeholder="Brief overview of what this plan offers..."
               value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
 
@@ -464,26 +464,26 @@ const Subscriptions = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label style={{ fontSize: '11px' }}>Max Users</label>
-                <input 
-                  type="number" className="form-control" 
+                <input
+                  type="number" className="form-control"
                   value={formData.userLimit}
-                  onChange={(e) => setFormData({...formData, userLimit: Number(e.target.value)})}
+                  onChange={(e) => setFormData({ ...formData, userLimit: Number(e.target.value) })}
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label style={{ fontSize: '11px' }}>Max Pkgs</label>
-                <input 
-                  type="number" className="form-control" 
+                <input
+                  type="number" className="form-control"
                   value={formData.packageLimit}
-                  onChange={(e) => setFormData({...formData, packageLimit: Number(e.target.value)})}
+                  onChange={(e) => setFormData({ ...formData, packageLimit: Number(e.target.value) })}
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label style={{ fontSize: '11px' }}>Max Staff</label>
-                <input 
-                  type="number" className="form-control" 
+                <input
+                  type="number" className="form-control"
                   value={formData.staffLimit}
-                  onChange={(e) => setFormData({...formData, staffLimit: Number(e.target.value)})}
+                  onChange={(e) => setFormData({ ...formData, staffLimit: Number(e.target.value) })}
                 />
               </div>
             </div>
@@ -492,9 +492,9 @@ const Subscriptions = () => {
           <div className="form-group" style={{ marginBottom: '24px' }}>
             <label>Included Features (List)</label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-              <input 
-                type="text" 
-                className="form-control" 
+              <input
+                type="text"
+                className="form-control"
                 placeholder="E.g., 24/7 Priority Support"
                 value={newFeature}
                 onChange={(e) => setNewFeature(e.target.value)}
@@ -505,9 +505,9 @@ const Subscriptions = () => {
                   }
                 }}
               />
-              <button 
-                type="button" 
-                className="btn btn-primary" 
+              <button
+                type="button"
+                className="btn btn-primary"
                 onClick={addFeature}
                 style={{ padding: '0 16px', borderRadius: '8px', whiteSpace: 'nowrap' }}
               >
@@ -516,17 +516,17 @@ const Subscriptions = () => {
             </div>
             {formData.features && formData.features.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--bg-main)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                 {formData.features.map((feat, idx) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', background: 'var(--bg-card)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Check size={14} color="var(--primary)" />
-                        <span style={{ fontWeight: '600' }}>{feat}</span>
-                      </div>
-                      <button type="button" onClick={() => removeFeature(idx)} style={{ background: '#fee2e2', border: 'none', color: '#dc2626', cursor: 'pointer', display: 'flex', padding: '4px', borderRadius: '6px' }}>
-                         <X size={14} />
-                      </button>
+                {formData.features.map((feat, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', background: 'var(--bg-card)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Check size={14} color="var(--primary)" />
+                      <span style={{ fontWeight: '600' }}>{feat}</span>
                     </div>
-                 ))}
+                    <button type="button" onClick={() => removeFeature(idx)} style={{ background: '#fee2e2', border: 'none', color: '#dc2626', cursor: 'pointer', display: 'flex', padding: '4px', borderRadius: '6px' }}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -542,11 +542,11 @@ const Subscriptions = () => {
               { key: 'enquiriesFollowupEnabled', label: 'Enquiries' },
             ].map((f) => (
               <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   style={{ width: '17px', height: '17px' }}
                   checked={formData[f.key]}
-                  onChange={(e) => setFormData({...formData, [f.key]: e.target.checked})}
+                  onChange={(e) => setFormData({ ...formData, [f.key]: e.target.checked })}
                 />
                 {f.label}
               </label>

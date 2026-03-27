@@ -4,10 +4,10 @@ import { getImageUrl } from '../utils/constants';
 import ActionDropdown from '../components/ActionDropdown';
 import Drawer from '../components/Drawer';
 import Pagination from '../components/Pagination';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
+import {
+  Plus,
+  Search,
+  Filter,
   MoreVertical,
   UserCheck,
   UserX,
@@ -37,18 +37,18 @@ import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { 
-  fetchVendorsRequest, 
-  addVendorRequest, 
-  updateVendorRequest, 
-  deleteVendorRequest 
+import {
+  fetchVendorsRequest,
+  addVendorRequest,
+  updateVendorRequest,
+  deleteVendorRequest
 } from '../store/slices/vendorsSlice';
 
 const Vendors = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { vendors, loading, error } = useSelector((state) => state.vendors);
-  
+
   const [view, setView] = useState('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -73,7 +73,7 @@ const Vendors = () => {
       'Delete Vendor?',
       'Are you sure you want to delete this vendor account? This action is permanent and cannot be undone.'
     );
-    
+
     if (isConfirmed) {
       dispatch(deleteVendorRequest(id));
       showToast('Deleted', 'Vendor account has been removed.', 'success');
@@ -86,7 +86,7 @@ const Vendors = () => {
       `${action.charAt(0).toUpperCase() + action.slice(1)} Partner?`,
       `Are you sure you want to ${action} ${vendor.name}? They will lose access to the dashboard until reinstated.`
     );
-    
+
     if (isConfirmed) {
       dispatch(updateVendorRequest({ id: vendor._id, data: { isSuspended: !vendor.isSuspended } }));
       showToast('Status Updated', `Vendor has been ${action}ed.`, 'success');
@@ -94,12 +94,12 @@ const Vendors = () => {
   };
 
   const filteredVendors = vendors.filter(v => {
-    const matchesSearch = v.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         v.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.email.toLowerCase().includes(searchTerm.toLowerCase());
     const isApproved = v.profile?.isApproved;
-    const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'approved' && isApproved) ||
-                         (statusFilter === 'pending' && !isApproved);
+    const matchesStatus = statusFilter === 'all' ||
+      (statusFilter === 'approved' && isApproved) ||
+      (statusFilter === 'pending' && !isApproved);
     return matchesSearch && matchesStatus;
   }).reverse();
 
@@ -144,10 +144,10 @@ const Vendors = () => {
       <div className="card allow-overflow" style={{ marginBottom: '32px', padding: '20px' }}>
         <div className="filter-row">
           <div className="search-wrapper">
-            <input 
-              type="text" 
-              className="form-control" 
-              placeholder="Search vendors by name or email..." 
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search vendors by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ paddingLeft: '44px', borderRadius: '12px' }}
@@ -158,7 +158,7 @@ const Vendors = () => {
 
           <div className="filter-actions">
             <div className="filter-group">
-              <FilterSelect 
+              <FilterSelect
                 options={[
                   { value: 'all', label: 'All Status' },
                   { value: 'approved', label: 'Approved', color: '#16a34a' },
@@ -169,20 +169,20 @@ const Vendors = () => {
                 width="180px"
               />
             </div>
-            
+
             <div className="results-count">
               <span className="badge badge-primary">{totalItems}</span>
-              <span style={{ marginLeft: '8px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
+              <span style={{ marginLeft: '1px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
             </div>
 
             <div className="view-toggles">
-              <button 
+              <button
                 onClick={() => setView('grid')}
                 className={`view-btn ${view === 'grid' ? 'active' : ''}`}
               >
                 <LayoutGrid size={18} />
               </button>
-              <button 
+              <button
                 onClick={() => setView('list')}
                 className={`view-btn ${view === 'list' ? 'active' : ''}`}
               >
@@ -206,200 +206,200 @@ const Vendors = () => {
             <div className="cards-grid mobile-slider">
               {currentVendors.map((vendor) => (
                 <div key={vendor._id} className="card" style={{ position: 'relative' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid var(--bg-main)' }}>
-                  {vendor.avatar && !vendor.avatar.includes('ui-avatars') ? (
-                    <img src={getImageUrl(vendor.avatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', background: '#dbeafe', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '20px' }}>
-                      {vendor.name.charAt(0)}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid var(--bg-main)' }}>
+                      {vendor.avatar && !vendor.avatar.includes('ui-avatars') ? (
+                        <img src={getImageUrl(vendor.avatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', background: '#dbeafe', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '20px' }}>
+                          {vendor.name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{vendor.name}</h3>
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        <span className="badge badge-primary" style={{ fontSize: '10px' }}>{vendor.role}</span>
+                        <span style={{ padding: '0 8px', borderRadius: '12px', fontSize: '10px', background: '#e0f2fe', color: '#0369a1', fontWeight: '600' }}>{vendor.profile?.subscriptionPlan || 'Free'}</span>
+                        {vendor.profile?.subscription && (
+                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: '4px' }}>
+                            {vendor.profile.subscription.crmEnabled && <ShieldCheck size={12} title="CRM" color="#22c55e" />}
+                            {vendor.profile.subscription.websiteEnabled && <Globe size={12} title="Website" color="#3b82f6" />}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {vendor.profile?.subscription && (
+                    <div style={{ background: 'var(--bg-main)', padding: '8px 12px', borderRadius: '8px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)' }}>
+                      <span>U: {vendor.profile.subscription.userLimit === -1 ? '∞' : vendor.profile.subscription.userLimit}</span>
+                      <span>P: {vendor.profile.subscription.packageLimit === -1 ? '∞' : vendor.profile.subscription.packageLimit}</span>
+                      <span>S: {vendor.profile.subscription.staffLimit === -1 ? '∞' : vendor.profile.subscription.staffLimit}</span>
                     </div>
                   )}
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{vendor.name}</h3>
-                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                    <span className="badge badge-primary" style={{ fontSize: '10px' }}>{vendor.role}</span>
-                    <span style={{ padding: '0 8px', borderRadius: '12px', fontSize: '10px', background: '#e0f2fe', color: '#0369a1', fontWeight: '600' }}>{vendor.profile?.subscriptionPlan || 'Free'}</span>
-                    {vendor.profile?.subscription && (
-                      <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: '4px' }}>
-                        {vendor.profile.subscription.crmEnabled && <ShieldCheck size={12} title="CRM" color="#22c55e" />}
-                        {vendor.profile.subscription.websiteEnabled && <Globe size={12} title="Website" color="#3b82f6" />}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                      <Mail size={14} /> <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{vendor.email}</span>
+                    </div>
+                    {vendor.profile?.companyName && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                        <Building size={14} /> <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{vendor.profile.companyName}</span>
                       </div>
                     )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                      <span style={{
+                        padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '700',
+                        background: vendor.profile?.isApproved ? '#dcfce7' : '#fee2e2',
+                        color: vendor.profile?.isApproved ? '#166534' : '#b91c1c'
+                      }}>
+                        {vendor.profile?.isApproved ? 'Approved' : 'Pending Approval'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Created {new Date(vendor.createdAt).toLocaleDateString()}</div>
+                    <div className="action-group">
+                      <button className={`action-btn ${vendor.isSuspended ? 'view' : 'delete'}`} onClick={() => handleToggleSuspension(vendor)} title={vendor.isSuspended ? 'Unsuspend Account' : 'Suspend Account'}>
+                        {vendor.isSuspended ? <CheckCircle size={16} /> : <UserX size={16} />}
+                      </button>
+                      <button className="action-btn" onClick={() => navigate(`/vendors/view/${vendor._id}`)} title="View Details"><Eye size={16} /></button>
+                      <button className="action-btn edit" onClick={() => navigate(`/vendors/edit/${vendor._id}`)} title="Edit Account"><Edit size={16} /></button>
+                      <button className="action-btn delete" onClick={() => handleDelete(vendor._id)} title="Delete Account"><Trash2 size={16} /></button>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              {vendor.profile?.subscription && (
-                <div style={{ background: 'var(--bg-main)', padding: '8px 12px', borderRadius: '8px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)' }}>
-                  <span>U: {vendor.profile.subscription.userLimit === -1 ? '∞' : vendor.profile.subscription.userLimit}</span>
-                  <span>P: {vendor.profile.subscription.packageLimit === -1 ? '∞' : vendor.profile.subscription.packageLimit}</span>
-                  <span>S: {vendor.profile.subscription.staffLimit === -1 ? '∞' : vendor.profile.subscription.staffLimit}</span>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  <Mail size={14} /> <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{vendor.email}</span>
-                </div>
-                {vendor.profile?.companyName && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                    <Building size={14} /> <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{vendor.profile.companyName}</span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                  <span style={{ 
-                    padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '700',
-                    background: vendor.profile?.isApproved ? '#dcfce7' : '#fee2e2',
-                    color: vendor.profile?.isApproved ? '#166534' : '#b91c1c'
-                  }}>
-                    {vendor.profile?.isApproved ? 'Approved' : 'Pending Approval'}
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Created {new Date(vendor.createdAt).toLocaleDateString()}</div>
-                <div className="action-group">
-                  <button className={`action-btn ${vendor.isSuspended ? 'view' : 'delete'}`} onClick={() => handleToggleSuspension(vendor)} title={vendor.isSuspended ? 'Unsuspend Account' : 'Suspend Account'}>
-                    {vendor.isSuspended ? <CheckCircle size={16} /> : <UserX size={16} />}
-                  </button>
-                  <button className="action-btn" onClick={() => navigate(`/vendors/view/${vendor._id}`)} title="View Details"><Eye size={16} /></button>
-                  <button className="action-btn edit" onClick={() => navigate(`/vendors/edit/${vendor._id}`)} title="Edit Account"><Edit size={16} /></button>
-                  <button className="action-btn delete" onClick={() => handleDelete(vendor._id)} title="Delete Account"><Trash2 size={16} /></button>
-                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+              <div className="table-container">
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border)' }}>
+                      <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', width: '50px' }}>#</th>
+                      <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Vendor</th>
+                      <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Plan</th>
+                      <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</th>
+                      <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Approval</th>
+                      <th style={{ padding: '16px 24px', textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentVendors.map((vendor, index) => (
+                      <tr key={vendor._id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                          {startIndex + index + 1}
+                        </td>
+                        <td style={{ padding: '16px 24px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                              {vendor.avatar && !vendor.avatar.includes('ui-avatars') ? (
+                                <img src={getImageUrl(vendor.avatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                <div style={{ width: '100%', height: '100%', background: '#dbeafe', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
+                                  {vendor.name.charAt(0)}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <p style={{ fontWeight: '600', fontSize: '14px' }}>{vendor.name}</p>
+                              <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{vendor.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '16px 24px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span className="badge" style={{
+                              background: vendor.profile?.subscriptionPlan === 'Free' ? '#f1f5f9' : '#dbeafe',
+                              color: vendor.profile?.subscriptionPlan === 'Free' ? '#64748b' : '#1e40af',
+                              width: 'fit-content'
+                            }}>
+                              {vendor.profile?.subscriptionPlan || 'Free'}
+                            </span>
+                            {vendor.profile?.subscription && (
+                              <>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '8px' }}>
+                                  <span>U: {vendor.profile.subscription.userLimit === -1 ? '∞' : vendor.profile.subscription.userLimit}</span>
+                                  <span>P: {vendor.profile.subscription.packageLimit === -1 ? '∞' : vendor.profile.subscription.packageLimit}</span>
+                                  <span>S: {vendor.profile.subscription.staffLimit === -1 ? '∞' : vendor.profile.subscription.staffLimit}</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+                                  {vendor.profile.subscription.crmEnabled && <ShieldCheck size={12} title="CRM" color="#22c55e" />}
+                                  {vendor.profile.subscription.websiteEnabled && <Globe size={12} title="Website" color="#3b82f6" />}
+                                  {vendor.profile.subscription.instagramReelsEnabled && <Smartphone size={12} title="Insta" color="#d946ef" />}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: '16px 24px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {vendor.isSuspended ? (
+                              <span style={{
+                                padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
+                                background: '#fee2e2', color: '#b91c1c'
+                              }}>Suspended</span>
+                            ) : (
+                              <span style={{
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                background: vendor.isVerified ? '#dcfce7' : '#fee2e2',
+                                color: vendor.isVerified ? '#166534' : '#b91c1c'
+                              }}>
+                                {vendor.isVerified ? 'Verified' : 'Unverified'}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: '16px 24px' }}>
+                          {vendor.profile?.isApproved ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#166534', fontSize: '13px' }}>
+                              <CheckCircle size={16} /> Approved
+                            </div>
+                          ) : (
+                            <button
+                              className="btn"
+                              style={{ padding: '4px 12px', fontSize: '12px', background: '#f8fafc', border: '1px solid var(--border)', width: 'auto' }}
+                              onClick={() => handleApprove(vendor._id)}
+                            >
+                              Approve Now
+                            </button>
+                          )}
+                        </td>
+                        <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                          <div className="action-group">
+                            <button className={`action-btn ${vendor.isSuspended ? 'view' : 'delete'}`} title={vendor.isSuspended ? 'Unsuspend' : 'Suspend'} onClick={() => handleToggleSuspension(vendor)}>
+                              {vendor.isSuspended ? <CheckCircle size={16} /> : <UserX size={16} />}
+                            </button>
+                            <button className="action-btn" title="View Details" onClick={() => navigate(`/vendors/view/${vendor._id}`)}>
+                              <Eye size={16} />
+                            </button>
+                            <button className="action-btn" title="Edit Vendor" onClick={() => navigate(`/vendors/edit/${vendor._id}`)}>
+                              <Edit size={16} />
+                            </button>
+                            <button className="action-btn danger" title="Delete Partner" onClick={() => handleDelete(vendor._id)}>
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
-          <div className="table-container">
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', width: '50px' }}>#</th>
-                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Vendor</th>
-                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Plan</th>
-                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</th>
-                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Approval</th>
-                  <th style={{ padding: '16px 24px', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentVendors.map((vendor, index) => (
-                  <tr key={vendor._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
-                      {startIndex + index + 1}
-                    </td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                          {vendor.avatar && !vendor.avatar.includes('ui-avatars') ? (
-                            <img src={getImageUrl(vendor.avatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <div style={{ width: '100%', height: '100%', background: '#dbeafe', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
-                              {vendor.name.charAt(0)}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <p style={{ fontWeight: '600', fontSize: '14px' }}>{vendor.name}</p>
-                          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{vendor.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span className="badge" style={{ 
-                          background: vendor.profile?.subscriptionPlan === 'Free' ? '#f1f5f9' : '#dbeafe',
-                          color: vendor.profile?.subscriptionPlan === 'Free' ? '#64748b' : '#1e40af',
-                          width: 'fit-content'
-                        }}>
-                          {vendor.profile?.subscriptionPlan || 'Free'}
-                        </span>
-                        {vendor.profile?.subscription && (
-                          <>
-                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '8px' }}>
-                              <span>U: {vendor.profile.subscription.userLimit === -1 ? '∞' : vendor.profile.subscription.userLimit}</span>
-                              <span>P: {vendor.profile.subscription.packageLimit === -1 ? '∞' : vendor.profile.subscription.packageLimit}</span>
-                              <span>S: {vendor.profile.subscription.staffLimit === -1 ? '∞' : vendor.profile.subscription.staffLimit}</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
-                              {vendor.profile.subscription.crmEnabled && <ShieldCheck size={12} title="CRM" color="#22c55e" />}
-                              {vendor.profile.subscription.websiteEnabled && <Globe size={12} title="Website" color="#3b82f6" />}
-                              {vendor.profile.subscription.instagramReelsEnabled && <Smartphone size={12} title="Insta" color="#d946ef" />}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {vendor.isSuspended ? (
-                          <span style={{ 
-                            padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
-                            background: '#fee2e2', color: '#b91c1c'
-                          }}>Suspended</span>
-                        ) : (
-                          <span style={{ 
-                            padding: '4px 10px', 
-                            borderRadius: '20px', 
-                            fontSize: '11px', 
-                            fontWeight: '600',
-                            background: vendor.isVerified ? '#dcfce7' : '#fee2e2',
-                            color: vendor.isVerified ? '#166534' : '#b91c1c'
-                          }}>
-                            {vendor.isVerified ? 'Verified' : 'Unverified'}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px 24px' }}>
-                      {vendor.profile?.isApproved ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#166534', fontSize: '13px' }}>
-                          <CheckCircle size={16} /> Approved
-                        </div>
-                      ) : (
-                        <button 
-                          className="btn" 
-                          style={{ padding: '4px 12px', fontSize: '12px', background: '#f8fafc', border: '1px solid var(--border)', width: 'auto' }}
-                          onClick={() => handleApprove(vendor._id)}
-                        >
-                          Approve Now
-                        </button>
-                      )}
-                    </td>
-                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                      <div className="action-group">
-                        <button className={`action-btn ${vendor.isSuspended ? 'view' : 'delete'}`} title={vendor.isSuspended ? 'Unsuspend' : 'Suspend'} onClick={() => handleToggleSuspension(vendor)}>
-                          {vendor.isSuspended ? <CheckCircle size={16} /> : <UserX size={16} />}
-                        </button>
-                        <button className="action-btn" title="View Details" onClick={() => navigate(`/vendors/view/${vendor._id}`)}>
-                          <Eye size={16} />
-                        </button>
-                        <button className="action-btn" title="Edit Vendor" onClick={() => navigate(`/vendors/edit/${vendor._id}`)}>
-                          <Edit size={16} />
-                        </button>
-                        <button className="action-btn danger" title="Delete Partner" onClick={() => handleDelete(vendor._id)}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          )}
+        </>
       )}
-      </>
-    )}
 
-    {!loading && currentVendors.length > 0 && (
+      {!loading && currentVendors.length > 0 && (
         <div style={{ marginTop: '24px', marginBottom: '32px' }}>
-          <Pagination 
+          <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}

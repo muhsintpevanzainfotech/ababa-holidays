@@ -29,21 +29,24 @@ const UserView = () => {
   const [userData, setUserData] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [complaints, setComplaints] = useState([]);
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
         // In a real app, these would be filtered by user ID on the backend
-        const [userRes, bookingsRes, paymentsRes] = await Promise.all([
+        const [userRes, bookingsRes, paymentsRes, complaintsRes] = await Promise.all([
           api.get(`/users/${id}`),
           api.get(`/bookings?user=${id}`),
-          api.get(`/payments?user=${id}`)
+          api.get(`/payments?user=${id}`),
+          api.get(`/complaints/user/${id}`)
         ]);
 
         setUserData(userRes.data.data);
         setBookings(bookingsRes.data.data || []);
         setPayments(paymentsRes.data.data || []);
+        setComplaints(complaintsRes.data.data || []);
       } catch (err) {
         showToast('Error fetching user intelligence', 'error');
         console.error(err);
@@ -116,6 +119,7 @@ const UserView = () => {
         <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>Intelligence Overview</button>
         <button className={activeTab === 'bookings' ? 'active' : ''} onClick={() => setActiveTab('bookings')}>Booking Ledger ({bookings.length})</button>
         <button className={activeTab === 'payments' ? 'active' : ''} onClick={() => setActiveTab('payments')}>Invoices & Payouts ({payments.length})</button>
+        <button className={activeTab === 'disputes' ? 'active' : ''} onClick={() => setActiveTab('disputes')}>Disputes ({complaints.length})</button>
       </div>
 
       {/* Content Area */}
@@ -214,6 +218,62 @@ const UserView = () => {
                         </tr>
                       )) : (
                         <tr><td colSpan="6" style={{ padding: '64px 24px', textAlign: 'center', color: 'var(--text-muted)' }}>No transaction records cataloged.</td></tr>
+                      )}
+                   </tbody>
+                </table>
+             </div>
+          </div>
+        )}
+        
+        {activeTab === 'disputes' && (
+          <div className="card" style={{ padding: 0 }}>
+             <div className="table-container">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                   <thead style={{ background: 'var(--bg-main)' }}>
+                      <tr>
+                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px' }}>Role</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px' }}>Subject Partner</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px' }}>Incident Subject</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px' }}>Status</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '12px' }}>Filed Date</th>
+                      </tr>
+                   </thead>
+                   <tbody>
+                      {complaints.length > 0 ? complaints.map((c, idx) => {
+                        const isComplainant = c.complainant?._id === id;
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <td style={{ padding: '16px 24px' }}>
+                               <span style={{ 
+                                 padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: '800', 
+                                 background: isComplainant ? '#eff6ff' : '#fff1f2', 
+                                 color: isComplainant ? '#1d4ed8' : '#9f1239',
+                                 border: `1px solid ${isComplainant ? '#3b82f630' : '#ef444430'}`
+                               }}>
+                                 {isComplainant ? 'COMPLAINANT' : 'DEFENDANT'}
+                               </span>
+                            </td>
+                            <td style={{ padding: '16px 24px' }}>
+                               <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ fontWeight: '700', fontSize: '14px' }}>{isComplainant ? c.defendant?.name : c.complainant?.name}</span>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{isComplainant ? c.defendant?.role : c.complainant?.role}</span>
+                               </div>
+                            </td>
+                            <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '600' }}>{c.subject}</td>
+                            <td style={{ padding: '16px 24px' }}>
+                               <span style={{ 
+                                 padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '800',
+                                 background: c.status === 'Resolved' ? '#f0fdf4' : c.status === 'Pending' ? '#fffbeb' : '#f1f5f9',
+                                 color: c.status === 'Resolved' ? '#166534' : c.status === 'Pending' ? '#92400e' : '#475569'
+                               }}>
+                                 {c.status.toUpperCase()}
+                               </span>
+                            </td>
+                            <td style={{ padding: '16px 24px', textAlign: 'right', fontSize: '13px', color: 'var(--text-muted)' }}>{new Date(c.createdAt).toLocaleDateString()}</td>
+                          </tr>
+                        );
+                      }) : (
+                        <tr><td colSpan="5" style={{ padding: '64px 24px', textAlign: 'center', color: 'var(--text-muted)' }}>No dispute records on file for this user.</td></tr>
                       )}
                    </tbody>
                 </table>

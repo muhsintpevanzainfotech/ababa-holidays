@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import Drawer from '../components/Drawer';
 import { getImageUrl } from '../utils/constants';
+import FilterSelect from '../components/FilterSelect';
+import MapPicker from '../components/MapPicker';
 import {
   Plus,
   MapPin,
@@ -20,8 +22,11 @@ import {
   XCircle,
   Filter
 } from 'lucide-react';
-import FilterSelect from '../components/FilterSelect';
-import MapPicker from '../components/MapPicker';
+import FormSelect from '../components/FormSelect';
+import PasskeyModal from '../components/PasskeyModal';
+import LockToggleButton from '../components/LockToggleButton';
+import { setUnlocked, lockSession } from '../store/slices/globalSlice';
+import Pagination from '../components/Pagination';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   fetchDestinationsRequest,
@@ -36,9 +41,12 @@ import { useConfirm } from '../context/ConfirmDialogContext';
 
 const Destinations = () => {
   const dispatch = useDispatch();
-  const { destinations, loading, error } = useSelector((state) => state.destinations);
+  const { destinations, pagination, loading, error } = useSelector((state) => state.destinations);
   const { states } = useSelector((state) => state.states);
   const { countries } = useSelector((state) => state.countries);
+  const { user } = useSelector((state) => state.auth);
+  const { isUnlocked } = useSelector((state) => state.global);
+  const isLocked = !isUnlocked;
   const { showToast } = useToast();
   const { confirm } = useConfirm();
   const [view, setView] = useState('list');
@@ -49,9 +57,13 @@ const Destinations = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [stateFilter, setStateFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [imagePreview, setImagePreview] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -65,14 +77,20 @@ const Destinations = () => {
   });
 
   useEffect(() => {
-    dispatch(fetchDestinationsRequest());
-    dispatch(fetchStatesRequest());
-    dispatch(fetchCountriesRequest());
-  }, [dispatch]);
+    dispatch(fetchDestinationsRequest({
+      page: currentPage,
+      limit,
+      search: searchTerm,
+      status: statusFilter,
+      state: stateFilter
+    }));
+    dispatch(fetchStatesRequest({ limit: 1000 }));
+    dispatch(fetchCountriesRequest({ limit: 1000 }));
+  }, [dispatch, currentPage, limit, searchTerm, statusFilter, stateFilter]);
 
   const handleOpenModal = (type, destination = null) => {
     setModalType(type);
-    if (type === 'edit' && destination) {
+    if ((type === 'edit' || type === 'view') && destination) {
       setCurrentDestination(destination);
       setFormData({
         name: destination.name,
@@ -101,23 +119,66 @@ const Destinations = () => {
     setShowModal(true);
   };
 
+  const handleGuardedAction = (type, destination = null) => {
+    if (type === 'view') {
+      handleOpenModal('view', destination);
+      return;
+    }
+
+    if (isLocked && (type === 'delete' || type === 'edit' || type === 'add')) {
+      setPendingAction({ type, destination });
+      setShowSecurityModal(true);
+    } else {
+      if (type === 'delete') {
+        handleDelete(destination._id);
+      } else {
+        handleOpenModal(type, destination);
+      }
+    }
+  };
+
+  const handleLockToggleInternal = () => {
+    if (!isUnlocked) {
+      setPendingAction({ type: 'unlock' });
+      setShowSecurityModal(true);
+    } else {
+      dispatch(lockSession());
+      showToast('Locked', 'Session locked successfully.', 'info');
+    }
+  };
+
+  const onSecurityVerified = () => {
+    setShowSecurityModal(false);
+    if (pendingAction?.type === 'unlock') {
+      showToast('Unlocked', 'You can now modify destinations freely.', 'success');
+    } else if (pendingAction) {
+      if (pendingAction.type === 'delete') {
+        handleDelete(pendingAction.destination._id);
+      } else {
+        handleOpenModal(pendingAction.type, pendingAction.destination);
+      }
+    }
+    setPendingAction(null);
+  };
+
   const handleFileChange = (e) => {
+    if (modalType === 'view') return;
     const file = e.target.files[0];
     if (file) {
       setFormData({ ...formData, image: file });
-      setImagePreview(null);
+      setImagePreview(URL.createObjectURL(file));
     }
     setSuggestions([]);
-    setShowModal(true);
   };
 
   const handleSearchPlaces = async (query) => {
+    if (modalType === 'view') return;
     setFormData(prev => ({ ...prev, name: query }));
     if (query.length < 3) {
       setSuggestions([]);
       return;
     }
-    
+
     setIsSearching(true);
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
@@ -131,6 +192,7 @@ const Destinations = () => {
   };
 
   const handleSelectSuggestion = (suggestion) => {
+    if (modalType === 'view') return;
     setFormData(prev => ({
       ...prev,
       name: suggestion.display_name.split(',')[0],
@@ -142,18 +204,7 @@ const Destinations = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Client-side duplicate check
-    const isDuplicate = destinations.some(d => 
-      d.name.toLowerCase() === formData.name.toLowerCase() && 
-      (d.state?._id === formData.state || d.state === formData.state) &&
-      d._id !== currentDestination?._id
-    );
-
-    if (isDuplicate) {
-      showToast('Error', 'This destination already exists in the selected state', 'error');
-      return;
-    }
+    if (modalType === 'view') return;
 
     const data = new FormData();
     Object.keys(formData).forEach(key => {
@@ -173,15 +224,16 @@ const Destinations = () => {
   };
 
   const handleStateChange = async (stateId) => {
+    if (modalType === 'view') return;
     setFormData(prev => ({ ...prev, state: stateId }));
-    
+
     if (!stateId) return;
-    
+
     const stateObj = states.find(s => s._id === stateId);
     if (!stateObj) return;
 
     const searchQuery = `${stateObj.name}, ${stateObj.country?.name || ''}`;
-    
+
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`);
       const data = await response.json();
@@ -204,22 +256,7 @@ const Destinations = () => {
     }
   };
 
-  const filteredDestinations = destinations.filter(dest => {
-    const matchesSearch = dest.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         dest.state?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         dest.category?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' ? true :
-                         statusFilter === 'active' ? dest.isActive : !dest.isActive;
-    
-    const matchesCountry = countryFilter === 'all' ? true :
-                          dest.state?.country?._id === countryFilter || dest.state?.country === countryFilter;
-    
-    const matchesState = stateFilter === 'all' ? true :
-                        dest.state?._id === stateFilter || dest.state === stateFilter;
-
-    return matchesSearch && matchesStatus && matchesCountry && matchesState;
-  });
+  const startIndex = (currentPage - 1) * limit;
 
   const categories = ['City', 'Beach', 'Mountain', 'Historical', 'Desert', 'Other'];
 
@@ -230,12 +267,17 @@ const Destinations = () => {
           <h1>Platform Destinations</h1>
           <p>Manage specific travel destinations and local highlights nested under states</p>
         </div>
-        <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
-          <Plus size={20} /> Add Destination
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {(user?.role === 'Admin' || user?.role === 'Sub-Admin') && (
+            <>
+              <LockToggleButton onUnlockClick={handleLockToggleInternal} />
+              <button className="btn btn-primary" onClick={() => handleGuardedAction('add')}>
+                <Plus size={20} /> Add Destination
+              </button>
+            </>
+          )}
+        </div>
       </div>
-
-      {/* Filter Bar */}
 
       <div className="card allow-overflow" style={{ marginBottom: '32px', padding: '20px' }}>
         <div className="filter-row">
@@ -252,60 +294,60 @@ const Destinations = () => {
             {searchTerm && <X size={16} onClick={() => setSearchTerm('')} style={{ position: 'absolute', right: '12px', cursor: 'pointer', color: 'var(--text-muted)' }} />}
           </div>
 
-            <div className="filter-actions" style={{ flexWrap: 'wrap' }}>
-              <div className="filter-group">
-                <FilterSelect
-                  options={[
-                    { value: 'all', label: 'All Countries' },
-                    ...countries.map(c => ({ value: c._id, label: c.name }))
-                  ]}
-                  value={countryFilter}
-                  onChange={(val) => {
-                    setCountryFilter(val);
-                    setStateFilter('all'); // Reset state filter when country changes
-                  }}
-                  width="180px"
-                />
-              </div>
-              <div className="filter-group">
-                <FilterSelect
-                  options={[
-                    { value: 'all', label: 'All States' },
-                    ...(countryFilter === 'all' 
-                      ? states 
-                      : states.filter(s => (s.country?._id || s.country) === countryFilter)
-                    ).map(s => ({ value: s._id, label: s.name }))
-                  ]}
-                  value={stateFilter}
-                  onChange={setStateFilter}
-                  width="180px"
-                />
-              </div>
-              <div className="filter-group">
-                <FilterSelect
-                  options={[
-                    { value: 'all', label: 'All Status' },
-                    { value: 'active', label: 'Active', color: '#16a34a' },
-                    { value: 'inactive', label: 'Inactive', color: '#dc2626' }
-                  ]}
-                  value={statusFilter}
-                  onChange={setStatusFilter}
-                  width="150px"
-                />
-              </div>
+          <div className="filter-actions" style={{ flexWrap: 'wrap' }}>
+            <div className="filter-group">
+              <FilterSelect
+                options={[
+                  { value: 'all', label: 'All Countries' },
+                  ...countries.map(c => ({ value: c._id, label: c.name }))
+                ]}
+                value={countryFilter}
+                onChange={(val) => {
+                  setCountryFilter(val);
+                  setStateFilter('all');
+                }}
+                width="180px"
+              />
+            </div>
+            <div className="filter-group">
+              <FilterSelect
+                options={[
+                  { value: 'all', label: 'All States' },
+                  ...(countryFilter === 'all'
+                    ? states
+                    : states.filter(s => (s.country?._id || s.country) === countryFilter)
+                  ).map(s => ({ value: s._id, label: s.name }))
+                ]}
+                value={stateFilter}
+                onChange={setStateFilter}
+                width="180px"
+              />
+            </div>
+            <div className="filter-group">
+              <FilterSelect
+                options={[
+                  { value: 'all', label: 'All Status' },
+                  { value: 'active', label: 'Active', color: '#16a34a' },
+                  { value: 'inactive', label: 'Inactive', color: '#dc2626' }
+                ]}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                width="150px"
+              />
+            </div>
             <div className="results-count">
-              <span className="badge badge-primary">{filteredDestinations.length}</span>
-              <span style={{ marginLeft: '8px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
+              <span className="badge badge-primary">{pagination?.total || 0}</span>
+              <span style={{ marginLeft: '1px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
             </div>
 
             <div className="view-toggles">
-              <button 
+              <button
                 onClick={() => setView('grid')}
                 className={`view-btn ${view === 'grid' ? 'active' : ''}`}
               >
                 <LayoutGrid size={18} />
               </button>
-              <button 
+              <button
                 onClick={() => setView('list')}
                 className={`view-btn ${view === 'list' ? 'active' : ''}`}
               >
@@ -318,24 +360,24 @@ const Destinations = () => {
 
       {loading ? (
         <p style={{ textAlign: 'center', padding: '40px' }}>Loading destinations...</p>
-      ) : filteredDestinations.length === 0 ? (
+      ) : destinations.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '48px' }}>
           <DestIcon size={48} color="#cbd5e1" style={{ marginBottom: '16px', margin: 'auto' }} />
           <p style={{ color: 'var(--text-muted)' }}>No destinations found. Start by adding a new destination.</p>
         </div>
       ) : view === 'grid' ? (
         <div className="cards-grid mobile-slider">
-          {filteredDestinations.map((dest) => (
+          {destinations.map((dest) => (
             <div key={dest._id} className="card" style={{ padding: '0', overflow: 'hidden' }}>
               <div style={{ height: '160px', background: '#f8fafc', position: 'relative' }}>
-                <img 
-                  src={dest.image?.startsWith('http') ? dest.image : getImageUrl(dest.image)} 
-                  alt={dest.name} 
+                <img
+                  src={dest.image?.startsWith('http') ? dest.image : getImageUrl(dest.image)}
+                  alt={dest.name}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
                 <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', gap: '8px' }}>
                   <span className="badge badge-primary" style={{ fontSize: '10px', fontWeight: '800' }}>{dest.category?.toUpperCase()}</span>
-                  <div style={{ 
+                  <div style={{
                     background: dest.isActive ? '#22c55e' : '#ef4444',
                     color: 'white', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700'
                   }}>
@@ -355,12 +397,17 @@ const Destinations = () => {
                   {dest.description || 'No description provided.'}
                 </p>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-                  <button className="action-btn" onClick={() => handleOpenModal('edit', dest)}>
+                  <button className="action-btn" title="View Details" onClick={() => handleGuardedAction('view', dest)}>
+                    <Eye size={16} />
+                  </button>
+                  <button className="action-btn" title="Edit Destination" onClick={() => handleGuardedAction('edit', dest)}>
                     <Edit size={16} />
                   </button>
-                  <button className="action-btn" style={{ color: '#e11d48' }} onClick={() => handleDelete(dest._id)}>
-                    <Trash2 size={16} />
-                  </button>
+                  {user?.role === 'Admin' && (
+                    <button className="action-btn" style={{ color: '#e11d48' }} onClick={() => handleGuardedAction('delete', dest)}>
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -381,10 +428,10 @@ const Destinations = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredDestinations.map((dest, index) => (
+                {destinations.map((dest, index) => (
                   <tr key={dest._id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
-                      {index + 1}
+                      {startIndex + index + 1}
                     </td>
                     <td style={{ padding: '16px 24px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -399,7 +446,7 @@ const Destinations = () => {
                       <span className="badge badge-primary" style={{ fontSize: '11px' }}>{dest.category}</span>
                     </td>
                     <td style={{ padding: '16px 24px' }}>
-                      <span style={{ 
+                      <span style={{
                         padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
                         background: dest.isActive ? '#dcfce7' : '#fee2e2', color: dest.isActive ? '#166534' : '#b91c1c'
                       }}>
@@ -408,15 +455,17 @@ const Destinations = () => {
                     </td>
                     <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                       <div className="action-group">
-                        <button className="action-btn" title="View Details" onClick={() => handleOpenModal('edit', dest)}>
+                        <button className="action-btn" title="View Details" onClick={() => handleGuardedAction('view', dest)}>
                           <Eye size={16} />
                         </button>
-                        <button className="action-btn" title="Edit Location" onClick={() => handleOpenModal('edit', dest)}>
+                        <button className="action-btn" title="Edit Location" onClick={() => handleGuardedAction('edit', dest)}>
                           <Edit size={16} />
                         </button>
-                        <button className="action-btn danger" title="Delete Destination" onClick={() => handleDelete(dest._id)}>
-                          <Trash2 size={16} />
-                        </button>
+                        {user?.role === 'Admin' && (
+                          <button className="action-btn danger" title="Delete Destination" onClick={() => handleGuardedAction('delete', dest)}>
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -427,41 +476,53 @@ const Destinations = () => {
         </div>
       )}
 
-      <Drawer isOpen={showModal} onClose={() => setShowModal(false)} title={modalType === 'add' ? 'Add New Destination' : 'Edit Destination'}>
+      {pagination && (
+        <Pagination
+          currentPage={pagination.page}
+          totalPages={pagination.pages}
+          totalItems={pagination.total}
+          itemsPerPage={pagination.limit}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setLimit}
+        />
+      )}
+
+      <Drawer isOpen={showModal} onClose={() => setShowModal(false)} title={modalType === 'add' ? 'Add New Destination' : modalType === 'edit' ? 'Edit Destination' : 'Destination Details'}>
         <form onSubmit={handleSubmit}>
           <div className="form-group" style={{ position: 'relative' }}>
             <label>Destination Name <span style={{ color: 'red' }}>*</span></label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', alignItems: 'center' }}>
-              <input 
-                type="text" 
-                className="form-control" 
-                placeholder="e.g. Gateway of India" 
+              <input
+                type="text"
+                className="form-control"
+                placeholder="e.g. Gateway of India"
                 value={formData.name}
                 onChange={(e) => handleSearchPlaces(e.target.value)}
                 required
+                disabled={modalType === 'view'}
               />
             </div>
-            {suggestions.length > 0 && (
-              <div style={{ 
-                position: 'absolute', 
-                top: '100%', 
-                left: 0, 
-                right: 0, 
-                background: 'white', 
-                border: '1px solid var(--border)', 
-                borderRadius: '8px', 
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)', 
+            {suggestions.length > 0 && modalType !== 'view' && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                background: 'white',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                 zIndex: 1000,
                 marginTop: '4px',
                 maxHeight: '200px',
                 overflowY: 'auto'
               }}>
                 {suggestions.map((s, idx) => (
-                  <div 
-                    key={idx} 
-                    style={{ 
-                      padding: '10px 16px', 
-                      cursor: 'pointer', 
+                  <div
+                    key={idx}
+                    style={{
+                      padding: '10px 16px',
+                      cursor: 'pointer',
                       borderBottom: idx === suggestions.length - 1 ? 'none' : '1px solid #f1f5f9',
                       fontSize: '13px',
                       transition: 'background 0.2s'
@@ -483,30 +544,34 @@ const Destinations = () => {
 
           <div style={{ marginBottom: '24px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Location (Automatically marked from name or state selection)</label>
-            <MapPicker 
-              lat={formData.latitude} 
-              lng={formData.longitude} 
-              onChange={({ lat, lng }) => setFormData({ ...formData, latitude: lat, longitude: lng })}
-            />
+            <div style={{ pointerEvents: modalType === 'view' ? 'none' : 'auto', opacity: modalType === 'view' ? 0.8 : 1 }}>
+              <MapPicker
+                lat={formData.latitude}
+                lng={formData.longitude}
+                onChange={({ lat, lng }) => setFormData({ ...formData, latitude: lat, longitude: lng })}
+              />
+            </div>
             <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Latitude</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="any"
-                  className="form-control" 
+                  className="form-control"
                   value={formData.latitude}
                   onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                  disabled={modalType === 'view'}
                 />
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Longitude</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="any"
-                  className="form-control" 
+                  className="form-control"
                   value={formData.longitude}
                   onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                  disabled={modalType === 'view'}
                 />
               </div>
             </div>
@@ -514,43 +579,37 @@ const Destinations = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
             <div className="form-group">
-              <label>Category</label>
-              <select 
-                className="form-control" 
+              <FormSelect
+                label="Category"
+                options={categories.map(c => ({ value: c, label: c }))}
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              >
-                {categories.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+                onChange={(val) => setFormData({ ...formData, category: val })}
+                disabled={modalType === 'view'}
+              />
             </div>
             <div className="form-group">
-              <label>State</label>
-              <select 
-                className="form-control" 
-                value={formData.state}
-                onChange={(e) => handleStateChange(e.target.value)}
+              <FormSelect
+                label="State"
                 required
-              >
-                <option value="">Select State</option>
-                {states.map(s => (
-                  <option key={s._id} value={s._id}>{s.name} ({s.country?.name || 'No Country'})</option>
-                ))}
-              </select>
+                options={states.map(s => ({ value: s._id, label: `${s.name} (${s.country?.name || 'No Country'})` }))}
+                value={formData.state}
+                onChange={(val) => handleStateChange(val)}
+                placeholder="Select State"
+                disabled={modalType === 'view'}
+              />
             </div>
           </div>
 
           <div style={{ marginBottom: '24px' }}>
             <label>Destination Image</label>
-            <div 
-              style={{ border: '2px dashed var(--border)', borderRadius: '12px', padding: '24px', textAlign: 'center', background: 'var(--bg-main)', cursor: 'pointer' }}
-              onClick={() => document.getElementById('destImage').click()}
+            <div
+              style={{ border: '2px dashed var(--border)', borderRadius: '12px', padding: '24px', textAlign: 'center', background: 'var(--bg-main)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
+              onClick={() => modalType !== 'view' && document.getElementById('destImage').click()}
             >
               {imagePreview ? (
                 <div style={{ position: 'relative', display: 'inline-block' }}>
                   <img src={imagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', boxShadow: 'var(--shadow)' }} />
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--primary)', fontWeight: '600' }}>Click to change image</div>
+                  {modalType !== 'view' && <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--primary)', fontWeight: '600' }}>Click to change image</div>}
                 </div>
               ) : (
                 <div style={{ color: 'var(--text-muted)' }}>
@@ -564,31 +623,41 @@ const Destinations = () => {
 
           <div className="form-group">
             <label>Description</label>
-            <textarea 
-              className="form-control" 
-              placeholder="About the destination..." 
+            <textarea
+              className="form-control"
+              placeholder="About the destination..."
               style={{ height: '100px', padding: '12px', resize: 'none' }}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              disabled={modalType === 'view'}
             />
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: modalType === 'view' ? 'default' : 'pointer' }}>
+              <input
+                type="checkbox"
                 checked={formData.isActive}
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                disabled={modalType === 'view'}
               />
               <span style={{ fontWeight: '600' }}>Destination is active</span>
             </label>
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ height: '48px', fontSize: '16px', fontWeight: '600' }}>
-            {modalType === 'add' ? 'Add Destination' : 'Save Changes'}
-          </button>
+          {modalType !== 'view' && (
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '48px', fontSize: '16px', fontWeight: '600' }}>
+              {modalType === 'add' ? 'Add Destination' : 'Save Changes'}
+            </button>
+          )}
         </form>
       </Drawer>
+
+      <PasskeyModal
+        isOpen={showSecurityModal}
+        onClose={() => setShowSecurityModal(false)}
+        onVerified={onSecurityVerified}
+      />
     </div>
   );
 };

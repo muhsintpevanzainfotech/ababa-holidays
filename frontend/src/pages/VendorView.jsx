@@ -16,7 +16,8 @@ import {
   CheckCircle,
   ExternalLink,
   Smartphone,
-  Info
+  Info,
+  AlertCircle
 } from 'lucide-react';
 import api from '../utils/api';
 import { getImageUrl } from '../utils/constants';
@@ -36,6 +37,7 @@ const VendorView = () => {
   const [blogs, setBlogs] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
+  const [complaints, setComplaints] = useState([]);
 
   useEffect(() => {
     const fetchVendorDetails = async () => {
@@ -48,17 +50,19 @@ const VendorView = () => {
         }
         
         // Fetch related data
-        const [pkgRes, blogRes, testRes, enqRes] = await Promise.all([
+        const [pkgRes, blogRes, testRes, enqRes, compRes] = await Promise.all([
           api.get(`/packages?vendor=${id}`),
           api.get(`/blogs?author=${id}`), // Assuming blogs filter by author (vendor ID)
           api.get(`/testimonials?vendor=${id}`),
-          api.get(`/enquiries?vendor=${id}`)
+          api.get(`/enquiries?vendor=${id}`),
+          api.get(`/complaints/user/${id}`)
         ]);
 
         if (pkgRes.data.success) setPackages(pkgRes.data.data);
         if (blogRes.data.success) setBlogs(blogRes.data.data);
         if (testRes.data.success) setTestimonials(testRes.data.data);
         if (enqRes.data.success) setEnquiries(enqRes.data.data);
+        if (compRes.data.success) setComplaints(compRes.data.data);
 
       } catch (err) {
         showToast('Error', 'Failed to fetch vendor details', 'error');
@@ -189,6 +193,7 @@ const VendorView = () => {
         <button className={`tab-btn ${activeTab === 'blogs' ? 'active' : ''}`} onClick={() => setActiveTab('blogs')}><FileText size={18} /> Blogs ({blogs.length})</button>
         <button className={`tab-btn ${activeTab === 'testimonials' ? 'active' : ''}`} onClick={() => setActiveTab('testimonials')}><Quote size={18} /> Testimonials ({testimonials.length})</button>
         <button className={`tab-btn ${activeTab === 'enquiries' ? 'active' : ''}`} onClick={() => setActiveTab('enquiries')}><MessageSquare size={18} /> Enquiries ({enquiries.length})</button>
+        <button className={`tab-btn ${activeTab === 'disputes' ? 'active' : ''}`} onClick={() => setActiveTab('disputes')}><AlertCircle size={18} /> Disputes ({complaints.length})</button>
       </div>
 
       {/* Tab Content Areas */}
@@ -355,6 +360,62 @@ const VendorView = () => {
                             </div>
                           </td>
                         </tr>
+                      )}
+                   </tbody>
+                </table>
+             </div>
+          </div>
+        )}
+
+        {activeTab === 'disputes' && (
+          <div className="card" style={{ padding: 0 }}>
+             <div className="table-container">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                   <thead style={{ background: 'var(--bg-main)' }}>
+                      <tr>
+                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px' }}>Incident Role</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px' }}>Subject Partner</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px' }}>Incident Subject</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '12px' }}>Status</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '12px' }}>Filed Date</th>
+                      </tr>
+                   </thead>
+                   <tbody>
+                      {complaints.length > 0 ? complaints.map((c, idx) => {
+                        const isComplainant = c.complainant?._id === id;
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <td style={{ padding: '16px 24px' }}>
+                               <span style={{ 
+                                 padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: '800', 
+                                 background: isComplainant ? '#eff6ff' : '#fff1f2', 
+                                 color: isComplainant ? '#1d4ed8' : '#9f1239',
+                                 border: `1px solid ${isComplainant ? '#3b82f630' : '#ef444430'}`
+                               }}>
+                                 {isComplainant ? 'COMPLAINANT' : 'DEFENDANT'}
+                               </span>
+                            </td>
+                            <td style={{ padding: '16px 24px' }}>
+                               <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ fontWeight: '700', fontSize: '14px' }}>{isComplainant ? c.defendant?.name : c.complainant?.name}</span>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{isComplainant ? c.defendant?.role : c.complainant?.role}</span>
+                               </div>
+                            </td>
+                            <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '600' }}>{c.subject}</td>
+                            <td style={{ padding: '16px 24px' }}>
+                               <span style={{ 
+                                 padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '800',
+                                 background: c.status === 'Resolved' ? '#f0fdf4' : c.status === 'Pending' ? '#fffbeb' : '#f1f5f9',
+                                 color: c.status === 'Resolved' ? '#166534' : c.status === 'Pending' ? '#92400e' : '#475569'
+                               }}>
+                                 {c.status.toUpperCase()}
+                               </span>
+                            </td>
+                            <td style={{ padding: '16px 24px', textAlign: 'right', fontSize: '13px', color: 'var(--text-muted)' }}>{new Date(c.createdAt).toLocaleDateString()}</td>
+                          </tr>
+                        );
+                      }) : (
+                        <tr><td colSpan="5" style={{ padding: '64px 24px', textAlign: 'center', color: 'var(--text-muted)' }}>No dispute records on file for this partner.</td></tr>
                       )}
                    </tbody>
                 </table>

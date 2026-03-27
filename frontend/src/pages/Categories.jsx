@@ -14,13 +14,15 @@ import {
   Upload,
   Briefcase,
   X,
-  Power,
-  Tag,
-  CheckCircle,
-  XCircle,
-  Filter
+  PlusCircle,
+  Filter,
+  Lock,
+  Unlock,
+  Eye
 } from 'lucide-react';
+import PasskeyModal from '../components/PasskeyModal';
 import FilterSelect from '../components/FilterSelect';
+import Pagination from '../components/Pagination';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   fetchCategoriesRequest,
@@ -31,11 +33,15 @@ import {
 import { fetchServicesRequest } from '../store/slices/servicesSlice';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import LockToggleButton from '../components/LockToggleButton';
+import { lockSession } from '../store/slices/globalSlice';
 
 const Categories = () => {
   const dispatch = useDispatch();
-  const { categories, loading, error } = useSelector((state) => state.categories);
-  const { services } = useSelector((state) => state.services);
+  const { categories, loading, error, pagination } = useSelector((state) => state.categories);
+  const { user } = useSelector((state) => state.auth);
+  const { isUnlocked } = useSelector((state) => state.global);
+  const isLocked = !isUnlocked;
   const { showToast } = useToast();
   const { confirm } = useConfirm();
   const [view, setView] = useState('list');
@@ -45,66 +51,125 @@ const Categories = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [imagePreview, setImagePreview] = useState(null);
+  const [iconPreview, setIconPreview] = useState(null);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [pendingAction, setPendingAction] = useState(null);
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    service: '',
     isActive: true,
     image: null,
-    icon: null
+    icon: null,
+    seoTitle: '',
+    seoDescription: '',
+    seoKeywords: ''
   });
 
   useEffect(() => {
-    dispatch(fetchCategoriesRequest());
-    dispatch(fetchServicesRequest());
-  }, [dispatch]);
+    dispatch(fetchCategoriesRequest({
+      page: currentPage,
+      limit,
+      search: searchTerm,
+      status: statusFilter
+    }));
+  }, [dispatch, currentPage, limit, searchTerm, statusFilter]);
 
   const handleOpenModal = (type, category = null) => {
     setModalType(type);
-    if (type === 'edit' && category) {
+    if ((type === 'edit' || type === 'view') && category) {
       setCurrentCategory(category);
       setFormData({
         title: category.title,
         description: category.description || '',
-        service: category.service?._id || category.service || '',
         isActive: category.isActive,
         image: null,
-        icon: null
+        icon: null,
+        seoTitle: category.seo?.title || '',
+        seoDescription: category.seo?.description || '',
+        seoKeywords: category.seo?.keywords?.join(', ') || ''
       });
       setImagePreview(category.image?.startsWith('http') ? category.image : getImageUrl(category.image));
+      setIconPreview(category.icon?.startsWith('http') ? category.icon : getImageUrl(category.icon));
     } else {
-      setFormData({ title: '', description: '', service: '', isActive: true, image: null, icon: null });
+      setFormData({
+        title: '',
+        description: '',
+        isActive: true,
+        image: null,
+        icon: null,
+        seoTitle: '',
+        seoDescription: '',
+        seoKeywords: ''
+      });
       setImagePreview(null);
+      setIconPreview(null);
     }
     setShowModal(true);
+  };
+
+  const handleGuardedAction = (type, category = null) => {
+    if (isLocked && (type === 'delete' || type === 'edit' || type === 'add')) {
+      setPendingAction({ type, service: category });
+      setShowSecurityModal(true);
+    } else {
+      if (type === 'delete') {
+        handleDelete(category._id);
+      } else {
+        handleOpenModal(type, category);
+      }
+    }
+  };
+
+  const handleLockToggleInternal = () => {
+    setPendingAction({ type: 'unlock' });
+    setShowSecurityModal(true);
+  };
+
+  const onSecurityVerified = () => {
+    setShowSecurityModal(false);
+    if (pendingAction?.type === 'unlock') {
+      showToast('Unlocked', 'You can now modify categories freely.', 'success');
+    } else if (pendingAction?.type === 'delete') {
+      handleDelete(pendingAction.service._id);
+    } else if (pendingAction?.type === 'edit') {
+      handleOpenModal('edit', pendingAction.service);
+    } else if (pendingAction?.type === 'add') {
+      handleOpenModal('add');
+    }
+    setPendingAction(null);
   };
 
   const handleFileChange = (e, field) => {
     const file = e.target.files[0];
     if (file) {
       setFormData({ ...formData, [field]: file });
-      if (field === 'image') {
-        const reader = new FileReader();
-        reader.onloadend = () => setImagePreview(reader.result);
-        reader.readAsDataURL(file);
-      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (field === 'image') setImagePreview(reader.result);
+        if (field === 'icon') setIconPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.service) {
-      return showToast('Error', 'Please select a parent service', 'error');
-    }
-
     const data = new FormData();
     data.append('title', formData.title);
     data.append('description', formData.description);
-    data.append('service', formData.service);
     data.append('isActive', formData.isActive);
     if (formData.image) data.append('image', formData.image);
     if (formData.icon) data.append('icon', formData.icon);
+
+    // Format SEO data
+    const seoData = {
+      title: formData.seoTitle,
+      description: formData.seoDescription,
+      keywords: formData.seoKeywords ? formData.seoKeywords.split(',').map(k => k.trim()) : []
+    };
+    data.append('seo', JSON.stringify(seoData));
 
     if (modalType === 'add') {
       dispatch(addCategoryRequest(data));
@@ -128,14 +193,8 @@ const Categories = () => {
     }
   };
 
-  const filteredCategories = categories.filter(category => {
-    const matchesSearch = category.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          category.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          category.service?.title?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' ? true :
-                         statusFilter === 'active' ? category.isActive : !category.isActive;
-    return matchesSearch && matchesStatus;
-  });
+  // Server-side filtering enabled
+  const displayCategories = categories;
 
   return (
     <div className="fade-in">
@@ -144,9 +203,14 @@ const Categories = () => {
           <h1>Package Categories</h1>
           <p>Organize travel packages into logical categories and themes</p>
         </div>
-        <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
-          <Plus size={20} /> Add Category
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {user?.role === 'Admin' && <LockToggleButton onUnlockClick={handleLockToggleInternal} />}
+          {user?.role === 'Admin' && (
+            <button className="btn btn-primary" onClick={() => handleGuardedAction('add')}>
+              <Plus size={20} /> Add Category
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="card allow-overflow" style={{ marginBottom: '32px', padding: '20px' }}>
@@ -178,18 +242,18 @@ const Categories = () => {
               />
             </div>
             <div className="results-count">
-              <span className="badge badge-primary">{filteredCategories.length}</span>
-              <span style={{ marginLeft: '8px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
+              <span className="badge badge-primary">{pagination?.total || 0}</span>
+              <span style={{ marginLeft: '1px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
             </div>
 
             <div className="view-toggles">
-              <button 
+              <button
                 onClick={() => setView('grid')}
                 className={`view-btn ${view === 'grid' ? 'active' : ''}`}
               >
                 <LayoutGrid size={18} />
               </button>
-              <button 
+              <button
                 onClick={() => setView('list')}
                 className={`view-btn ${view === 'list' ? 'active' : ''}`}
               >
@@ -202,22 +266,22 @@ const Categories = () => {
 
       {loading ? (
         <p style={{ textAlign: 'center', padding: '40px' }}>Loading categories...</p>
-      ) : filteredCategories.length === 0 ? (
+      ) : displayCategories.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '48px' }}>
           <Layers size={48} color="#cbd5e1" style={{ marginBottom: '16px', margin: 'auto' }} />
           <p style={{ color: 'var(--text-muted)' }}>No categories found matching your search.</p>
         </div>
       ) : view === 'grid' ? (
         <div className="cards-grid mobile-slider">
-          {filteredCategories.map((category) => (
+          {displayCategories.map((category) => (
             <div key={category._id} className="card" style={{ padding: '0', overflow: 'hidden' }}>
               <div style={{ height: '160px', background: '#f8fafc', position: 'relative' }}>
-                <img 
-                  src={category.image?.startsWith('http') ? category.image : getImageUrl(category.image)} 
-                  alt={category.title} 
+                <img
+                  src={category.image?.startsWith('http') ? category.image : getImageUrl(category.image)}
+                  alt={category.title}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
-                <div style={{ 
+                <div style={{
                   position: 'absolute', top: '12px', right: '12px',
                   background: category.isActive ? '#22c55e' : '#ef4444',
                   color: 'white',
@@ -228,24 +292,26 @@ const Categories = () => {
                 </div>
               </div>
               <div style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                  <Briefcase size={14} color="var(--primary)" />
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--primary)', textTransform: 'uppercase' }}>
-                    {typeof category.service === 'object' ? category.service.title : 'Service'}
-                  </span>
-                </div>
                 <h3 style={{ fontSize: '17px', fontWeight: '700', marginBottom: '8px' }}>{category.title}</h3>
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '20px', minHeight: '38px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                   {category.description}
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>ID: {category.customId}</span>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="action-btn" onClick={() => handleOpenModal('edit', category)}>
-                      <Edit size={16} />
+                    <button className="action-btn" title="View Details" onClick={() => handleOpenModal('view', category)}>
+                      <Eye size={16} />
                     </button>
-                    <button className="action-btn" style={{ color: '#e11d48' }} onClick={() => handleDelete(category._id)}>
-                      <Trash2 size={16} />
-                    </button>
+                    {(user?.role === 'Admin' || user?.role === 'Sub-Admin') && (
+                      <button className="action-btn" onClick={() => handleGuardedAction('edit', category)}>
+                        <Edit size={16} />
+                      </button>
+                    )}
+                    {user?.role === 'Admin' && (
+                      <button className="action-btn" style={{ color: '#e11d48' }} onClick={() => handleGuardedAction('delete', category)}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -260,16 +326,16 @@ const Categories = () => {
                 <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border)' }}>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', width: '50px' }}>#</th>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Category</th>
-                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Parent Service</th>
+                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Custom ID</th>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</th>
                   <th style={{ padding: '16px 24px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCategories.map((category, index) => (
+                {displayCategories.map((category, index) => (
                   <tr key={category._id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
-                      {index + 1}
+                      {((currentPage - 1) * limit) + index + 1}
                     </td>
                     <td style={{ padding: '16px 24px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -279,16 +345,9 @@ const Categories = () => {
                         <span style={{ fontWeight: '600', fontSize: '14px' }}>{category.title}</span>
                       </div>
                     </td>
+                    <td style={{ padding: '16px 24px', fontSize: '14px' }}>{category.customId}</td>
                     <td style={{ padding: '16px 24px' }}>
-                      <span style={{ 
-                        padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
-                        background: '#eff6ff', color: '#1d4ed8'
-                      }}>
-                        {typeof category.service === 'object' ? category.service.title : 'N/A'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <span style={{ 
+                      <span style={{
                         padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
                         background: category.isActive ? '#dcfce7' : '#fee2e2', color: category.isActive ? '#166534' : '#b91c1c'
                       }}>
@@ -297,12 +356,19 @@ const Categories = () => {
                     </td>
                     <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button className="action-btn" onClick={() => handleOpenModal('edit', category)}>
-                          <Edit size={16} />
+                        <button className="action-btn" title="View Details" onClick={() => handleOpenModal('view', category)}>
+                          <Eye size={16} />
                         </button>
-                        <button className="action-btn" style={{ color: '#e11d48' }} onClick={() => handleDelete(category._id)}>
-                          <Trash2 size={16} />
-                        </button>
+                        {user?.role === 'Admin' && (
+                          <button className="action-btn" onClick={() => handleGuardedAction('edit', category)}>
+                            <Edit size={16} />
+                          </button>
+                        )}
+                        {user?.role === 'Admin' && (
+                          <button className="action-btn" style={{ color: '#e11d48' }} onClick={() => handleGuardedAction('delete', category)}>
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -313,66 +379,119 @@ const Categories = () => {
         </div>
       )}
 
-      <Drawer 
-        isOpen={showModal} 
+      {pagination && (
+        <Pagination
+          currentPage={pagination.page}
+          totalPages={pagination.pages}
+          totalItems={pagination.total}
+          itemsPerPage={limit}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setLimit}
+        />
+      )}
+
+      <Drawer
+        isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={modalType === 'add' ? 'Add Service Category' : 'Edit Category'}
+        title={modalType === 'add' ? 'Add Service Category' : modalType === 'edit' ? 'Edit Category' : 'Category Details'}
       >
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Category Title</label>
-            <input 
+            <input
               type="text" className="form-control" required placeholder="e.g. Budget Stays"
               value={formData.title}
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Parent Service</label>
-            <select 
-              className="form-control" required
-              value={formData.service}
-              onChange={(e) => setFormData({...formData, service: e.target.value})}
-            >
-              <option value="">Select Service</option>
-              {services.map(s => (
-                <option key={s._id} value={s._id}>{s.title}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Description</label>
-            <textarea 
-              className="form-control" style={{ height: '100px', resize: 'none', padding: '12px' }} required
-              placeholder="What this category represents..."
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              disabled={modalType === 'view'}
             />
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
+            <label>Category Icon (Small Logo)</label>
+            <div
+              style={{ border: '2px dashed var(--border)', borderRadius: '12px', padding: '16px', textAlign: 'center', background: 'var(--bg-main)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
+              onClick={() => modalType !== 'view' && document.getElementById('categoryIcon').click()}
+            >
+              {iconPreview ? (
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <img src={iconPreview} alt="Icon Preview" style={{ width: '64px', height: '64px', borderRadius: '8px', objectFit: 'contain', background: '#fff', padding: '4px', boxShadow: 'var(--shadow)' }} />
+                  {modalType !== 'view' && <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--primary)', fontWeight: '600' }}>Change Icon</div>}
+                </div>
+              ) : (
+                <div style={{ color: 'var(--text-muted)' }}>
+                  <Plus size={24} style={{ marginBottom: '4px', margin: 'auto' }} />
+                  <p style={{ fontSize: '13px' }}>Click to upload icon</p>
+                </div>
+              )}
+              {modalType !== 'view' && <input id="categoryIcon" type="file" style={{ display: 'none' }} accept="image/*" onChange={(e) => handleFileChange(e, 'icon')} />}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Description</label>
+            <textarea
+              className="form-control" style={{ height: '100px', resize: 'none', padding: '12px' }} required
+              placeholder="What this category represents..."
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              disabled={modalType === 'view'}
+            />
+          </div>
+
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: modalType === 'view' ? 'default' : 'pointer' }}>
+              <input
+                type="checkbox"
                 checked={formData.isActive}
-                onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                disabled={modalType === 'view'}
               />
               <span>Category is active and visible</span>
             </label>
           </div>
 
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '20px', marginBottom: '20px' }}>
+            <h4 style={{ marginBottom: '16px', fontSize: '15px', fontWeight: '700' }}>SEO Configuration</h4>
+            <div className="form-group">
+              <label>SEO Title</label>
+              <input
+                type="text" className="form-control" placeholder="Meta title for SEO"
+                value={formData.seoTitle}
+                onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
+                disabled={modalType === 'view'}
+              />
+            </div>
+            <div className="form-group">
+              <label>SEO Description</label>
+              <textarea
+                className="form-control" style={{ height: '80px', resize: 'none', padding: '12px' }}
+                placeholder="Meta description for search results"
+                value={formData.seoDescription}
+                onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
+                disabled={modalType === 'view'}
+              />
+            </div>
+            <div className="form-group">
+              <label>SEO Keywords (comma separated)</label>
+              <input
+                type="text" className="form-control" placeholder="keyword1, keyword2, keyword3"
+                value={formData.seoKeywords}
+                onChange={(e) => setFormData({ ...formData, seoKeywords: e.target.value })}
+                disabled={modalType === 'view'}
+              />
+            </div>
+          </div>
+
           <div style={{ marginBottom: '32px' }}>
             <label>Category Image</label>
-            <div 
-              style={{ border: '2px dashed var(--border)', borderRadius: '12px', padding: '24px', textAlign: 'center', background: 'var(--bg-main)', cursor: 'pointer' }}
-              onClick={() => document.getElementById('categoryImage').click()}
+            <div
+              style={{ border: '2px dashed var(--border)', borderRadius: '12px', padding: '24px', textAlign: 'center', background: 'var(--bg-main)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
+              onClick={() => modalType !== 'view' && document.getElementById('categoryImage').click()}
             >
               {imagePreview ? (
                 <div style={{ position: 'relative', display: 'inline-block' }}>
                   <img src={imagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', boxShadow: 'var(--shadow)' }} />
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--primary)', fontWeight: '600' }}>Click to change image</div>
+                  {modalType !== 'view' && <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--primary)', fontWeight: '600' }}>Click to change image</div>}
                 </div>
               ) : (
                 <div style={{ color: 'var(--text-muted)' }}>
@@ -380,15 +499,23 @@ const Categories = () => {
                   <p>Click to upload category image</p>
                 </div>
               )}
-              <input id="categoryImage" type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'image')} />
+              {modalType !== 'view' && <input id="categoryImage" type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange(e, 'image')} />}
             </div>
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ height: '48px', fontSize: '16px', fontWeight: '600' }}>
-            {modalType === 'add' ? 'Create Category' : 'Save Changes'}
-          </button>
+          {modalType !== 'view' && (
+            <button type="submit" className="btn btn-primary" style={{ height: '48px', fontSize: '16px', fontWeight: '600' }}>
+              {modalType === 'add' ? 'Create Category' : 'Save Changes'}
+            </button>
+          )}
         </form>
       </Drawer>
+      <PasskeyModal
+        isOpen={showSecurityModal}
+        onClose={() => setShowSecurityModal(false)}
+        onVerified={onSecurityVerified}
+        title={pendingAction?.type === 'unlock' ? 'Unlock Modifications' : 'Security Check Required'}
+      />
     </div>
   );
 };

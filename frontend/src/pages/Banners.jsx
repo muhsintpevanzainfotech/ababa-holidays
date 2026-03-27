@@ -3,10 +3,10 @@ import api from '../utils/api';
 import { getImageUrl } from '../utils/constants';
 import ActionDropdown from '../components/ActionDropdown';
 import Drawer from '../components/Drawer';
-import { 
-  Plus, 
-  Trash2, 
-  Eye, 
+import {
+  Plus,
+  Trash2,
+  Eye,
   Power,
   Image as ImageIcon,
   ExternalLink,
@@ -24,10 +24,10 @@ import {
 } from 'lucide-react';
 import FilterSelect from '../components/FilterSelect';
 import { useSelector, useDispatch } from 'react-redux';
-import { 
-  fetchBannersRequest, 
-  addBannerRequest, 
-  updateBannerRequest, 
+import {
+  fetchBannersRequest,
+  addBannerRequest,
+  updateBannerRequest,
   deleteBannerRequest,
   toggleBannerStatusRequest
 } from '../store/slices/bannersSlice';
@@ -117,7 +117,7 @@ const Banners = () => {
       'Delete Banner?',
       'Are you sure you want to delete this promotional banner?'
     );
-    
+
     if (isConfirmed) {
       dispatch(deleteBannerRequest(id));
       showToast('Deleted', 'Banner has been removed.', 'success');
@@ -126,8 +126,8 @@ const Banners = () => {
 
   const filteredBanners = banners.filter(banner => {
     const matchesSearch = banner.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' ? true : 
-                         statusFilter === 'active' ? banner.isActive : !banner.isActive;
+    const matchesStatus = statusFilter === 'all' ? true :
+      statusFilter === 'active' ? banner.isActive : !banner.isActive;
     return matchesSearch && matchesStatus;
   });
 
@@ -146,7 +146,7 @@ const Banners = () => {
       <div className="card allow-overflow" style={{ marginBottom: '32px', padding: '20px' }}>
         <div className="filter-row">
           <div className="filter-group">
-            <FilterSelect 
+            <FilterSelect
               options={[
                 { value: 'all', label: 'All Status' },
                 { value: 'active', label: 'Active', color: '#16a34a' },
@@ -158,10 +158,10 @@ const Banners = () => {
             />
           </div>
           <div className="search-wrapper">
-            <input 
-              type="text" 
-              className="form-control" 
-              placeholder="Search by banner title..." 
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search by banner title..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ paddingLeft: '44px', borderRadius: '12px' }}
@@ -173,17 +173,17 @@ const Banners = () => {
           <div className="filter-actions">
             <div className="results-count">
               <span className="badge badge-primary">{filteredBanners.length}</span>
-              <span style={{ marginLeft: '8px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
+              <span style={{ marginLeft: '1px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
             </div>
 
             <div className="view-toggles">
-              <button 
+              <button
                 onClick={() => setView('grid')}
                 className={`view-btn ${view === 'grid' ? 'active' : ''}`}
               >
                 <LayoutGrid size={18} />
               </button>
-              <button 
+              <button
                 onClick={() => setView('list')}
                 className={`view-btn ${view === 'list' ? 'active' : ''}`}
               >
@@ -206,13 +206,13 @@ const Banners = () => {
           {filteredBanners.map((banner) => (
             <div key={banner._id} className="card" style={{ padding: '0', overflow: 'hidden' }}>
               <div style={{ height: '180px', overflow: 'hidden', background: '#f8fafc', position: 'relative' }}>
-                <img 
-                  src={banner.image?.startsWith('http') ? banner.image : getImageUrl(banner.image)} 
-                  alt={banner.title} 
+                <img
+                  src={banner.image?.startsWith('http') ? banner.image : getImageUrl(banner.image)}
+                  alt={banner.title}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
-                <div style={{ 
-                  position: 'absolute', top: '12px', right: '12px', 
+                <div style={{
+                  position: 'absolute', top: '12px', right: '12px',
                   padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
                   background: banner.isActive ? '#22c55e' : '#ef4444', color: 'white',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
@@ -225,9 +225,9 @@ const Banners = () => {
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', height: '40px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                   {banner.description || 'No description provided.'}
                 </p>
-                
+
                 <div style={{ display: 'flex', gap: '8px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
-                  <button 
+                  <button
                     onClick={() => toggleStatus(banner._id)}
                     className="btn" style={{ background: banner.isActive ? '#fff1f2' : '#f0fdf4', color: banner.isActive ? '#ef4444' : '#22c55e', border: 'none', fontSize: '12px', flex: 1 }}
                   >
@@ -267,7 +267,7 @@ const Banners = () => {
                     </td>
                     <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)' }}>{banner.link || '-'}</td>
                     <td style={{ padding: '16px 24px' }}>
-                      <span style={{ 
+                      <span style={{
                         padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
                         background: banner.isActive ? '#dcfce7' : '#fee2e2',
                         color: banner.isActive ? '#166534' : '#b91c1c'
@@ -296,44 +296,44 @@ const Banners = () => {
         </div>
       )}
 
-      <Drawer 
-        isOpen={showModal} 
+      <Drawer
+        isOpen={showModal}
         onClose={() => setShowModal(false)}
         title={modalType === 'add' ? 'Upload New Banner' : 'Edit Banner'}
       >
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Banner Title</label>
-            <input 
+            <input
               type="text" className="form-control" required placeholder="e.g. Summer Sale 2024"
               value={formData.title}
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             />
           </div>
 
           <div className="form-group">
             <label>Description</label>
-            <textarea 
-              className="form-control" 
-              style={{ height: '100px', padding: '12px' }} 
+            <textarea
+              className="form-control"
+              style={{ height: '100px', padding: '12px' }}
               placeholder="Banner description..."
               value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
 
           <div className="form-group">
             <label>Redirection Link (Optional)</label>
-            <input 
+            <input
               type="text" className="form-control" placeholder="https://..."
               value={formData.link}
-              onChange={(e) => setFormData({...formData, link: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, link: e.target.value })}
             />
           </div>
 
           <div style={{ marginBottom: '24px' }}>
             <label>Banner Image</label>
-            <div 
+            <div
               style={{ border: '2px dashed var(--border)', borderRadius: '12px', padding: '24px', textAlign: 'center', background: 'var(--bg-main)', cursor: 'pointer', transition: '0.2s' }}
               onClick={() => document.getElementById('bannerImage').click()}
             >
@@ -354,10 +354,10 @@ const Banners = () => {
 
           <div className="form-group">
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={formData.isActive}
-                onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
               />
               <span>Mark as Active</span>
             </label>

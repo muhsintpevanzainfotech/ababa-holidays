@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import ActionDropdown from '../components/ActionDropdown';
-import { 
-  Plus, 
+import {
+  Plus,
   Search,
-  Edit, 
-  Trash2, 
-  UserX, 
+  Edit,
+  Trash2,
+  UserX,
   CheckCircle,
   X,
   LayoutGrid,
@@ -26,12 +26,12 @@ import { useConfirm } from '../context/ConfirmDialogContext';
 import Drawer from '../components/Drawer';
 import Pagination from '../components/Pagination';
 import { useSelector, useDispatch } from 'react-redux';
-import { 
-  fetchUsersRequest, 
-  deleteUserRequest, 
-  updateUserStatusRequest, 
-  addUserRequest, 
-  updateUserRequest 
+import {
+  fetchUsersRequest,
+  deleteUserRequest,
+  updateUserStatusRequest,
+  addUserRequest,
+  updateUserRequest
 } from '../store/slices/usersSlice';
 
 const Users = () => {
@@ -139,13 +139,13 @@ const Users = () => {
   };
 
   const filteredUsers = users.filter((user) => {
-    const matchesSearch = 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch =
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.customId?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesRole = user.role === 'User';
-    const matchesStatus = statusFilter === 'all' || 
+    const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'suspended' ? user.isSuspended : !user.isSuspended);
 
     return matchesSearch && matchesRole && matchesStatus;
@@ -191,10 +191,10 @@ const Users = () => {
       <div className="card allow-overflow" style={{ marginBottom: '32px', padding: '20px' }}>
         <div className="filter-row">
           <div className="search-wrapper">
-            <input 
-              type="text" 
-              className="form-control" 
-              placeholder="Search by name or email..." 
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ paddingLeft: '44px', borderRadius: '12px' }}
@@ -206,7 +206,7 @@ const Users = () => {
           <div className="filter-actions">
 
             <div className="filter-group">
-              <FilterSelect 
+              <FilterSelect
                 options={[
                   { value: 'all', label: 'All Status' },
                   { value: 'active', label: 'Active', color: '#16a34a' },
@@ -217,20 +217,20 @@ const Users = () => {
                 width="160px"
               />
             </div>
-            
+
             <div className="results-count">
               <span className="badge badge-primary">{totalItems}</span>
-              <span style={{ marginLeft: '8px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
+              <span style={{ marginLeft: '1px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
             </div>
 
             <div className="view-toggles">
-              <button 
+              <button
                 onClick={() => setView('grid')}
                 className={`view-btn ${view === 'grid' ? 'active' : ''}`}
               >
                 <LayoutGrid size={18} />
               </button>
-              <button 
+              <button
                 onClick={() => setView('list')}
                 className={`view-btn ${view === 'list' ? 'active' : ''}`}
               >
@@ -254,159 +254,159 @@ const Users = () => {
             <div className="cards-grid mobile-slider">
               {currentUsers.map((user) => (
                 <div key={user._id} className="card" style={{ padding: '24px', position: 'relative' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-                <div style={{ position: 'relative' }}>
-                  <img 
-                    src={user.avatar || 'https://ui-avatars.com/api/?name=' + user.name} 
-                    alt={user.name} 
-                    style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #f1f5f9' }}
-                  />
-                  {user.isOnline && (
-                    <div style={{ 
-                      position: 'absolute', bottom: '2px', right: '2px', 
-                      width: '12px', height: '12px', background: '#22c55e', 
-                      borderRadius: '50%', border: '2px solid white' 
-                    }}></div>
-                  )}
-                </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{user.name}</h3>
-                    {user.isOnline && (
-                      <span style={{ fontSize: '10px', color: '#22c55e', fontWeight: '700', textTransform: 'uppercase' }}>Online</span>
-                    )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                    <div style={{ position: 'relative' }}>
+                      <img
+                        src={user.avatar || 'https://ui-avatars.com/api/?name=' + user.name}
+                        alt={user.name}
+                        style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #f1f5f9' }}
+                      />
+                      {user.isOnline && (
+                        <div style={{
+                          position: 'absolute', bottom: '2px', right: '2px',
+                          width: '12px', height: '12px', background: '#22c55e',
+                          borderRadius: '50%', border: '2px solid white'
+                        }}></div>
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{user.name}</h3>
+                        {user.isOnline && (
+                          <span style={{ fontSize: '10px', color: '#22c55e', fontWeight: '700', textTransform: 'uppercase' }}>Online</span>
+                        )}
+                      </div>
+                      <span className="badge badge-primary" style={{ fontSize: '11px' }}>{user.role}</span>
+                      {user.isSuspended && <span className="badge badge-error" style={{ fontSize: '11px', marginLeft: '4px' }}>Suspended</span>}
+                    </div>
                   </div>
-                  <span className="badge badge-primary" style={{ fontSize: '11px' }}>{user.role}</span>
-                  {user.isSuspended && <span className="badge badge-error" style={{ fontSize: '11px', marginLeft: '4px' }}>Suspended</span>}
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  <Mail size={14} /> {user.email}
-                </div>
-                {user.phone && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                    <Phone size={14} /> {user.phone}
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                  <Shield size={14} /> {user.customId}
-                </div>
-              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Created {new Date(user.createdAt).toLocaleDateString()}</div>
-                <div className="action-group">
-                  <button onClick={() => navigate(`/users/view/${user._id}`)} className="action-btn view" title="View History"><Eye size={16} /></button>
-                  <button onClick={() => toggleSuspension(user)} className={`action-btn ${user.isSuspended ? 'view' : 'delete'}`} title={user.isSuspended ? 'Unsuspend' : 'Suspend Account'}>
-                    {user.isSuspended ? <CheckCircle size={16} /> : <UserX size={16} />}
-                  </button>
-                  <button onClick={() => handleOpenModal('edit', user)} className="action-btn edit" title="Edit User"><Edit size={16} /></button>
-                  <button onClick={() => handleDelete(user._id)} className="action-btn delete" title="Delete User"><Trash2 size={16} /></button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                      <Mail size={14} /> {user.email}
+                    </div>
+                    {user.phone && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                        <Phone size={14} /> {user.phone}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                      <Shield size={14} /> {user.customId}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Created {new Date(user.createdAt).toLocaleDateString()}</div>
+                    <div className="action-group">
+                      <button onClick={() => navigate(`/users/view/${user._id}`)} className="action-btn view" title="View History"><Eye size={16} /></button>
+                      <button onClick={() => toggleSuspension(user)} className={`action-btn ${user.isSuspended ? 'view' : 'delete'}`} title={user.isSuspended ? 'Unsuspend' : 'Suspend Account'}>
+                        {user.isSuspended ? <CheckCircle size={16} /> : <UserX size={16} />}
+                      </button>
+                      <button onClick={() => handleOpenModal('edit', user)} className="action-btn edit" title="Edit User"><Edit size={16} /></button>
+                      <button onClick={() => handleDelete(user._id)} className="action-btn delete" title="Delete User"><Trash2 size={16} /></button>
+                    </div>
+                  </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+              <div className="table-container">
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border)' }}>
+                      <th style={{ padding: '16px 24px', fontWeight: '600', color: 'var(--text-muted)', fontSize: '13px', width: '50px' }}>#</th>
+                      <th style={{ padding: '16px 24px', fontWeight: '600', color: 'var(--text-muted)', fontSize: '13px' }}>User</th>
+                      <th style={{ padding: '16px 24px', fontWeight: '600', color: 'var(--text-muted)', fontSize: '13px' }}>ID</th>
+                      <th style={{ padding: '16px 24px', fontWeight: '600', color: 'var(--text-muted)', fontSize: '13px' }}>Role</th>
+                      <th style={{ padding: '16px 24px', fontWeight: '600', color: 'var(--text-muted)', fontSize: '13px' }}>Status</th>
+                      <th style={{ padding: '16px 24px', fontWeight: '600', color: 'var(--text-muted)', fontSize: '13px', textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentUsers.map((user, index) => (
+                      <tr key={user._id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                          {startIndex + index + 1}
+                        </td>
+                        <td style={{ padding: '16px 24px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ position: 'relative' }}>
+                              <img src={user.avatar || 'https://ui-avatars.com/api/?name=' + user.name} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                              {user.isOnline && (
+                                <div style={{
+                                  position: 'absolute', bottom: '0', right: '0',
+                                  width: '10px', height: '10px', background: '#22c55e',
+                                  borderRadius: '50%', border: '20% solid white', // using border trick for white ring
+                                  boxShadow: '0 0 0 2px white'
+                                }}></div>
+                              )}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {user.name}
+                                {user.isOnline && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }}></div>}
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{user.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)' }}>{user.customId}</td>
+                        <td style={{ padding: '16px 24px' }}>
+                          <span className="badge badge-primary" style={{ fontSize: '11px' }}>{user.role}</span>
+                        </td>
+                        <td style={{ padding: '16px 24px' }}>
+                          <span className={`badge ${user.isSuspended ? 'badge-error' : 'badge-success'}`} style={{ fontSize: '11px' }}>
+                            {user.isSuspended ? 'Suspended' : 'Active'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                          <div className="action-group">
+                            <button className="action-btn view" title="View History" onClick={() => navigate(`/users/view/${user._id}`)}>
+                              <Eye size={16} />
+                            </button>
+                            <button className="action-btn" title={user.isSuspended ? 'Unsuspend' : 'Suspend'} onClick={() => toggleSuspension(user)}>
+                              {user.isSuspended ? <CheckCircle size={16} /> : <UserX size={16} />}
+                            </button>
+                            <button className="action-btn" title="Edit User" onClick={() => handleOpenModal('edit', user)}>
+                              <Edit size={16} />
+                            </button>
+                            <button className="action-btn danger" title="Delete User" onClick={() => handleDelete(user._id)}>
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
-          <div className="table-container">
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ padding: '16px 24px', fontWeight: '600', color: 'var(--text-muted)', fontSize: '13px', width: '50px' }}>#</th>
-                  <th style={{ padding: '16px 24px', fontWeight: '600', color: 'var(--text-muted)', fontSize: '13px' }}>User</th>
-                  <th style={{ padding: '16px 24px', fontWeight: '600', color: 'var(--text-muted)', fontSize: '13px' }}>ID</th>
-                  <th style={{ padding: '16px 24px', fontWeight: '600', color: 'var(--text-muted)', fontSize: '13px' }}>Role</th>
-                  <th style={{ padding: '16px 24px', fontWeight: '600', color: 'var(--text-muted)', fontSize: '13px' }}>Status</th>
-                  <th style={{ padding: '16px 24px', fontWeight: '600', color: 'var(--text-muted)', fontSize: '13px', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentUsers.map((user, index) => (
-                  <tr key={user._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
-                      {startIndex + index + 1}
-                    </td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ position: 'relative' }}>
-                          <img src={user.avatar || 'https://ui-avatars.com/api/?name=' + user.name} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
-                          {user.isOnline && (
-                            <div style={{ 
-                              position: 'absolute', bottom: '0', right: '0', 
-                              width: '10px', height: '10px', background: '#22c55e', 
-                              borderRadius: '50%', border: '20% solid white', // using border trick for white ring
-                              boxShadow: '0 0 0 2px white'
-                            }}></div>
-                          )}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {user.name}
-                            {user.isOnline && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }}></div>}
-                          </div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{user.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)' }}>{user.customId}</td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <span className="badge badge-primary" style={{ fontSize: '11px' }}>{user.role}</span>
-                    </td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <span className={`badge ${user.isSuspended ? 'badge-error' : 'badge-success'}`} style={{ fontSize: '11px' }}>
-                        {user.isSuspended ? 'Suspended' : 'Active'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                      <div className="action-group">
-                        <button className="action-btn view" title="View History" onClick={() => navigate(`/users/view/${user._id}`)}>
-                          <Eye size={16} />
-                        </button>
-                        <button className="action-btn" title={user.isSuspended ? 'Unsuspend' : 'Suspend'} onClick={() => toggleSuspension(user)}>
-                          {user.isSuspended ? <CheckCircle size={16} /> : <UserX size={16} />}
-                        </button>
-                        <button className="action-btn" title="Edit User" onClick={() => handleOpenModal('edit', user)}>
-                          <Edit size={16} />
-                        </button>
-                        <button className="action-btn danger" title="Delete User" onClick={() => handleDelete(user._id)}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+          )}
 
-      {!loading && currentUsers.length > 0 && (
-        <div style={{ marginTop: '24px', marginBottom: '32px' }}>
-          <Pagination 
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            itemsPerPage={itemsPerPage}
-            onItemsPerPageChange={setItemsPerPage}
-            totalItems={totalItems}
-          />
-        </div>
+          {!loading && currentUsers.length > 0 && (
+            <div style={{ marginTop: '24px', marginBottom: '32px' }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                onItemsPerPageChange={setItemsPerPage}
+                totalItems={totalItems}
+              />
+            </div>
+          )}
+        </>
       )}
-      </>
-    )}
 
       <Drawer isOpen={showModal} onClose={() => setShowModal(false)} title={modalType === 'add' ? 'Add New User' : 'Edit User'}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="form-group">
             <label>Full Name</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              placeholder="e.g. John Doe" 
+            <input
+              type="text"
+              className="form-control"
+              placeholder="e.g. John Doe"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -415,10 +415,10 @@ const Users = () => {
 
           <div className="form-group">
             <label>Email Address</label>
-            <input 
-              type="email" 
-              className="form-control" 
-              placeholder="john@example.com" 
+            <input
+              type="email"
+              className="form-control"
+              placeholder="john@example.com"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
@@ -428,10 +428,10 @@ const Users = () => {
 
           <div className="form-group">
             <label>Phone Number</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              placeholder="+91 9876543210" 
+            <input
+              type="text"
+              className="form-control"
+              placeholder="+91 9876543210"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             />
@@ -439,11 +439,11 @@ const Users = () => {
 
           <div className="form-group">
             <label>Role</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              value="User" 
-              readOnly 
+            <input
+              type="text"
+              className="form-control"
+              value="User"
+              readOnly
               style={{ background: 'var(--bg-main)', cursor: 'not-allowed' }}
             />
           </div>
@@ -451,10 +451,10 @@ const Users = () => {
           {modalType === 'add' && (
             <div className="form-group">
               <label>Initial Password</label>
-              <input 
-                type="password" 
-                className="form-control" 
-                placeholder="********" 
+              <input
+                type="password"
+                className="form-control"
+                placeholder="********"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
@@ -465,7 +465,7 @@ const Users = () => {
 
           <div className="form-group">
             <label>Profile Picture</label>
-            <div 
+            <div
               style={{ border: '2px dashed var(--border)', borderRadius: '12px', padding: '24px', textAlign: 'center', background: 'var(--bg-main)', cursor: 'pointer' }}
               onClick={() => document.getElementById('userAvatar').click()}
             >
