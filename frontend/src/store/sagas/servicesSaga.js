@@ -7,10 +7,11 @@ import {
   deleteServiceRequest, deleteServiceSuccess, deleteServiceFailure
 } from '../slices/servicesSlice';
 
-function* fetchServicesSaga() {
+function* fetchServicesSaga(action) {
   try {
-    const response = yield call(api.get, '/services');
-    yield put(fetchServicesSuccess(response.data.data));
+    const { page = 1, limit = 10, search = '', status = 'all' } = action.payload || {};
+    const response = yield call(api.get, `/services?page=${page}&limit=${limit}&search=${search}&status=${status}`);
+    yield put(fetchServicesSuccess(response.data));
   } catch (error) {
     yield put(fetchServicesFailure(error.response?.data?.message || 'Failed to fetch services'));
   }

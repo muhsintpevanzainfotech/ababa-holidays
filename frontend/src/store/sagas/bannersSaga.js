@@ -8,9 +8,11 @@ import {
   toggleBannerStatusRequest, toggleBannerStatusSuccess, toggleBannerStatusFailure
 } from '../slices/bannersSlice';
 
-function* fetchBannersSaga() {
+function* fetchBannersSaga(action) {
   try {
-    const response = yield call(api.get, '/banners/admin');
+    const role = action.payload || 'Admin';
+    const url = role === 'Vendor' ? '/banners/vendor' : '/banners/admin';
+    const response = yield call(api.get, url);
     yield put(fetchBannersSuccess(response.data.data));
   } catch (error) {
     yield put(fetchBannersFailure(error.response?.data?.message || 'Failed to fetch banners'));

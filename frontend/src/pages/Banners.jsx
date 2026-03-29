@@ -34,7 +34,7 @@ import {
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
-const Banners = () => {
+const Banners = ({ userRole = 'Admin' }) => {
   const dispatch = useDispatch();
   const { banners, loading, error } = useSelector((state) => state.banners);
   const { showToast } = useToast();
@@ -56,8 +56,8 @@ const Banners = () => {
   });
 
   useEffect(() => {
-    dispatch(fetchBannersRequest());
-  }, [dispatch]);
+    dispatch(fetchBannersRequest(userRole));
+  }, [dispatch, userRole]);
 
   const handleOpenModal = (type, banner = null) => {
     setModalType(type);
@@ -135,11 +135,11 @@ const Banners = () => {
     <div className="fade-in">
       <div className="page-header">
         <div>
-          <h1>Offer Banners</h1>
-          <p>Manage promotional banners and platform highlights</p>
+          <h1>{userRole === 'Vendor' ? 'Agency Banners' : 'Web Banners'}</h1>
+          <p>{userRole === 'Vendor' ? 'Manage your individual business promotions and highlights' : 'Manage official platform banners and highlights'}</p>
         </div>
         <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
-          <Plus size={20} /> Add New Banner
+          <Plus size={20} /> Add {userRole === 'Vendor' ? 'Special Banner' : 'Official Banner'}
         </button>
       </div>
 

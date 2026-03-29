@@ -25,6 +25,14 @@ exports.createTestimonial = async (req, res, next) => {
     }
 
     const payload = { ...req.body, vendor: vendorId };
+    payload.createdBy = req.user.id;
+    
+    if (req.user.role === 'Admin' || req.user.role === 'Sub-Admin') {
+      payload.userRole = 'Admin';
+    } else {
+      payload.userRole = 'Vendor';
+    }
+
     if (req.files) {
       if (req.files.image) payload.image = req.files.image[0].path;
       if (req.files.video) payload.video = req.files.video[0].path;
@@ -41,8 +49,13 @@ exports.createTestimonial = async (req, res, next) => {
 exports.getTestimonials = async (req, res, next) => {
   try {
     const filter = {};
+    if (req.query.userRole) {
+      filter.userRole = req.query.userRole;
+    }
+
     if (req.query.vendor === 'global') {
       filter.vendor = null;
+      filter.userRole = 'Admin';
     } else if (req.query.vendor) {
       filter.vendor = req.query.vendor;
     } else if (req.user && req.user.role === 'Vendor') {
@@ -76,7 +89,7 @@ exports.updateTestimonial = async (req, res, next) => {
     }
 
     testimonial = await Testimonial.findByIdAndUpdate(req.params.id, payload, {
-      new: true, runValidators: true
+      returnDocument: 'after', runValidators: true
     });
     
     res.status(200).json({ success: true, data: testimonial });

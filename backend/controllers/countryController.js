@@ -23,8 +23,38 @@ const deleteFile = (filePath) => {
 // @access  Public
 exports.getCountries = async (req, res, next) => {
   try {
-    const countries = await Country.find().sort({ name: 1 });
-    res.status(200).json({ success: true, count: countries.length, data: countries });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+    if (req.query.status && req.query.status !== 'all') {
+      filter.isActive = req.query.status === 'active';
+    }
+    if (req.query.search) {
+      filter.$or = [
+        { name: { $regex: req.query.search, $options: 'i' } },
+        { description: { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
+
+    const total = await Country.countDocuments(filter);
+    const countries = await Country.find(filter)
+      .sort({ name: 1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({ 
+      success: true, 
+      count: countries.length, 
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      },
+      data: countries 
+    });
   } catch (error) {
     next(error);
   }

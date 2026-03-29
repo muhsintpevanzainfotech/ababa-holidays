@@ -93,7 +93,7 @@ const updateBookingStatus = async (req, res, next) => {
     }
 
     // Ensure only the vendor who owns this booking or an Admin can update
-    if (booking.vendor.toString() !== req.user.id && req.user.role !== 'Admin') {
+    if (booking.vendor.toString() !== req.user.id && req.user.role !== 'Admin' && req.user.role !== 'Sub-Admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to update this booking' });
     }
 

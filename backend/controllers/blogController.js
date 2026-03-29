@@ -17,6 +17,12 @@ exports.createBlog = async (req, res, next) => {
       } catch (e) {}
     }
 
+    if (req.user.role === 'Admin' || req.user.role === 'Sub-Admin') {
+      payload.userRole = 'Admin';
+    } else if (req.user.role === 'Vendor' || req.user.role === 'Vendor-Staff') {
+      payload.userRole = 'Vendor';
+    }
+
     const blog = await Blog.create(payload);
     res.status(201).json({ success: true, data: blog });
   } catch (error) {
@@ -26,7 +32,28 @@ exports.createBlog = async (req, res, next) => {
 
 exports.getBlogs = async (req, res, next) => {
   try {
-    const blogs = await Blog.find().populate('author', 'name email').sort('-createdAt');
+    const blogs = await Blog.find({ status: 'Published' }).populate('author', 'name email').sort('-createdAt');
+    res.status(200).json({ success: true, count: blogs.length, data: blogs });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getAdminBlogs = async (req, res, next) => {
+  try {
+    const blogs = await Blog.find({ userRole: 'Admin', status: 'Published' }).populate('author', 'name email').sort('-createdAt');
+    res.status(200).json({ success: true, count: blogs.length, data: blogs });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getVendorBlogs = async (req, res, next) => {
+  try {
+    const query = { userRole: 'Vendor', status: 'Published' };
+    if (req.params.id) query.createdBy = req.params.id; // Specific Vendor
+
+    const blogs = await Blog.find(query).populate('author', 'name email').sort('-createdAt');
     res.status(200).json({ success: true, count: blogs.length, data: blogs });
   } catch (error) {
     next(error);
@@ -69,7 +96,7 @@ exports.updateBlog = async (req, res, next) => {
     }
 
     blog = await Blog.findByIdAndUpdate(req.params.id, payload, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true
     });
 

@@ -10,7 +10,7 @@ const bannersSlice = createSlice({
   name: 'banners',
   initialState,
   reducers: {
-    fetchBannersRequest: (state) => {
+    fetchBannersRequest: (state, action) => {
       state.loading = true;
       state.error = null;
     },

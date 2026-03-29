@@ -80,11 +80,29 @@ const userSchema = new mongoose.Schema({
   isOnline: {
     type: Boolean,
     default: false
-  }
+  },
+  totalTimeSpent: {
+    type: Number, // In minutes
+    default: 0
+  },
+  activityLog: [{
+    date: { type: String }, // Format YYYY-MM-DD
+    count: { type: Number, default: 0 }
+  }],
+  leaves: [{
+    date: { type: String }, // Format YYYY-MM-DD
+    reason: { type: String }
+  }]
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
+});
+
+// Virtual for real-time online status
+userSchema.virtual('isTrulyOnline').get(function() {
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  return this.isOnline && this.lastActive > fiveMinutesAgo;
 });
 
 // Virtual for Vendor Profile

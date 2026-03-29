@@ -99,7 +99,7 @@ exports.updateBanner = asyncHandler(async (req, res, next) => {
   }
 
   // Authorize
-  if (banner.createdBy.toString() !== req.user.id && req.user.role !== 'Admin') {
+  if (banner.createdBy.toString() !== req.user.id && req.user.role !== 'Admin' && req.user.role !== 'Sub-Admin') {
     return next(new ErrorResponse('Not authorized to update this banner', 403));
   }
 
@@ -112,7 +112,7 @@ exports.updateBanner = asyncHandler(async (req, res, next) => {
   }
 
   banner = await OfferBanner.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true
   });
 
@@ -130,7 +130,7 @@ exports.deleteBanner = asyncHandler(async (req, res, next) => {
   }
 
   // Authorize
-  if (banner.createdBy.toString() !== req.user.id && req.user.role !== 'Admin') {
+  if (banner.createdBy.toString() !== req.user.id && req.user.role !== 'Admin' && req.user.role !== 'Sub-Admin') {
     return next(new ErrorResponse('Not authorized to delete this banner', 403));
   }
 
@@ -155,7 +155,7 @@ exports.toggleBannerStatus = asyncHandler(async (req, res, next) => {
   }
 
   // Authorize
-  if (banner.createdBy.toString() !== req.user.id && req.user.role !== 'Admin') {
+  if (banner.createdBy.toString() !== req.user.id && req.user.role !== 'Admin' && req.user.role !== 'Sub-Admin') {
     return next(new ErrorResponse('Not authorized to update this banner', 403));
   }
 

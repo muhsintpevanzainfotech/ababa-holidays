@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 
-const FormSelect = ({ label, options, value, onChange, placeholder = 'Select an option', required = false }) => {
+const FormSelect = ({ label, options, value, onChange, placeholder = 'Select an option', required = false, disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   
@@ -18,18 +18,18 @@ const FormSelect = ({ label, options, value, onChange, placeholder = 'Select an 
   }, []);
 
   return (
-    <div className="form-group" style={{ position: 'relative' }} ref={dropdownRef}>
+    <div className="form-group" style={{ position: 'relative', opacity: disabled ? 0.7 : 1 }} ref={dropdownRef}>
       {label && <label>{label}{required && <span style={{ color: '#ef4444', marginLeft: '4px' }}>*</span>}</label>}
       <div 
         className={`form-control ${isOpen ? 'is-open' : ''}`} 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
         style={{ 
-          cursor: 'pointer', 
+          cursor: disabled ? 'default' : 'pointer', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
           borderColor: isOpen ? 'var(--primary)' : 'var(--border)',
-          background: 'white',
+          background: disabled ? 'var(--bg-main)' : 'white',
           height: '42px',
           padding: '0 16px'
         }}
@@ -37,14 +37,16 @@ const FormSelect = ({ label, options, value, onChange, placeholder = 'Select an 
         <span style={{ color: selectedOption ? 'var(--text-main)' : 'var(--text-muted)' }}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronDown 
-          size={16} 
-          style={{ 
-            color: 'var(--text-muted)', 
-            transition: '0.3s', 
-            transform: isOpen ? 'rotate(180deg)' : 'none' 
-          }} 
-        />
+        {!disabled && (
+          <ChevronDown 
+            size={16} 
+            style={{ 
+              color: 'var(--text-muted)', 
+              transition: '0.3s', 
+              transform: isOpen ? 'rotate(180deg)' : 'none' 
+            }} 
+          />
+        )}
       </div>
 
       {isOpen && (

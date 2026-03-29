@@ -7,10 +7,11 @@ import {
   deleteCategoryRequest, deleteCategorySuccess, deleteCategoryFailure
 } from '../slices/categoriesSlice';
 
-function* fetchCategoriesSaga() {
+function* fetchCategoriesSaga(action) {
   try {
-    const response = yield call(api.get, '/categories');
-    yield put(fetchCategoriesSuccess(response.data.data));
+    const { page = 1, limit = 10, search = '', status = 'all' } = action.payload || {};
+    const response = yield call(api.get, `/categories?page=${page}&limit=${limit}&search=${search}&status=${status}`);
+    yield put(fetchCategoriesSuccess(response.data));
   } catch (error) {
     yield put(fetchCategoriesFailure(error.response?.data?.message || 'Failed to fetch categories'));
   }

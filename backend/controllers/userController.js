@@ -230,7 +230,8 @@ const createUser = asyncHandler(async (req, res, next) => {
     phone,
     avatar,
     isVerified: true,
-    isSuspended: req.body.isSuspended === 'true' || req.body.isSuspended === true
+    isSuspended: req.body.isSuspended === 'true' || req.body.isSuspended === true,
+    permissions: req.body.permissions ? (typeof req.body.permissions === 'string' ? JSON.parse(req.body.permissions) : req.body.permissions) : []
   });
 
   if (role === 'Vendor' && req.body.profile) {
@@ -299,6 +300,10 @@ const updateUser = asyncHandler(async (req, res, next) => {
 
   if (req.body.password) {
     user.password = req.body.password;
+  }
+
+  if (req.body.permissions) {
+    user.permissions = typeof req.body.permissions === 'string' ? JSON.parse(req.body.permissions) : req.body.permissions;
   }
 
   const updatedUser = await user.save();

@@ -19,7 +19,8 @@ import {
   List as ListIcon,
   X,
   CheckCircle,
-  UserX
+  UserX,
+  Activity
 } from 'lucide-react';
 import FilterSelect from '../components/FilterSelect';
 import { useToast } from '../context/ToastContext';
@@ -44,6 +45,8 @@ const Staff = () => {
   const [modalType, setModalType] = useState('add'); // 'add' or 'edit'
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('all');
+  const [heatmapYear, setHeatmapYear] = useState(new Date().getFullYear());
   const [currentUser, setCurrentUser] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [adminCount, setAdminCount] = useState(0);
@@ -70,14 +73,19 @@ const Staff = () => {
   });
 
   const availablePermissions = [
-    { id: 'manage_services', label: 'Services & Categories' },
-    { id: 'manage_destinations', label: 'Destinations & Locations' },
-    { id: 'manage_packages', label: 'Travel Packages' },
-    { id: 'manage_bookings', label: 'Bookings & Reservations' },
-    { id: 'manage_payments', label: 'Payments & Revenue' },
-    { id: 'manage_vendors', label: 'Vendors & Subscriptions' },
-    { id: 'manage_blogs', label: 'Blogs & News' },
-    { id: 'manage_testimonials', label: 'Testimonials' },
+    { id: 'manage_dashboard', label: 'Platform Dashboard & Insights' },
+    { id: 'manage_vendors', label: 'Vendor & Agency Control' },
+    { id: 'manage_users', label: 'Traveler & User Accounts' },
+    { id: 'manage_subscriptions', label: 'Subscription Plans & Revenue' },
+    { id: 'manage_services', label: 'Global Services & Categories' },
+    { id: 'manage_destinations', label: 'Locations & Geo Management' },
+    { id: 'manage_packages', label: 'Travel Inventory & Packages' },
+    { id: 'manage_bookings', label: 'Reservation & Booking Control' },
+    { id: 'manage_payments', label: 'Financial Reports & Payments' },
+    { id: 'manage_complaints', label: 'Dispute & Incident Resolution' },
+    { id: 'manage_banners', label: 'Platform Studio: Web Banners' },
+    { id: 'manage_blogs', label: 'Platform Studio: Web Blogs' },
+    { id: 'manage_testimonials', label: 'Platform Studio: Global Reviews' },
   ];
 
   useEffect(() => {
@@ -195,7 +203,8 @@ const Staff = () => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    return matchesSearch && matchesRole;
+    const matchesYear = yearFilter === 'all' || new Date(user.createdAt).getFullYear().toString() === yearFilter;
+    return matchesSearch && matchesRole && matchesYear;
   }).reverse();
 
   // Pagination calculations
@@ -245,6 +254,20 @@ const Staff = () => {
               />
             </div>
 
+            <div className="filter-group">
+              <FilterSelect
+                options={[
+                  { value: 'all', label: 'All Years' },
+                  ...[...new Set(users.map(u => new Date(u.createdAt).getFullYear()))]
+                    .sort((a, b) => b - a)
+                    .map(y => ({ value: y.toString(), label: y.toString() }))
+                ]}
+                value={yearFilter}
+                onChange={setYearFilter}
+                width="140px"
+              />
+            </div>
+
             <div className="results-count">
               <span className="badge badge-primary">{totalItems}</span>
               <span style={{ marginLeft: '1px', fontWeight: '600', fontSize: '13px' }}>Matches</span>
@@ -278,9 +301,9 @@ const Staff = () => {
       ) : (
         <>
           {view === 'grid' ? (
-            <div className="cards-grid mobile-slider" style={{ marginBottom: '24px' }}>
+            <div className="cards-grid mobile-slider allow-overflow" style={{ marginBottom: '24px' }}>
               {currentUsers.map((user) => (
-                <div key={user._id} className="card" style={{ padding: '24px', position: 'relative' }}>
+                <div key={user._id} className="card allow-overflow" style={{ padding: '24px', position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
                     <div style={{ position: 'relative' }}>
                       <img
@@ -340,7 +363,7 @@ const Staff = () => {
               ))}
             </div>
           ) : (
-            <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+            <div className="card allow-overflow" style={{ padding: '0' }}>
               <div className="table-container">
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
@@ -433,141 +456,341 @@ const Staff = () => {
         onClose={() => setShowModal(false)}
         title={modalType === 'add' ? 'Add administrator' : modalType === 'edit' ? 'Edit administrator' : 'Administrator Details'}
       >
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-            <div
-              style={{ width: '100px', height: '100px', borderRadius: '50%', background: '#f8fafc', margin: '0 auto 16px', position: 'relative', border: '2px dashed var(--border)', cursor: modalType === 'view' ? 'default' : 'pointer', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              onClick={() => modalType !== 'view' && document.getElementById('staffAvatar').click()}
-            >
-              {imagePreview ? (
-                <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-                  <Upload size={24} style={{ marginBottom: '4px' }} />
-                  <p style={{ fontSize: '11px' }}>Photo</p>
+          {modalType === 'view' && currentUser && (
+            <div className="fade-in">
+              <div style={{ textAlign: 'center', marginBottom: '32px', background: 'var(--bg-main)', padding: '32px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                 <div style={{ position: 'relative', width: '100px', height: '100px', margin: '0 auto 16px' }}>
+                    <img src={currentUser.avatar ? getImageUrl(currentUser.avatar) : 'https://ui-avatars.com/api/?name=' + currentUser.name} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '3px solid white', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+                    <div style={{ position: 'absolute', bottom: '5px', right: '5px', width: '16px', height: '16px', background: currentUser.isTrulyOnline ? '#22c55e' : '#94a3b8', borderRadius: '50%', border: '2px solid white' }}></div>
+                 </div>
+                 <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '4px' }}>{currentUser.name}</h2>
+                 <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '8px' }}>{currentUser.role} &nbsp;•&nbsp; {currentUser.email}</p>
+                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Joined {new Date(currentUser.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                 </p>
+                 <div style={{ display: 'flex', justifyContent: 'center', gap: '24px' }}>
+                    <div style={{ textAlign: 'center' }}>
+                       <div style={{ fontWeight: '800', fontSize: '18px', color: 'var(--primary)' }}>{Math.floor(currentUser.totalTimeSpent || 0)}m</div>
+                       <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Time Spent</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                       <div style={{ fontWeight: '800', fontSize: '18px', color: '#16a34a' }}>{currentUser.activityLog?.length || 0}d</div>
+                       <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Daily Logs</div>
+                    </div>
+                 </div>
+              </div>
+
+              <div style={{ marginBottom: '32px' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '1px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Shield size={16} /> Module Permissions
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+                   {currentUser.permissions?.length > 0 ? currentUser.permissions.map(p => {
+                      const label = availablePermissions.find(ap => ap.id === p)?.label || p;
+                      return (
+                        <div key={p} style={{ padding: '10px 16px', borderRadius: '10px', background: 'rgba(79, 70, 229, 0.05)', color: 'var(--primary)', border: '1px solid rgba(79, 70, 229, 0.1)', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <CheckCircle size={14} /> {label}
+                        </div>
+                      );
+                   }) : (
+                      <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No specific permissions assigned.</p>
+                   )}
                 </div>
-              )}
-              <input id="staffAvatar" type="file" style={{ display: 'none' }} accept="image/*" onChange={handleFileChange} />
-            </div>
-            <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--primary)', cursor: 'pointer' }} onClick={() => document.getElementById('staffAvatar').click()}>
-              {imagePreview ? 'Change Photo' : 'Upload Profile Photo'}
-            </p>
-          </div>
+              </div>              <div style={{ marginBottom: '32px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h4 style={{ fontSize: '13px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '1px', margin: 0 }}>
+                    Platform Engagement
+                  </h4>
+                  <select 
+                    style={{ padding: '4px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-main)', fontSize: '12px', fontWeight: '700', outline: 'none' }}
+                    value={heatmapYear}
+                    onChange={(e) => setHeatmapYear(parseInt(e.target.value))}
+                  >
+                     {[...new Set([new Date().getFullYear(), ...currentUser.activityLog?.map(a => parseInt(a.date.split('-')[0])) || []])].sort((a,b) => b-a).map(yr => (
+                        <option key={yr} value={yr}>{yr} Logs</option>
+                     ))}
+                  </select>
+                </div>
+                
+                {(!currentUser.activityLog || currentUser.activityLog.length === 0) ? (
+                   <div style={{ padding: '40px', textAlign: 'center', background: 'var(--bg-card)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+                      <Activity size={32} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
+                      <p style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: '600' }}>This administrator has not recorded any dashboard activity yet.</p>
+                   </div>
+                ) : (
+                   <>
+                    <div style={{ 
+                      background: 'var(--bg-card)', 
+                      padding: '24px', 
+                      borderRadius: '16px', 
+                      border: '1px solid var(--border)',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                      overflowX: 'auto'
+                    }}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {/* Day labels column */}
+                        <div style={{ 
+                          display: 'grid', 
+                          gridTemplateRows: 'repeat(7, 10px)', 
+                          gap: '3px', 
+                          marginTop: '25px',
+                          fontSize: '9px',
+                          color: 'var(--text-muted)',
+                          fontWeight: '700'
+                        }}>
+                           <div style={{ visibility: 'hidden' }}>Sun</div>
+                           <div>Mon</div>
+                           <div style={{ visibility: 'hidden' }}>Tue</div>
+                           <div>Wed</div>
+                           <div style={{ visibility: 'hidden' }}>Thu</div>
+                           <div>Fri</div>
+                           <div style={{ visibility: 'hidden' }}>Sat</div>
+                        </div>
 
-          <div className="form-group">
-            <label>Full Name</label>
-            <input
-              type="text" className="form-control" required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
-          </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ position: 'relative', height: '18px', marginBottom: '8px' }}>
+                             {(() => {
+                               const months = [];
+                               for (let m = 0; m < 12; m++) {
+                                 const firstOfMonth = new Date(heatmapYear, m, 1);
+                                 const startOfYear = new Date(heatmapYear, 0, 1);
+                                 const dayOfYear = Math.floor((firstOfMonth - startOfYear) / (24 * 60 * 60 * 1000));
+                                 const weekIndex = Math.floor(dayOfYear / 7);
+                                 months.push({ name: firstOfMonth.toLocaleString('default', { month: 'short' }), week: weekIndex });
+                               }
+                               return months.map((m, idx) => (
+                                 <span key={idx} style={{ 
+                                   position: 'absolute', 
+                                   left: `${m.week * 13}px`,
+                                   fontSize: '11px', 
+                                   color: 'var(--text-muted)', 
+                                   fontWeight: '600'
+                                 }}>
+                                   {m.name}
+                                 </span>
+                               ));
+                             })()}
+                          </div>
 
-          <div className="form-group">
-            <label>Email Address</label>
-            <input
-              type="email" className="form-control" required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              autoComplete="username"
-            />
-          </div>
+                           <div style={{ 
+                             display: 'grid', 
+                             gridTemplateRows: 'repeat(7, 10px)', 
+                             gridAutoFlow: 'column', 
+                             gridAutoColumns: '10px', 
+                             gap: '3px',
+                             width: 'max-content'
+                           }}>
+                             {[...Array(371)].map((_, i) => { 
+                                const d = new Date(heatmapYear, 0, 1);
+                                d.setDate(d.getDate() + i);
+                                
+                                if (d.getFullYear() > heatmapYear) return null;
 
-          <div className="form-group">
-            <label>Role</label>
-            <select
-              className="form-control"
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              disabled={modalType === 'add' || modalType === 'view'}
-            >
-              {modalType === 'add' ? (
-                <option value="Sub-Admin">Sub-Admin</option>
-              ) : (
-                <>
-                  <option value="Admin">Admin</option>
-                  <option value="Sub-Admin">Sub-Admin</option>
-                </>
-              )}
-            </select>
-            {modalType === 'add' && (
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                New administrative accounts must be Sub-Admins.
-              </p>
-            )}
-          </div>
+                                const dateStr = d.toISOString().split('T')[0];
+                                const activity = (currentUser.activityLog || []).find(a => a.date === dateStr);
+                                const leave = (currentUser.leaves || []).find(l => l.date === dateStr);
+                                const isSunday = d.getDay() === 0;
+                                const isToday = d.toDateString() === new Date().toDateString();
+                                const isFuture = d > new Date();
 
-          <div className="form-group">
-            <label>Phone Number</label>
-            <input
-              type="text" className="form-control"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            />
-          </div>
+                                const level = activity ? Math.min(Math.ceil(activity.count / 5), 4) : 0;
+                                const activityColors = ['#f1f5f9', '#dcfce7', '#86efac', '#22c55e', '#15803d'];
+                                
+                                // Color priority logic
+                                let bgColor = activityColors[level];
+                                let title = isFuture ? '' : `${dateStr}: ${activity?.count || 0} actions`;
 
-          <div className="form-group">
-            <label>Password {modalType === 'edit' && '(Leave blank to keep current)'}</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showPassword ? "text" : "password"}
-                className="form-control"
-                required={modalType === 'add'}
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
+                                if (leave) {
+                                  bgColor = '#fecaca'; // Red for leave
+                                  title = `${dateStr}: On Leave (${leave.reason || 'No reason'})`;
+                                } else if (activity) {
+                                  bgColor = activityColors[level];
+                                } else if (isSunday) {
+                                  bgColor = '#fef08a'; // Yellow for Sunday
+                                  title = `${dateStr}: Sunday (Off Day)`;
+                                }
+                                
+                                return (
+                                  <div 
+                                    key={i} 
+                                    title={title}
+                                    className={isToday ? 'pulse-today' : ''}
+                                    style={{ 
+                                      width: '10px', 
+                                      height: '10px', 
+                                      borderRadius: '2px', 
+                                      background: isFuture ? 'transparent' : bgColor, 
+                                      cursor: 'help',
+                                      opacity: isFuture ? 0 : 1,
+                                      border: isToday ? '1px solid var(--primary)' : 'none',
+                                      boxSizing: 'border-box'
+                                    }}
+                                  />
+                                );
+                             })}
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', marginTop: '12px', fontSize: '10px', color: 'var(--text-muted)' }}>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <div style={{ width: '10px', height: '10px', background: '#fef08a', borderRadius: '2px' }} /> Sunday
+                       </div>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <div style={{ width: '10px', height: '10px', background: '#fecaca', borderRadius: '2px' }} /> Leave
+                       </div>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '12px' }}>
+                          Less 
+                          <div style={{ width: '10px', height: '10px', background: '#f1f5f9', borderRadius: '2px' }} />
+                          <div style={{ width: '10px', height: '10px', background: '#15803d', borderRadius: '2px' }} /> 
+                          More
+                       </div>
+                       <span style={{ marginLeft: '12px', fontWeight: '700', color: 'var(--primary)' }}>{heatmapYear} Performance</span>
+                    </div>
+                   </>
+                )}
+              </div>
 
-          <div className="form-group">
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: modalType === 'view' ? 'default' : 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={formData.isSuspended}
-                onChange={(e) => setFormData({ ...formData, isSuspended: e.target.checked })}
-                disabled={modalType === 'view'}
-              />
-              <span>Account Suspended</span>
-            </label>
-          </div>
-
-          {authUser?.role === 'Admin' && (modalType === 'edit' || modalType === 'view') && formData.role !== 'Admin' && (
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', marginTop: '24px', marginBottom: '24px' }}>
-              <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Shield size={18} color="var(--primary)" />
-                Module Permissions {modalType === 'view' && '(Read Only)'}
-              </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-                {availablePermissions.map(perm => (
-                  <label key={perm.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-main)', borderRadius: '10px', cursor: modalType === 'view' ? 'default' : 'pointer' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '600' }}>{perm.label}</span>
-                    <input
-                      type="checkbox"
-                      style={{ width: '18px', height: '18px' }}
-                      checked={formData.permissions.includes(perm.id)}
-                      onChange={() => modalType !== 'view' && togglePermission(perm.id)}
-                      disabled={modalType === 'view'}
-                    />
-                  </label>
-                ))}
+              <div style={{ display: 'flex', gap: '12px', marginTop: '40px' }}>
+                <button className="btn" style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)' }} onClick={() => setShowModal(false)}>Close View</button>
+                <button className="btn btn-primary" style={{ flex: 2 }} onClick={() => setModalType('edit')}>Edit Administrator</button>
               </div>
             </div>
           )}
 
           {modalType !== 'view' && (
-            <button type="submit" className="btn btn-primary" style={{ height: '48px', fontSize: '16px', fontWeight: '600', marginTop: '16px' }}>
-              {modalType === 'add' ? 'Create Administrator' : 'Update Administrator'}
-            </button>
+            <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: '32px', textAlign: 'center' }}>
+                <div
+                  style={{ width: '100px', height: '100px', borderRadius: '50%', background: '#f8fafc', margin: '0 auto 16px', position: 'relative', border: '2px dashed var(--border)', cursor: 'pointer', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={() => document.getElementById('staffAvatar').click()}
+                >
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                      <Upload size={24} style={{ marginBottom: '4px' }} />
+                      <p style={{ fontSize: '11px' }}>Photo</p>
+                    </div>
+                  )}
+                  <input id="staffAvatar" type="file" style={{ display: 'none' }} accept="image/*" onChange={handleFileChange} />
+                </div>
+                <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--primary)', cursor: 'pointer' }} onClick={() => document.getElementById('staffAvatar').click()}>
+                  {imagePreview ? 'Change Photo' : 'Upload Profile Photo'}
+                </p>
+              </div>
+
+              <div className="form-group">
+                <label>Full Name</label>
+                <input
+                  type="text" className="form-control" required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Email Address</label>
+                <input
+                  type="email" className="form-control" required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  autoComplete="username"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Role</label>
+                <select
+                  className="form-control"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  disabled={modalType === 'add'}
+                >
+                  {modalType === 'add' ? (
+                    <option value="Sub-Admin">Sub-Admin</option>
+                  ) : (
+                    <>
+                      <option value="Admin">Admin</option>
+                      <option value="Sub-Admin">Sub-Admin</option>
+                    </>
+                  )}
+                </select>
+                {modalType === 'add' && (
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    New administrative accounts must be Sub-Admins.
+                  </p>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label>Phone Number</label>
+                <input
+                  type="text" className="form-control"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Password {modalType === 'edit' && '(Leave blank to keep current)'}</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="form-control"
+                    required={modalType === 'add'}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.isSuspended}
+                    onChange={(e) => setFormData({ ...formData, isSuspended: e.target.checked })}
+                  />
+                  <span>Account Suspended</span>
+                </label>
+              </div>
+
+              {authUser?.role === 'Admin' && modalType === 'edit' && formData.role !== 'Admin' && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', marginTop: '24px', marginBottom: '24px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Shield size={18} color="var(--primary)" />
+                    Module Permissions
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+                    {availablePermissions.map(perm => (
+                      <label key={perm.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-main)', borderRadius: '10px', cursor: 'pointer' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '600' }}>{perm.label}</span>
+                        <input
+                          type="checkbox"
+                          style={{ width: '18px', height: '18px' }}
+                          checked={formData.permissions.includes(perm.id)}
+                          onChange={() => togglePermission(perm.id)}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button type="submit" className="btn btn-primary" style={{ height: '48px', fontSize: '16px', fontWeight: '600', marginTop: '16px' }}>
+                {modalType === 'add' ? 'Create Administrator' : 'Update Administrator'}
+              </button>
+            </form>
           )}
-        </form>
       </Drawer>
     </div>
   );

@@ -15,9 +15,10 @@ import {
   deleteTestimonialFailure,
 } from '../slices/testimonialsSlice';
 
-function* fetchTestimonialsSaga() {
+function* fetchTestimonialsSaga(action) {
   try {
-    const response = yield call(api.get, '/testimonials');
+    const role = action.payload || 'Admin';
+    const response = yield call(api.get, `/testimonials?userRole=${role}`);
     yield put(fetchTestimonialsSuccess(response.data.data));
   } catch (error) {
     yield put(fetchTestimonialsFailure(error.response?.data?.message || error.message));

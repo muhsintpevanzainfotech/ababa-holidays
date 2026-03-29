@@ -10,7 +10,7 @@ const blogsSlice = createSlice({
   name: 'blogs',
   initialState,
   reducers: {
-    fetchBlogsRequest: (state) => {
+    fetchBlogsRequest: (state, action) => {
       state.loading = true;
       state.error = null;
     },

@@ -16,10 +16,10 @@ import {
 } from '../slices/locationsSlice';
 
 // Countries Sagas
-function* fetchCountriesSaga() {
+function* fetchCountriesSaga(action) {
   try {
-    const response = yield call(api.get, '/countries');
-    yield put(fetchCountriesSuccess(response.data.data));
+    const response = yield call(api.get, '/countries', { params: action.payload });
+    yield put(fetchCountriesSuccess(response.data));
   } catch (error) {
     yield put(fetchCountriesFailure(error.response?.data?.message || 'Failed to fetch countries'));
   }
@@ -54,10 +54,10 @@ function* deleteCountrySaga(action) {
 }
 
 // States Sagas
-function* fetchStatesSaga() {
+function* fetchStatesSaga(action) {
   try {
-    const response = yield call(api.get, '/states');
-    yield put(fetchStatesSuccess(response.data.data));
+    const response = yield call(api.get, '/states', { params: action.payload });
+    yield put(fetchStatesSuccess(response.data));
   } catch (error) {
     yield put(fetchStatesFailure(error.response?.data?.message || 'Failed to fetch states'));
   }
@@ -92,10 +92,10 @@ function* deleteStateSaga(action) {
 }
 
 // Destinations Sagas
-function* fetchDestinationsSaga() {
+function* fetchDestinationsSaga(action) {
   try {
-    const response = yield call(api.get, '/destinations');
-    yield put(fetchDestinationsSuccess(response.data.data));
+    const response = yield call(api.get, '/destinations', { params: action.payload });
+    yield put(fetchDestinationsSuccess(response.data));
   } catch (error) {
     yield put(fetchDestinationsFailure(error.response?.data?.message || 'Failed to fetch destinations'));
   }

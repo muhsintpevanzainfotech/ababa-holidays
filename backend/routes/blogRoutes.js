@@ -4,7 +4,9 @@ const {
   getBlogs,
   getBlog,
   updateBlog,
-  deleteBlog
+  deleteBlog,
+  getAdminBlogs,
+  getVendorBlogs
 } = require('../controllers/blogController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const { createUpload } = require('../middleware/uploadMiddleware');
@@ -14,6 +16,8 @@ const router = express.Router();
 
 // Public routes
 router.get('/', getBlogs);
+router.get('/admin', getAdminBlogs);
+router.get('/vendor', getVendorBlogs);
 router.get('/:id', getBlog);
 
 // Protected routes (Admin/Sub-Admin/Vendor)

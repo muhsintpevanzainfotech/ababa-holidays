@@ -20,9 +20,14 @@ const createSubscription = async (req, res, next) => {
     if (!payload.startDate) payload.startDate = new Date();
     
     if (!payload.endDate) {
-      const duration = payload.durationInDays || 365; // Default to 1 year for templates
+      const duration = payload.durationInDays || 365;
       const endDate = new Date(payload.startDate);
-      endDate.setDate(endDate.getDate() + duration);
+      if (duration === -1) {
+        // Set to 100 years from now for unlimited
+        endDate.setFullYear(endDate.getFullYear() + 100);
+      } else {
+        endDate.setDate(endDate.getDate() + duration);
+      }
       payload.endDate = endDate;
     }
 

@@ -21,8 +21,42 @@ const deleteFile = (filePath) => {
 // @access  Public
 exports.getStates = async (req, res, next) => {
   try {
-    const states = await State.find().populate('country', 'name').sort({ name: 1 });
-    res.status(200).json({ success: true, count: states.length, data: states });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+    if (req.query.status && req.query.status !== 'all') {
+      filter.isActive = req.query.status === 'active';
+    }
+    if (req.query.country && req.query.country !== 'all') {
+      filter.country = req.query.country;
+    }
+    if (req.query.search) {
+      filter.$or = [
+        { name: { $regex: req.query.search, $options: 'i' } },
+        { description: { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
+
+    const total = await State.countDocuments(filter);
+    const states = await State.find(filter)
+      .populate('country', 'name')
+      .sort({ name: 1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({ 
+      success: true, 
+      count: states.length, 
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      },
+      data: states 
+    });
   } catch (error) {
     next(error);
   }
@@ -61,7 +95,8 @@ exports.createState = async (req, res, next) => {
     if (req.file) {
       req.body.image = `uploads/${req.file.filename}`;
     }
-    const state = await State.create(req.body);
+    let state = await State.create(req.body);
+    state = await state.populate('country', 'name');
     res.status(201).json({ success: true, data: state });
   } catch (error) {
     if (req.file) deleteFile(`uploads/${req.file.filename}`);
@@ -88,7 +123,7 @@ exports.updateState = async (req, res, next) => {
     state = await State.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
-    });
+    }).populate('country', 'name');
 
     res.status(200).json({ success: true, data: state });
   } catch (error) {

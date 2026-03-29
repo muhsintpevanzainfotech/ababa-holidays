@@ -18,12 +18,11 @@ const ActionDropdown = ({ actions }) => {
   return (
     <div className="dropdown-container" ref={dropdownRef}>
       <button 
-        className="action-btn" 
+        className={`action-btn ${isOpen ? 'active' : ''}`} 
         onClick={(e) => {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        style={{ background: isOpen ? 'var(--bg-main)' : 'white' }}
       >
         <MoreVertical size={18} />
       </button>

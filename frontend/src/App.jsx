@@ -23,12 +23,14 @@ import SubmitTestimonial from './pages/SubmitTestimonial';
 import VendorView from './pages/VendorView';
 import Bookings from './pages/Bookings';
 import Payments from './pages/Payments';
+import Complaints from './pages/Complaints';
 import UserView from './pages/UserView';
 import Layout from './components/Layout';
 import DestinationLayout from './components/DestinationLayout';
 import { ToastProvider } from './context/ToastContext';
 import { ConfirmDialogProvider } from './context/ConfirmDialogContext';
 import { UIProvider } from './context/UIContext';
+import SecurityMonitor from './components/SecurityMonitor';
 import { useSelector } from 'react-redux';
 
 const RoleRoute = ({ children, allowedRoles }) => {
@@ -43,7 +45,8 @@ function App() {
     <UIProvider>
       <ConfirmDialogProvider>
         <ToastProvider>
-        <Router>
+          <SecurityMonitor />
+          <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/submit-testimonial" element={<SubmitTestimonial />} />
@@ -79,10 +82,23 @@ function App() {
               <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
               <Route path="change-password" element={<ChangePassword />} />
-              <Route path="blogs" element={<Blogs />} />
-              <Route path="testimonials" element={<Testimonials />} />
               <Route path="bookings" element={<Bookings />} />
               <Route path="payments" element={<Payments />} />
+              <Route path="complaints" element={<Complaints />} />
+
+              {/* Website Management (Staff) */}
+              <Route path="website">
+                <Route path="banners" element={<Banners userRole="Admin" />} />
+                <Route path="blogs" element={<Blogs userRole="Admin" />} />
+                <Route path="testimonials" element={<Testimonials userRole="Admin" />} />
+              </Route>
+
+              {/* Vendor Hub (Vendors) */}
+              <Route path="vendor">
+                <Route path="banners" element={<Banners userRole="Vendor" />} />
+                <Route path="blogs" element={<Blogs userRole="Vendor" />} />
+                <Route path="testimonials" element={<Testimonials userRole="Vendor" />} />
+              </Route>
             </Route>
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

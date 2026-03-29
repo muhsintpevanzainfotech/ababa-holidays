@@ -238,7 +238,7 @@ const VendorView = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                        <span style={{ color: 'var(--text-muted)' }}>Staff Members</span>
-                       <span style={{ fontWeight: '700' }}>{vendor.profile?.subscription?.staffLimit || 0}</span>
+                                               <span style={{ fontWeight: '700' }}>{vendor.profile?.subscription?.staffLimit === -1 ? '∞' : (vendor.profile?.subscription?.staffLimit || 0)}</span>
                     </div>
                  </div>
                </div>

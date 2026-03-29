@@ -11,9 +11,9 @@ const router = express.Router();
 
 router.route('/')
   .post(protect, createBooking)
-  .get(protect, authorize('Vendor', 'Vendor-Staff', 'Admin'), getBookings);
+  .get(protect, authorize('Vendor', 'Vendor-Staff', 'Admin', 'Sub-Admin'), getBookings);
 
 router.route('/:id/status')
-  .put(protect, authorize('Vendor', 'Vendor-Staff', 'Admin'), updateBookingStatus);
+  .put(protect, authorize('Vendor', 'Vendor-Staff', 'Admin', 'Sub-Admin'), updateBookingStatus);
 
 module.exports = router;

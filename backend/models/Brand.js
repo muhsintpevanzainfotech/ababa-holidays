@@ -27,7 +27,12 @@ const brandSchema = new mongoose.Schema({
     type: String,
     enum: ['Active', 'Inactive'],
     default: 'Active'
-  }
+  },
+  socialMedia: [{
+    title: { type: String },
+    icon: { type: String },
+    link: { type: String }
+  }]
 }, {
   timestamps: true
 });

@@ -10,7 +10,7 @@ const testimonialsSlice = createSlice({
   name: 'testimonials',
   initialState,
   reducers: {
-    fetchTestimonialsRequest: (state) => {
+    fetchTestimonialsRequest: (state, action) => {
       state.loading = true;
       state.error = null;
     },

@@ -2,6 +2,12 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   services: [],
+  pagination: {
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0
+  },
   loading: false,
   error: null,
 };
@@ -16,7 +22,8 @@ const servicesSlice = createSlice({
     },
     fetchServicesSuccess: (state, action) => {
       state.loading = false;
-      state.services = action.payload;
+      state.services = action.payload.data;
+      state.pagination = action.payload.pagination;
     },
     fetchServicesFailure: (state, action) => {
       state.loading = false;

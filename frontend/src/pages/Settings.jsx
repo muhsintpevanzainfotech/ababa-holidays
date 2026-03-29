@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, BellOff, Lock, UserCog, CheckCircle, ArrowRight, ShieldAlert, Key, Eye, EyeOff, Save, Bell } from 'lucide-react';
@@ -18,6 +18,13 @@ const Settings = () => {
   const { user } = useSelector((state) => state.auth);
   const { isNotificationsEnabled, toggleNotifications } = useUI();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    // If a sub-admin somehow lands on permissions tab via URL, force them back to profile
+    if (activeTab === 'permissions' && user?.role !== 'Admin') {
+      setActiveTab('profile');
+    }
+  }, [activeTab, user]);
 
   // Password State
   const [updating, setUpdating] = useState(false);
@@ -108,12 +115,14 @@ const Settings = () => {
             >
               <Lock size={20} /> Security & Password
             </button>
-            <button 
-              onClick={() => setActiveTab('permissions')}
-              style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', borderRadius: '12px', background: activeTab === 'permissions' ? 'var(--bg-main)' : 'transparent', border: activeTab === 'permissions' ? '1px solid var(--border)' : '1px solid transparent', color: activeTab === 'permissions' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'permissions' ? '700' : '600', cursor: 'pointer', textAlign: 'left', transition: 'var(--transition)' }}
-            >
-              <UserCog size={20} /> Sub-Admin Control
-            </button>
+            {user?.role === 'Admin' && (
+              <button 
+                onClick={() => setActiveTab('permissions')}
+                style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', borderRadius: '12px', background: activeTab === 'permissions' ? 'var(--bg-main)' : 'transparent', border: activeTab === 'permissions' ? '1px solid var(--border)' : '1px solid transparent', color: activeTab === 'permissions' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeTab === 'permissions' ? '700' : '600', cursor: 'pointer', textAlign: 'left', transition: 'var(--transition)' }}
+              >
+                <UserCog size={20} /> Sub-Admin Control
+              </button>
+            )}
           </div>
         </div>
 
@@ -210,7 +219,7 @@ const Settings = () => {
           )}
 
           {/* PERMISSIONS TAB */}
-          {activeTab === 'permissions' && (
+          {activeTab === 'permissions' && user?.role === 'Admin' && (
             <div className="card fade-in" style={{ padding: '32px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                  <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0 }}>Sub-Admin Access Control</h2>

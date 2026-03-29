@@ -62,6 +62,8 @@ app.use('/api/contact-us', require('./routes/contactUsRoutes'));
 app.use('/api/enquiries', require('./routes/enquiryRoutes'));
 app.use('/api/banners', require('./routes/offerBannerRoutes'));
 app.use('/api/brands', require('./routes/brandRoutes'));
+app.use('/api/complaints', require('./routes/complaintRoutes'));
+app.use('/api/settings', require('./routes/settingRoutes'));
 
 // Global Error Handler Middleware
 const { errorHandler } = require('./middleware/errorMiddleware');

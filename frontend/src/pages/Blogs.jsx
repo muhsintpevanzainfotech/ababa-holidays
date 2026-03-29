@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { 
   Plus, Search, Edit, Trash2, X, LayoutGrid, List as ListIcon, 
   CheckCircle, Clock, FileText, Image as ImageIcon, AlertTriangle,
-  Globe, Info, MessageSquare, User, Filter, MoreVertical
+  Globe, Info, MessageSquare, User, Filter, MoreVertical, Eye
 } from 'lucide-react';
 import { 
   fetchBlogsRequest, addBlogRequest, updateBlogRequest, deleteBlogRequest 
@@ -15,7 +15,7 @@ import FormSelect from '../components/FormSelect';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
-const Blogs = () => {
+const Blogs = ({ userRole = 'Admin' }) => {
   const dispatch = useDispatch();
   const { blogs, loading } = useSelector((state) => state.blogs);
   const { user } = useSelector((state) => state.auth);
@@ -50,8 +50,8 @@ const Blogs = () => {
   const [imagePreview, setImagePreview] = useState(null);
 
   useEffect(() => {
-    dispatch(fetchBlogsRequest());
-  }, [dispatch]);
+    dispatch(fetchBlogsRequest(userRole));
+  }, [dispatch, userRole]);
 
   const handleOpenModal = (type, blog = null) => {
     setModalType(type);
@@ -93,6 +93,7 @@ const Blogs = () => {
       setImagePreview(null);
     }
     setShowModal(true);
+    setCurrentBlog(blog);
 
     // Ensure the editor content syncs back when opening
     setTimeout(() => {
@@ -182,11 +183,11 @@ const Blogs = () => {
     <div className="fade-in">
       <div className="page-header">
         <div>
-          <h1>Blog Management</h1>
-          <p>Create and manage articles, news, and travel tips</p>
+          <h1>{userRole === 'Vendor' ? 'Agency Blog Studio' : 'Platform Editorial Center'}</h1>
+          <p>{userRole === 'Vendor' ? 'Share travel stories and agency news with your customers' : 'Manage official platform insights and travel stories'}</p>
         </div>
         <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
-          <Plus size={20} /> Write New Post
+          <Plus size={20} /> Write {userRole === 'Vendor' ? 'Agency Post' : 'Editorial Post'}
         </button>
       </div>
 
@@ -325,6 +326,9 @@ const Blogs = () => {
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>{blog.author?.name || 'Admin'}</span>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="action-btn" onClick={() => handleOpenModal('view', blog)} title="View Intelligence">
+                      <Eye size={16} />
+                    </button>
                     <button className="action-btn" onClick={() => handleOpenModal('edit', blog)}>
                       <Edit size={16} />
                     </button>
@@ -381,6 +385,9 @@ const Blogs = () => {
                     </td>
                     <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                       <div className="action-group">
+                        <button className="action-btn" onClick={() => handleOpenModal('view', blog)} title="View Intelligence">
+                          <Eye size={16} />
+                        </button>
                         <button className="action-btn" onClick={() => handleOpenModal('edit', blog)}>
                           <Edit size={16} />
                         </button>
@@ -400,9 +407,72 @@ const Blogs = () => {
       <Drawer 
         isOpen={showModal} 
         onClose={() => setShowModal(false)}
-        title={modalType === 'add' ? 'Create New Blog Post' : 'Edit Blog Post'}
+        title={modalType === 'add' ? 'Create New Blog Post' : modalType === 'edit' ? 'Edit Blog Post' : 'Blog Intelligence'}
         size="lg"
       >
+        {modalType === 'view' ? (
+          <div style={{ paddingBottom: '40px' }}>
+            <div style={{ height: '240px', borderRadius: '16px', overflow: 'hidden', marginBottom: '24px', border: '1px solid var(--border)' }}>
+              <img 
+                src={currentBlog?.image?.startsWith('http') ? currentBlog.image : getImageUrl(currentBlog?.image)} 
+                alt="" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <span className="badge" style={{ background: 'rgba(79, 70, 229, 0.1)', color: 'var(--primary)', fontSize: '11px' }}>{currentBlog?.category || 'Uncategorized'}</span>
+              <span className="badge" style={{ background: currentBlog?.status === 'Published' ? 'rgba(34, 197, 129, 0.1)' : 'rgba(234, 179, 8, 0.1)', color: currentBlog?.status === 'Published' ? '#16a34a' : '#ca8a04', fontSize: '11px' }}>{currentBlog?.status}</span>
+              {currentBlog?.isFeatured && <span className="badge" style={{ background: 'var(--primary)', color: 'white', fontSize: '11px' }}>FEATURED</span>}
+              {currentBlog?.isTopPick && <span className="badge" style={{ background: '#ec4899', color: 'white', fontSize: '11px' }}>TOP PICK</span>}
+            </div>
+
+            <h2 style={{ fontSize: '28px', fontWeight: '800', lineHeight: '1.2', marginBottom: '16px' }}>{currentBlog?.title}</h2>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px', padding: '12px 16px', background: 'var(--bg-main)', borderRadius: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)' }}>
+                  <User size={16} color="var(--primary)" />
+                </div>
+                <span style={{ fontSize: '14px', fontWeight: '700' }}>{currentBlog?.author?.name || 'Administrative Staff'}</span>
+              </div>
+              <div style={{ width: '1px', height: '20px', background: 'var(--border)' }}></div>
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>{new Date(currentBlog?.createdAt).toLocaleDateString(undefined, { dateStyle: 'long' })}</span>
+            </div>
+
+            <div 
+              className="blog-content-preview"
+              dangerouslySetInnerHTML={{ __html: currentBlog?.content }}
+              style={{ fontSize: '16px', lineHeight: '1.8', color: 'var(--text-main)' }}
+            />
+
+            <div style={{ marginTop: '40px', padding: '24px', background: 'linear-gradient(135deg, var(--bg-main), #f1f5f9)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+               <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 16px 0', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  <Globe size={18} color="var(--primary)" /> Search Engine Intelligence
+               </h4>
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', fontWeight: '800' }}>SEO TITLE</p>
+                    <p style={{ margin: '4px 0 0', fontSize: '14px', fontWeight: '600' }}>{currentBlog?.seo?.title || 'Not Set'}</p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', fontWeight: '800' }}>META DESCRIPTION</p>
+                    <p style={{ margin: '4px 0 0', fontSize: '13px', lineHeight: '1.5' }}>{currentBlog?.seo?.description || 'No description provided for crawlers.'}</p>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', fontWeight: '800' }}>KEYWORDS</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                      {currentBlog?.seo?.keywords?.map((k, i) => (
+                        <span key={i} style={{ padding: '4px 10px', background: 'white', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px', fontWeight: '700' }}>{k}</span>
+                      )) || <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>None</span>}
+                    </div>
+                  </div>
+               </div>
+            </div>
+            
+            <button className="btn btn-primary btn-block" style={{ marginTop: '32px', height: '48px' }} onClick={() => setShowModal(false)}>Close Intelligence</button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} style={{ paddingBottom: '40px' }}>
           <div className="form-group">
             <label>Title</label>
@@ -569,6 +639,7 @@ const Blogs = () => {
             {modalType === 'add' ? 'Publish Blog' : 'Update Blog'}
           </button>
         </form>
+      )}
       </Drawer>
     </div>
   );

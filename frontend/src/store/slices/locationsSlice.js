@@ -3,6 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 // Countries Slice
 const countriesInitialState = {
   countries: [],
+  pagination: null,
   loading: false,
   error: null,
 };
@@ -12,7 +13,11 @@ const countriesSlice = createSlice({
   initialState: countriesInitialState,
   reducers: {
     fetchCountriesRequest: (state) => { state.loading = true; state.error = null; },
-    fetchCountriesSuccess: (state, action) => { state.loading = false; state.countries = action.payload; },
+    fetchCountriesSuccess: (state, action) => { 
+      state.loading = false; 
+      state.countries = action.payload.data;
+      state.pagination = action.payload.pagination;
+    },
     fetchCountriesFailure: (state, action) => { state.loading = false; state.error = action.payload; },
     addCountryRequest: (state) => { state.loading = true; },
     addCountrySuccess: (state, action) => { state.loading = false; state.countries = [action.payload, ...state.countries]; },
@@ -35,6 +40,7 @@ const countriesSlice = createSlice({
 // States Slice
 const statesInitialState = {
   states: [],
+  pagination: null,
   loading: false,
   error: null,
 };
@@ -44,7 +50,11 @@ const statesSlice = createSlice({
   initialState: statesInitialState,
   reducers: {
     fetchStatesRequest: (state) => { state.loading = true; state.error = null; },
-    fetchStatesSuccess: (state, action) => { state.loading = false; state.states = action.payload; },
+    fetchStatesSuccess: (state, action) => { 
+      state.loading = false; 
+      state.states = action.payload.data;
+      state.pagination = action.payload.pagination;
+    },
     fetchStatesFailure: (state, action) => { state.loading = false; state.error = action.payload; },
     addStateRequest: (state) => { state.loading = true; },
     addStateSuccess: (state, action) => { state.loading = false; state.states = [action.payload, ...state.states]; },
@@ -67,6 +77,7 @@ const statesSlice = createSlice({
 // Destinations Slice
 const destinationsInitialState = {
   destinations: [],
+  pagination: null,
   loading: false,
   error: null,
 };
@@ -76,7 +87,11 @@ const destinationsSlice = createSlice({
   initialState: destinationsInitialState,
   reducers: {
     fetchDestinationsRequest: (state) => { state.loading = true; state.error = null; },
-    fetchDestinationsSuccess: (state, action) => { state.loading = false; state.destinations = action.payload; },
+    fetchDestinationsSuccess: (state, action) => { 
+      state.loading = false; 
+      state.destinations = action.payload.data;
+      state.pagination = action.payload.pagination;
+    },
     fetchDestinationsFailure: (state, action) => { state.loading = false; state.error = action.payload; },
     addDestinationRequest: (state) => { state.loading = true; },
     addDestinationSuccess: (state, action) => { state.loading = false; state.destinations = [action.payload, ...state.destinations]; },

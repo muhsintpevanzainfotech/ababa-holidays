@@ -7,9 +7,11 @@ import {
   deleteBlogRequest, deleteBlogSuccess, deleteBlogFailure
 } from '../slices/blogsSlice';
 
-function* fetchBlogs() {
+function* fetchBlogs(action) {
   try {
-    const response = yield call(api.get, '/blogs');
+    const role = action.payload || 'Admin';
+    const url = role === 'Vendor' ? '/blogs/vendor' : '/blogs/admin';
+    const response = yield call(api.get, url);
     yield put(fetchBlogsSuccess(response.data.data));
   } catch (error) {
     yield put(fetchBlogsFailure(error.response?.data?.message || 'Failed to fetch blogs'));

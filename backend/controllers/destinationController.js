@@ -20,7 +20,26 @@ const deleteFile = (filePath) => {
 // @access  Public
 exports.getDestinations = async (req, res, next) => {
   try {
-    const destinations = await Destination.find()
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+    if (req.query.status && req.query.status !== 'all') {
+      filter.isActive = req.query.status === 'active';
+    }
+    if (req.query.state && req.query.state !== 'all') {
+      filter.state = req.query.state;
+    }
+    if (req.query.search) {
+      filter.$or = [
+        { name: { $regex: req.query.search, $options: 'i' } },
+        { description: { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
+
+    const total = await Destination.countDocuments(filter);
+    const destinations = await Destination.find(filter)
       .populate({
         path: 'state',
         select: 'name country',
@@ -29,8 +48,21 @@ exports.getDestinations = async (req, res, next) => {
           select: 'name'
         }
       })
-      .sort({ name: 1 });
-    res.status(200).json({ success: true, count: destinations.length, data: destinations });
+      .sort({ name: 1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({ 
+      success: true, 
+      count: destinations.length, 
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      },
+      data: destinations 
+    });
   } catch (error) {
     next(error);
   }
@@ -77,7 +109,12 @@ exports.createDestination = async (req, res, next) => {
     if (req.file) {
       req.body.image = `uploads/${req.file.filename}`;
     }
-    const destination = await Destination.create(req.body);
+    let destination = await Destination.create(req.body);
+    destination = await destination.populate({
+      path: 'state',
+      select: 'name country',
+      populate: { path: 'country', select: 'name' }
+    });
     res.status(201).json({ success: true, data: destination });
   } catch (error) {
     if (req.file) deleteFile(`uploads/${req.file.filename}`);
@@ -104,6 +141,10 @@ exports.updateDestination = async (req, res, next) => {
     destination = await Destination.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
+    }).populate({
+      path: 'state',
+      select: 'name country',
+      populate: { path: 'country', select: 'name' }
     });
 
     res.status(200).json({ success: true, data: destination });

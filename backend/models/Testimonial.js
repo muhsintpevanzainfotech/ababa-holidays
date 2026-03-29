@@ -38,6 +38,15 @@ const testimonialSchema = new mongoose.Schema({
   isTopPick: {
     type: Boolean,
     default: false
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  userRole: {
+    type: String,
+    enum: ['Admin', 'Vendor'],
+    default: 'Admin'
   }
 }, {
   timestamps: true

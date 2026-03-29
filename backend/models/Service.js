@@ -47,6 +47,12 @@ serviceSchema.pre('save', async function () {
     const prefix = 'SER';
     const counterId = `${prefix}_${year}`;
 
+    // If this is the very first record, reset the counter
+    const count = await this.constructor.countDocuments();
+    if (count === 0) {
+       await Counter.findOneAndUpdate({ id: counterId }, { seq: 0 });
+    }
+
     const counter = await Counter.findOneAndUpdate(
       { id: counterId },
       { $inc: { seq: 1 } },
@@ -55,6 +61,14 @@ serviceSchema.pre('save', async function () {
 
     const seqString = counter.seq.toString().padStart(5, '0');
     this.customId = `${prefix}${year}${seqString}`;
+  }
+
+  // Capitalize title and description
+  if (this.title) {
+    this.title = this.title.trim().charAt(0).toUpperCase() + this.title.trim().slice(1);
+  }
+  if (this.description) {
+    this.description = this.description.trim().charAt(0).toUpperCase() + this.description.trim().slice(1);
   }
 });
 

@@ -31,7 +31,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-const Testimonials = () => {
+const Testimonials = ({ userRole = 'Admin' }) => {
   const dispatch = useDispatch();
   const { testimonials, loading } = useSelector((state) => state.testimonials);
   const { vendors } = useSelector((state) => state.vendors);
@@ -60,9 +60,9 @@ const Testimonials = () => {
   const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
-    dispatch(fetchTestimonialsRequest());
+    dispatch(fetchTestimonialsRequest(userRole));
     dispatch(fetchVendorsRequest());
-  }, [dispatch]);
+  }, [dispatch, userRole]);
 
   const handleOpenModal = (type, testimonial = null) => {
     setModalType(type);
@@ -155,12 +155,12 @@ const Testimonials = () => {
     <div className="fade-in">
       <div className="page-header">
         <div>
-          <h1>Testimonials</h1>
-          <p>Manage and showcase customer success stories</p>
+          <h1>{userRole === 'Vendor' ? 'Agency Feedback Hub' : 'Official Success Stories'}</h1>
+          <p>{userRole === 'Vendor' ? 'Manage customer reviews and feedback for your business' : 'Manage platform testimonials and global showcase stories'}</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
           <button className="btn btn-primary" onClick={() => handleOpenModal('add')} style={{ width: '100%' }}>
-            <Plus size={20} /> Add Testimonial
+            <Plus size={20} /> Add {userRole === 'Vendor' ? 'Customer Review' : 'Global Story'}
           </button>
           <button 
             className="btn" 
@@ -391,12 +391,14 @@ const Testimonials = () => {
             <label>Video URL (Optional)</label>
             <input type="url" className="form-control" placeholder="YouTube/Vimeo link" value={formData.video} onChange={(e) => setFormData({...formData, video: e.target.value})} />
           </div>
-          <div className="form-group">
-            <FormSelect 
-              label="Assigned Vendor (Optional)" options={vendors.map(v => ({ value: v._id, label: v.companyName || v.name }))} 
-              value={formData.vendor} onChange={(val) => setFormData({...formData, vendor: val})} 
-            />
-          </div>
+          {userRole !== 'Vendor' && (
+            <div className="form-group">
+              <FormSelect 
+                label="Assigned Vendor (Optional)" options={vendors.map(v => ({ value: v._id, label: v.companyName || v.name }))} 
+                value={formData.vendor} onChange={(val) => setFormData({...formData, vendor: val})} 
+              />
+            </div>
+          )}
           <div className="form-group">
             <FormSelect 
               label="Approval Status" options={[{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Rejected', label: 'Rejected' }]} 

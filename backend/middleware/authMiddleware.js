@@ -26,10 +26,38 @@ const protect = async (req, res, next) => {
         return res.status(403).json({ message: 'Your account has been suspended. Please contact support.' });
       }
 
-      // Update lastActive without triggering pre-save hooks or version errors
-      await User.findByIdAndUpdate(req.user._id, { 
-        $set: { lastActive: Date.now() } 
-      });
+      // Update activity and online status
+      const lastActive = req.user.lastActive;
+      const now = new Date();
+      const diffMs = now - lastActive;
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      
+      const today = now.toISOString().split('T')[0];
+      
+      // Calculate active session increment (max 30 mins to avoid idle time inflation)
+      const timeIncrement = (diffMins > 0 && diffMins < 30) ? diffMins : 0.5;
+
+      const userUpdate = {
+        $set: { 
+          lastActive: now,
+          isOnline: true 
+        },
+        $inc: { totalTimeSpent: timeIncrement }
+      };
+
+      // Handle daily activity count
+      const activityIndex = req.user.activityLog.findIndex(a => a.date === today);
+      if (activityIndex > -1) {
+        userUpdate['$inc'][`activityLog.${activityIndex}.count`] = 1;
+      } else {
+        // Keep logs for the last 5 years
+        if (req.user.activityLog.length > 1825) {
+          userUpdate['$pop'] = { activityLog: -1 };
+        }
+        userUpdate['$push'] = { activityLog: { date: today, count: 1 } };
+      }
+
+      await User.findByIdAndUpdate(req.user._id, userUpdate);
 
       next();
       return;

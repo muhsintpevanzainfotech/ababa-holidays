@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import ActionDropdown from '../components/ActionDropdown';
 import {
+  Globe,
   Plus,
   CreditCard,
   Check,
@@ -26,8 +27,11 @@ import FilterSelect from '../components/FilterSelect';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import Drawer from '../components/Drawer';
+import PasskeyModal from '../components/PasskeyModal';
+import LockToggleButton from '../components/LockToggleButton';
 
 import { useSelector, useDispatch } from 'react-redux';
+import { setUnlocked, lockSession } from '../store/slices/globalSlice';
 import {
   fetchSubscriptionsRequest,
   addSubscriptionRequest,
@@ -38,7 +42,12 @@ import {
 const Subscriptions = () => {
   const dispatch = useDispatch();
   const { subscriptions, loading, error } = useSelector((state) => state.subscriptions);
+  const { user } = useSelector((state) => state.auth);
+  const { isUnlocked, unlockedUntil } = useSelector((state) => state.global);
+  const isLocked = !isUnlocked;
   const [view, setView] = useState('grid');
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('add');
   const [currentSub, setCurrentSub] = useState(null);
@@ -71,7 +80,31 @@ const Subscriptions = () => {
     dispatch(fetchSubscriptionsRequest());
   }, [dispatch]);
 
+  const isAdmin = user?.role === 'Admin';
+  const isSubAdmin = user?.role === 'Sub-Admin';
+
+  const isSessionUnlocked = () => {
+    if (!isUnlocked || !unlockedUntil) return false;
+    const expiry = new Date(unlockedUntil);
+    const isValid = expiry > new Date();
+    if (!isValid && isUnlocked) {
+      dispatch(lockSession());
+    }
+    return isValid;
+  };
+
   const handleOpenModal = (type, sub = null) => {
+    if (!isAdmin) {
+      showToast('Unauthorized', 'Only platform admins can modify subscription models.', 'error');
+      return;
+    }
+
+    if (!isSessionUnlocked()) {
+      setPendingAction(() => () => handleOpenModal(type, sub));
+      setShowSecurityModal(true);
+      return;
+    }
+
     setModalType(type);
     if (type === 'edit' && sub) {
       setCurrentSub(sub);
@@ -107,6 +140,28 @@ const Subscriptions = () => {
     setShowModal(true);
   };
 
+  const handleLockToggleInternal = () => {
+    if (isLocked) {
+      setPendingAction({ type: 'unlock' });
+      setShowSecurityModal(true);
+    } else {
+      dispatch(lockSession());
+      showToast('Locked', 'Session locked successfully.', 'info');
+    }
+  };
+
+  const onSecurityVerified = () => {
+    setShowSecurityModal(false);
+    if (pendingAction?.type === 'unlock') {
+      showToast('Unlocked', 'You can now modify subscriptions freely.', 'success');
+    } else if (pendingAction) {
+      if (typeof pendingAction === 'function') {
+         pendingAction();
+      }
+    }
+    setPendingAction(null);
+  };
+
   const addFeature = () => {
     if (newFeature.trim()) {
       setFormData({ ...formData, features: [...(formData.features || []), newFeature.trim()] });
@@ -134,6 +189,12 @@ const Subscriptions = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!isAdmin) return;
+    if (!isSessionUnlocked()) {
+      setPendingAction(() => () => handleDelete(id));
+      setShowSecurityModal(true);
+      return;
+    }
     if (await confirm('Delete Plan?', 'Are you sure you want to delete this subscription plan? Existing vendors on this plan may be affected.')) {
       dispatch(deleteSubscriptionRequest(id));
       showToast('Success', 'Plan deleted successfully', 'success');
@@ -154,9 +215,16 @@ const Subscriptions = () => {
           <h1>Platform Subscriptions</h1>
           <p>Manage tiers, pricing models, and feature access permissions for vendors</p>
         </div>
-        <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
-          <Plus size={20} /> Add New Plan
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {isAdmin && (
+            <>
+              <LockToggleButton onUnlockClick={handleLockToggleInternal} />
+              <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
+                <Plus size={20} /> Add New Plan
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -253,7 +321,9 @@ const Subscriptions = () => {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <p style={{ fontSize: '24px', fontWeight: '900', color: 'var(--primary)', lineHeight: 1 }}>₹{sub.price}</p>
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{sub.durationInDays} Days Access</p>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    {sub.durationInDays === -1 ? 'Lifetime Access' : `${sub.durationInDays} Days Access`}
+                  </p>
                 </div>
               </div>
 
@@ -311,14 +381,16 @@ const Subscriptions = () => {
                 )}
               </div>
 
-              <div style={{ marginTop: '32px', display: 'flex', gap: '8px' }}>
-                <button className="btn" style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', color: 'var(--text-main)', flex: 1, height: '42px', fontWeight: '600' }} onClick={() => handleOpenModal('edit', sub)}>
-                  Edit Plan
-                </button>
-                <button className="btn" style={{ background: '#fff1f2', border: 'none', color: '#e11d48', width: '42px', height: '42px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => handleDelete(sub._id)}>
-                  <Trash2 size={18} />
-                </button>
-              </div>
+              {isAdmin && (
+                <div style={{ marginTop: '32px', display: 'flex', gap: '8px' }}>
+                  <button className="btn" style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', color: 'var(--text-main)', flex: 1, height: '42px', fontWeight: '600' }} onClick={() => handleOpenModal('edit', sub)}>
+                    Edit Plan
+                  </button>
+                  <button className="btn" style={{ background: '#fff1f2', border: 'none', color: '#e11d48', width: '42px', height: '42px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => handleDelete(sub._id)}>
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -349,7 +421,7 @@ const Subscriptions = () => {
                     </td>
                     <td style={{ padding: '16px 24px' }}>
                       <div style={{ fontWeight: '800', color: 'var(--primary)', marginBottom: '4px' }}>₹{sub.price}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sub.durationInDays} Days</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sub.durationInDays === -1 ? '∞ / Lifetime' : `${sub.durationInDays} Days`}</div>
                     </td>
                     <td style={{ padding: '16px 24px' }}>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -381,17 +453,18 @@ const Subscriptions = () => {
                       </span>
                     </td>
                     <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                      <div className="action-group">
-                        <button className="action-btn" title={sub.isActive !== false ? 'Deactivate' : 'Activate'} onClick={() => toggleStatus(sub._id)}>
-                          {sub.isActive !== false ? <XCircle size={16} /> : <CheckCircle size={16} />}
-                        </button>
-                        <button className="action-btn" title="Edit Plan" onClick={() => handleOpenModal('edit', sub)}>
-                          <Edit size={16} />
-                        </button>
-                        <button className="action-btn danger" title="Delete Plan" onClick={() => handleDelete(sub._id)}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                      {isAdmin ? (
+                        <div className="action-group">
+                          <button className="action-btn" title="Edit Plan" onClick={() => handleOpenModal('edit', sub)}>
+                            <Edit size={16} />
+                          </button>
+                          <button className="action-btn danger" title="Delete Plan" onClick={() => handleDelete(sub._id)}>
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Read Only</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -440,10 +513,23 @@ const Subscriptions = () => {
               />
             </div>
             <div className="form-group">
-              <label>Duration (Days)</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ margin: 0 }}>Duration (Days)</label>
+                <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'var(--primary)', fontWeight: '700' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.durationInDays === -1}
+                    onChange={(e) => setFormData({ ...formData, durationInDays: e.target.checked ? -1 : 30 })}
+                    style={{ width: '15px', height: '15px' }}
+                  />
+                  Unlimited / Permanent
+                </label>
+              </div>
               <input
                 type="number" className="form-control" required
-                value={formData.durationInDays}
+                disabled={formData.durationInDays === -1}
+                value={formData.durationInDays === -1 ? '' : formData.durationInDays}
+                placeholder={formData.durationInDays === -1 ? '∞ (No Expiry)' : '30'}
                 onChange={(e) => setFormData({ ...formData, durationInDays: Number(e.target.value) })}
               />
             </div>
@@ -463,26 +549,65 @@ const Subscriptions = () => {
             <h4 style={{ fontSize: '13px', fontWeight: '800', marginBottom: '16px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Resource Limits</h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '11px' }}>Max Users</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '11px', margin: 0 }}>Max Users</label>
+                  <label style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: 'var(--primary)', fontWeight: '700' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={formData.userLimit === -1} 
+                      onChange={(e) => setFormData({ ...formData, userLimit: e.target.checked ? -1 : 0 })}
+                      style={{ width: '12px', height: '12px' }}
+                    />
+                    Unlimited
+                  </label>
+                </div>
                 <input
                   type="number" className="form-control"
-                  value={formData.userLimit}
+                  disabled={formData.userLimit === -1}
+                  value={formData.userLimit === -1 ? '' : formData.userLimit}
+                  placeholder={formData.userLimit === -1 ? '∞' : '0'}
                   onChange={(e) => setFormData({ ...formData, userLimit: Number(e.target.value) })}
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '11px' }}>Max Pkgs</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '11px', margin: 0 }}>Max Pkgs</label>
+                  <label style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: 'var(--primary)', fontWeight: '700' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={formData.packageLimit === -1} 
+                      onChange={(e) => setFormData({ ...formData, packageLimit: e.target.checked ? -1 : 0 })}
+                      style={{ width: '12px', height: '12px' }}
+                    />
+                    Unlimited
+                  </label>
+                </div>
                 <input
                   type="number" className="form-control"
-                  value={formData.packageLimit}
+                  disabled={formData.packageLimit === -1}
+                  value={formData.packageLimit === -1 ? '' : formData.packageLimit}
+                  placeholder={formData.packageLimit === -1 ? '∞' : '0'}
                   onChange={(e) => setFormData({ ...formData, packageLimit: Number(e.target.value) })}
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label style={{ fontSize: '11px' }}>Max Staff</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '11px', margin: 0 }}>Max Staff</label>
+                  <label style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: 'var(--primary)', fontWeight: '700' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={formData.staffLimit === -1} 
+                      onChange={(e) => setFormData({ ...formData, staffLimit: e.target.checked ? -1 : 0 })}
+                      style={{ width: '12px', height: '12px' }}
+                    />
+                    Unlimited
+                  </label>
+                </div>
                 <input
                   type="number" className="form-control"
-                  value={formData.staffLimit}
+                  disabled={formData.staffLimit === -1}
+                  value={formData.staffLimit === -1 ? '' : formData.staffLimit}
+                  placeholder={formData.staffLimit === -1 ? '∞' : '0'}
                   onChange={(e) => setFormData({ ...formData, staffLimit: Number(e.target.value) })}
                 />
               </div>
@@ -558,6 +683,13 @@ const Subscriptions = () => {
           </button>
         </form>
       </Drawer>
+
+      <PasskeyModal
+        isOpen={showSecurityModal}
+        onClose={() => setShowSecurityModal(false)}
+        onVerified={onSecurityVerified}
+        title="Admin Security Access"
+      />
     </div>
   );
 };

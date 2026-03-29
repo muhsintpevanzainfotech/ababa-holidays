@@ -7,8 +7,36 @@ const { deleteFile } = require('../utils/fileHelpers');
 // @route   GET /api/services
 // @access  Public
 const getServices = asyncHandler(async (req, res, next) => {
-  const services = await Service.find({ isActive: true });
-  res.json({ success: true, count: services.length, data: services });
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
+  const skip = (page - 1) * limit;
+
+  // Build Filter
+  const filter = {};
+  if (req.query.status && req.query.status !== 'all') {
+    filter.isActive = req.query.status === 'active';
+  }
+  if (req.query.search) {
+    filter.$or = [
+      { title: { $regex: req.query.search, $options: 'i' } },
+      { description: { $regex: req.query.search, $options: 'i' } }
+    ];
+  }
+
+  const total = await Service.countDocuments(filter);
+  const services = await Service.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit);
+
+  res.json({ 
+    success: true, 
+    count: services.length,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit)
+    },
+    data: services 
+  });
 });
 
 // @desc    Get single service
@@ -41,7 +69,7 @@ const createService = asyncHandler(async (req, res, next) => {
 
   // Parse JSON strings if they come from multipart/form-data
   ['seo', 'subServices'].forEach(key => {
-    if (typeof payload[key] === 'string') {
+    if (payload[key] && typeof payload[key] === 'string') {
       try {
         payload[key] = JSON.parse(payload[key]);
       } catch (e) {}
@@ -66,6 +94,8 @@ const updateService = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Service not found', 404));
   }
 
+  const payload = { ...req.body };
+
   if (req.files) {
     if (req.files.icon) {
       if (service.icon) deleteFile(service.icon);
@@ -79,7 +109,7 @@ const updateService = asyncHandler(async (req, res, next) => {
 
   // Parse JSON strings if they come from multipart/form-data
   ['seo', 'subServices'].forEach(key => {
-    if (typeof payload[key] === 'string') {
+    if (payload[key] && typeof payload[key] === 'string') {
       try {
         payload[key] = JSON.parse(payload[key]);
       } catch (e) {}

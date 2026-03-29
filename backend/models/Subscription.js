@@ -40,6 +40,10 @@ const subscriptionSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  durationInDays: {
+    type: Number,
+    default: 30 // Use -1 for unlimited
+  },
   crmEnabled: {
     type: Boolean,
     default: false
