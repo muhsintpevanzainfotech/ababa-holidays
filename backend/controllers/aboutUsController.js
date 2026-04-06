@@ -45,7 +45,7 @@ exports.updateAboutUs = async (req, res, next) => {
       aboutUs = await AboutUs.create(payload);
     } else {
       aboutUs = await AboutUs.findOneAndUpdate({ vendor: vendorId }, payload, {
-        new: true,
+        returnDocument: 'after',
         runValidators: true
       });
     }

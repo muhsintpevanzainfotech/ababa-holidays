@@ -39,10 +39,16 @@ exports.getCountries = async (req, res, next) => {
     }
 
     const total = await Country.countDocuments(filter);
-    const countries = await Country.find(filter)
-      .sort({ name: 1 })
-      .skip(skip)
-      .limit(limit);
+    
+    let countries;
+    if (req.query.all === 'true') {
+      countries = await Country.find(filter).sort({ name: 1 });
+    } else {
+      countries = await Country.find(filter)
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit);
+    }
 
     res.status(200).json({ 
       success: true, 

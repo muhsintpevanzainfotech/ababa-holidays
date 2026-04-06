@@ -39,7 +39,10 @@ router.route('/')
     { name: 'idCard', maxCount: 1 },
     { name: 'tinUpload', maxCount: 1 },
     { name: 'gstUpload', maxCount: 1 },
-    { name: 'bankUpload', maxCount: 1 }
+    { name: 'bankUpload', maxCount: 1 },
+    { name: 'logoS', maxCount: 1 },
+    { name: 'logoM', maxCount: 1 },
+    { name: 'logoL', maxCount: 1 }
   ]), createUser);
 
 router.route('/:id')
@@ -48,7 +51,10 @@ router.route('/:id')
     { name: 'idCard', maxCount: 1 },
     { name: 'tinUpload', maxCount: 1 },
     { name: 'gstUpload', maxCount: 1 },
-    { name: 'bankUpload', maxCount: 1 }
+    { name: 'bankUpload', maxCount: 1 },
+    { name: 'logoS', maxCount: 1 },
+    { name: 'logoM', maxCount: 1 },
+    { name: 'logoL', maxCount: 1 }
   ]), updateUser)
   .delete(protect, authorize('Admin', 'Sub-Admin'), deleteUser);
 

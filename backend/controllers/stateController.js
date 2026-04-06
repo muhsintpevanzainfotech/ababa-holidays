@@ -40,11 +40,17 @@ exports.getStates = async (req, res, next) => {
     }
 
     const total = await State.countDocuments(filter);
-    const states = await State.find(filter)
-      .populate('country', 'name')
-      .sort({ name: 1 })
-      .skip(skip)
-      .limit(limit);
+    
+    let states;
+    if (req.query.all === 'true') {
+      states = await State.find(filter).populate('country', 'name').sort({ name: 1 });
+    } else {
+      states = await State.find(filter)
+        .populate('country', 'name')
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit);
+    }
 
     res.status(200).json({ 
       success: true, 

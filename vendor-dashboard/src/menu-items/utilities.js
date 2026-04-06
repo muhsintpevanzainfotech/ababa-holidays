@@ -22,7 +22,7 @@ const utilities = {
       type: 'item',
       url: '/typography',
       icon: icons.IconTypography,
-      breadcrumbs: false
+      breadcrumbs: true
     },
     {
       id: 'util-color',
@@ -30,7 +30,7 @@ const utilities = {
       type: 'item',
       url: '/color',
       icon: icons.IconPalette,
-      breadcrumbs: false
+      breadcrumbs: true
     },
     {
       id: 'util-shadow',
@@ -38,7 +38,7 @@ const utilities = {
       type: 'item',
       url: '/shadow',
       icon: icons.IconShadow,
-      breadcrumbs: false
+      breadcrumbs: true
     }
   ]
 };

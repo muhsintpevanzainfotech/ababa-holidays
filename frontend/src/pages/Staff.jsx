@@ -86,6 +86,8 @@ const Staff = () => {
     { id: 'manage_banners', label: 'Platform Studio: Web Banners' },
     { id: 'manage_blogs', label: 'Platform Studio: Web Blogs' },
     { id: 'manage_testimonials', label: 'Platform Studio: Global Reviews' },
+    { id: 'manage_reels', label: 'Platform Studio: Web Shows (Reels)' },
+    { id: 'manage_policies', label: 'System: Global Policies & Terms' },
   ];
 
   useEffect(() => {

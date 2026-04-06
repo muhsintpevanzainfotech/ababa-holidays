@@ -8,6 +8,9 @@ const path = require('path');
 const deleteFile = (filePath) => {
   if (!filePath) return;
 
+  // Don't try to delete external URLs
+  if (filePath.startsWith('http')) return;
+
   const absolutePath = path.isAbsolute(filePath) 
     ? filePath 
     : path.join(process.cwd(), filePath);

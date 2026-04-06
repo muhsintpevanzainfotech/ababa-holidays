@@ -27,8 +27,14 @@ const vendorProfileSchema = new mongoose.Schema({
   address: {
     street: String,
     city: String,
-    state: String,
-    country: String,
+    state: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'State'
+    },
+    country: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Country'
+    },
     zipCode: String,
     fullAddress: String,
     mapLink: String,
@@ -57,10 +63,16 @@ const vendorProfileSchema = new mongoose.Schema({
     issuingAuthority: String,
     upload: String
   },
-  brand: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Brand'
+  companylogos: {
+    small: { type: String, default: '/public/defaults/default_travel.png' },
+    medium: { type: String, default: '/public/defaults/default_travel.png' },
+    large: { type: String, default: '/public/defaults/default_travel.png' }
   },
+  socialMedia: [{
+    title: { type: String },
+    icon: { type: String },
+    link: { type: String }
+  }],
   bankDetails: {
     accountName: String,
     accountNumber: String,

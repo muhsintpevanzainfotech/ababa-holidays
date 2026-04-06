@@ -27,6 +27,7 @@ import {
   MessageSquare,
   Calendar,
   ShieldAlert,
+  Smartphone
 } from 'lucide-react';
 
 const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile, onToggleCollapse }) => {
@@ -211,6 +212,12 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile, onToggleCollapse })
                       <span>Web Reviews</span>
                     </NavLink>
                   )}
+                  {hasPermission('manage_reels') && (
+                    <NavLink to="/website/shows" onClick={handleLinkClick} className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>
+                      <Smartphone size={14} />
+                      <span>Web Shows</span>
+                    </NavLink>
+                  )}
                 </div>
               </>
             )}
@@ -259,6 +266,10 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile, onToggleCollapse })
               <NavLink to="/vendor/testimonials" onClick={handleLinkClick} className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>
                 <MessageSquare size={14} />
                 <span>Feedback</span>
+              </NavLink>
+              <NavLink to="/vendor/shows" onClick={handleLinkClick} className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>
+                <Smartphone size={14} />
+                <span>Agency Highlights</span>
               </NavLink>
             </div>
           </div>
@@ -363,6 +374,12 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile, onToggleCollapse })
           </NavLink>
         )}
 
+        {hasPermission('manage_policies') && (
+          <NavLink to="/policies" onClick={handleLinkClick} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+            <ShieldCheck size={20} />
+            <span>Policies</span>
+          </NavLink>
+        )}
         <NavLink to="/settings" onClick={handleLinkClick} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
           <Settings size={20} />
           <span>Settings</span>

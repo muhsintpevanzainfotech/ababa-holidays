@@ -38,6 +38,7 @@ const VendorView = () => {
   const [testimonials, setTestimonials] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
   const [complaints, setComplaints] = useState([]);
+  const [reels, setReels] = useState([]);
 
   useEffect(() => {
     const fetchVendorDetails = async () => {
@@ -50,12 +51,13 @@ const VendorView = () => {
         }
         
         // Fetch related data
-        const [pkgRes, blogRes, testRes, enqRes, compRes] = await Promise.all([
+        const [pkgRes, blogRes, testRes, enqRes, compRes, reelRes] = await Promise.all([
           api.get(`/packages?vendor=${id}`),
           api.get(`/blogs?author=${id}`), // Assuming blogs filter by author (vendor ID)
           api.get(`/testimonials?vendor=${id}`),
           api.get(`/enquiries?vendor=${id}`),
-          api.get(`/complaints/user/${id}`)
+          api.get(`/complaints/user/${id}`),
+          api.get(`/instagram-reels?vendor=${id}`)
         ]);
 
         if (pkgRes.data.success) setPackages(pkgRes.data.data);
@@ -63,6 +65,7 @@ const VendorView = () => {
         if (testRes.data.success) setTestimonials(testRes.data.data);
         if (enqRes.data.success) setEnquiries(enqRes.data.data);
         if (compRes.data.success) setComplaints(compRes.data.data);
+        if (reelRes.data.success) setReels(reelRes.data.data);
 
       } catch (err) {
         showToast('Error', 'Failed to fetch vendor details', 'error');
@@ -184,6 +187,13 @@ const VendorView = () => {
           </div>
           <span>{enquiries.length}</span>
         </div>
+        <div className="profile-stat-box" onClick={() => setActiveTab('highlights')} style={{ cursor: 'pointer' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Web Shows</span>
+            <Smartphone size={20} color="#d946ef" opacity={0.5} />
+          </div>
+          <span>{reels.length}</span>
+        </div>
       </div>
 
       {/* Tabbed Navigation */}
@@ -193,6 +203,7 @@ const VendorView = () => {
         <button className={`tab-btn ${activeTab === 'blogs' ? 'active' : ''}`} onClick={() => setActiveTab('blogs')}><FileText size={18} /> Blogs ({blogs.length})</button>
         <button className={`tab-btn ${activeTab === 'testimonials' ? 'active' : ''}`} onClick={() => setActiveTab('testimonials')}><Quote size={18} /> Testimonials ({testimonials.length})</button>
         <button className={`tab-btn ${activeTab === 'enquiries' ? 'active' : ''}`} onClick={() => setActiveTab('enquiries')}><MessageSquare size={18} /> Enquiries ({enquiries.length})</button>
+        <button className={`tab-btn ${activeTab === 'highlights' ? 'active' : ''}`} onClick={() => setActiveTab('highlights')}><Smartphone size={18} /> Highlights ({reels.length})</button>
         <button className={`tab-btn ${activeTab === 'disputes' ? 'active' : ''}`} onClick={() => setActiveTab('disputes')}><AlertCircle size={18} /> Disputes ({complaints.length})</button>
       </div>
 
@@ -423,6 +434,42 @@ const VendorView = () => {
           </div>
         )}
 
+
+        {activeTab === 'highlights' && (
+          <div className="cards-grid">
+             {reels.length > 0 ? reels.map((reel, idx) => (
+                <div key={idx} className="card" style={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ height: '200px', background: '#000', position: 'relative', overflow: 'hidden' }}>
+                    {reel.video ? (
+                      <video src={getImageUrl(reel.video)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted onMouseOver={(e) => e.target.play()} onMouseOut={(e) => e.target.pause()} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexDirection: 'column', gap: '8px' }}>
+                         <Smartphone size={32} opacity={0.5} />
+                         <span style={{ fontSize: '10px', opacity: 0.8 }}>External Reel</span>
+                         {reel.reelUrl && (
+                            <a href={reel.reelUrl} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm" style={{ fontSize: '9px', padding: '2px 8px' }}>
+                               View on Insta
+                            </a>
+                         )}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ padding: '12px' }}>
+                    <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: '800' }}>{reel.title}</h4>
+                    <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4', height: '30px', overflow: 'hidden' }}>{reel.caption}</p>
+                  </div>
+                </div>
+             )) : (
+                <div className="card" style={{ gridColumn: '1/-1', textAlign: 'center', padding: '64px 24px' }}>
+                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'var(--text-muted)' }}>
+                     <Smartphone size={48} opacity={0.2} />
+                     <p style={{ margin: 0, fontWeight: '600' }}>No Agency Highlights</p>
+                     <p style={{ margin: 0, fontSize: '13px' }}>The vendor hasn’t uploaded any reels or highlights yet.</p>
+                   </div>
+                </div>
+             )}
+          </div>
+        )}
 
       </div>
     </div>

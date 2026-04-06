@@ -4,7 +4,8 @@ import {
   fetchBlogsRequest, fetchBlogsSuccess, fetchBlogsFailure,
   addBlogRequest, addBlogSuccess, addBlogFailure,
   updateBlogRequest, updateBlogSuccess, updateBlogFailure,
-  deleteBlogRequest, deleteBlogSuccess, deleteBlogFailure
+  deleteBlogRequest, deleteBlogSuccess, deleteBlogFailure,
+  toggleBlogStatusRequest
 } from '../slices/blogsSlice';
 
 function* fetchBlogs(action) {
@@ -50,9 +51,20 @@ function* deleteBlog(action) {
   }
 }
 
+function* toggleBlogStatus(action) {
+  try {
+    const { id, status } = action.payload;
+    const response = yield call(api.put, `/blogs/${id}`, { status });
+    yield put(updateBlogSuccess(response.data.data));
+  } catch (error) {
+    console.error('Failed to toggle blog status', error);
+  }
+}
+
 export function* watchBlogsSaga() {
   yield takeLatest(fetchBlogsRequest.type, fetchBlogs);
   yield takeLatest(addBlogRequest.type, addBlog);
   yield takeLatest(updateBlogRequest.type, updateBlog);
   yield takeLatest(deleteBlogRequest.type, deleteBlog);
+  yield takeLatest(toggleBlogStatusRequest.type, toggleBlogStatus);
 }

@@ -74,27 +74,28 @@ export default function ProfileSection() {
 
   return (
     <>
-      <Chip
-        slotProps={{ label: { sx: { lineHeight: 0 } } }}
-        sx={{ ml: 2, height: '48px', alignItems: 'center', borderRadius: '27px' }}
-        icon={
-          <Avatar
-            src={User1}
-            alt="user-images"
-            sx={{ typography: 'mediumAvatar', margin: '8px 0 8px 8px !important', cursor: 'pointer' }}
-            ref={anchorRef}
-            aria-controls={open ? 'menu-list-grow' : undefined}
-            aria-haspopup="true"
-            color="inherit"
-          />
-        }
-        label={<IconSettings stroke={1.5} size="24px" />}
+      <Avatar
+        src={User1}
+        alt="user-images"
+        sx={{ 
+          ...theme.typography.mediumAvatar, 
+          cursor: 'pointer',
+          borderRadius: '14px',
+          width: '44px',
+          height: '44px',
+          ml: 2,
+          border: '2px solid',
+          borderColor: theme.vars.palette.primary.light,
+          '&:hover': {
+              borderColor: theme.vars.palette.primary.main,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+          }
+        }}
         ref={anchorRef}
         aria-controls={open ? 'menu-list-grow' : undefined}
         aria-haspopup="true"
         onClick={handleToggle}
-        color="primary"
-        aria-label="user-account"
+        color="inherit"
       />
       <Popper
         placement="bottom"

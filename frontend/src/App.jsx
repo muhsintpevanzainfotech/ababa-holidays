@@ -25,6 +25,8 @@ import Bookings from './pages/Bookings';
 import Payments from './pages/Payments';
 import Complaints from './pages/Complaints';
 import UserView from './pages/UserView';
+import Shows from './pages/Shows';
+import Policies from './pages/Policies';
 import Layout from './components/Layout';
 import DestinationLayout from './components/DestinationLayout';
 import { ToastProvider } from './context/ToastContext';
@@ -49,6 +51,7 @@ function App() {
           <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/vendor-register" element={<VendorRegistration isPublic={true} />} />
             <Route path="/submit-testimonial" element={<SubmitTestimonial />} />
             
             <Route path="/" element={<Layout />}>
@@ -85,12 +88,14 @@ function App() {
               <Route path="bookings" element={<Bookings />} />
               <Route path="payments" element={<Payments />} />
               <Route path="complaints" element={<Complaints />} />
+              <Route path="policies" element={<Policies />} />
 
               {/* Website Management (Staff) */}
               <Route path="website">
                 <Route path="banners" element={<Banners userRole="Admin" />} />
                 <Route path="blogs" element={<Blogs userRole="Admin" />} />
                 <Route path="testimonials" element={<Testimonials userRole="Admin" />} />
+                <Route path="shows" element={<Shows userRole="Admin" />} />
               </Route>
 
               {/* Vendor Hub (Vendors) */}
@@ -98,6 +103,7 @@ function App() {
                 <Route path="banners" element={<Banners userRole="Vendor" />} />
                 <Route path="blogs" element={<Blogs userRole="Vendor" />} />
                 <Route path="testimonials" element={<Testimonials userRole="Vendor" />} />
+                <Route path="shows" element={<Shows userRole="Vendor" />} />
               </Route>
             </Route>
 

@@ -7,11 +7,17 @@ import AuthGuard from 'utils/route-guard/AuthGuard';
 
 // dashboard routing
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/Default')));
+const DashboardAnalytics = Loadable(lazy(() => import('views/dashboard/Analytics')));
+const DashboardReports = Loadable(lazy(() => import('views/dashboard/Reports')));
 
-// utilities routing
-const UtilsTypography = Loadable(lazy(() => import('views/utilities/Typography')));
-const UtilsColor = Loadable(lazy(() => import('views/utilities/Color')));
-const UtilsShadow = Loadable(lazy(() => import('views/utilities/Shadow')));
+// platform routing
+const PlatformBanners = Loadable(lazy(() => import('views/platform-management/Banners')));
+const PlatformBlogs = Loadable(lazy(() => import('views/platform-management/Blogs')));
+const PlatformTestimonials = Loadable(lazy(() => import('views/platform-management/Testimonials')));
+const PlatformPolicies = Loadable(lazy(() => import('views/platform-management/Policies')));
+const ServicesManagement = Loadable(lazy(() => import('views/services-management')));
+
+const VendorSettings = Loadable(lazy(() => import('views/pages/settings')));
 
 // sample page routing
 const SamplePage = Loadable(lazy(() => import('views/sample-page')));
@@ -32,24 +38,49 @@ const MainRoutes = {
     },
     {
       path: 'dashboard',
+      element: <DashboardDefault />
+    },
+    {
+      path: 'analytics',
+      element: <DashboardAnalytics />
+    },
+    {
+      path: 'reports',
+      element: <DashboardReports />
+    },
+    {
+      path: 'platform',
       children: [
         {
-          path: 'default',
-          element: <DashboardDefault />
+          path: 'banners',
+          element: <PlatformBanners />
+        },
+        {
+          path: 'blogs',
+          element: <PlatformBlogs />
+        },
+        {
+          path: 'testimonials',
+          element: <PlatformTestimonials />
+        },
+        {
+          path: 'policies',
+          element: <PlatformPolicies />
+        },
+        {
+          path: 'services',
+          element: <ServicesManagement />
         }
       ]
     },
     {
-      path: 'typography',
-      element: <UtilsTypography />
-    },
-    {
-      path: 'color',
-      element: <UtilsColor />
-    },
-    {
-      path: 'shadow',
-      element: <UtilsShadow />
+      path: 'system',
+      children: [
+        {
+          path: 'settings',
+          element: <VendorSettings />
+        }
+      ]
     },
     {
       path: '/sample-page',

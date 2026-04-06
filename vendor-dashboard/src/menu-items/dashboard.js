@@ -1,8 +1,8 @@
 // assets
-import { IconDashboard } from '@tabler/icons-react';
+import { IconDashboard, IconDeviceAnalytics, IconReceipt } from '@tabler/icons-react';
 
 // constant
-const icons = { IconDashboard };
+const icons = { IconDashboard, IconDeviceAnalytics, IconReceipt };
 
 // ==============================|| DASHBOARD MENU ITEMS ||============================== //
 
@@ -13,11 +13,27 @@ const dashboard = {
   children: [
     {
       id: 'default',
-      title: 'Dashboard',
+      title: 'General Overview',
       type: 'item',
-      url: '/dashboard/default',
+      url: '/dashboard',
       icon: icons.IconDashboard,
-      breadcrumbs: false
+      breadcrumbs: true
+    },
+    {
+      id: 'analytics',
+      title: 'Business Analytics',
+      type: 'item',
+      url: '/analytics',
+      icon: icons.IconDeviceAnalytics,
+      breadcrumbs: true
+    },
+    {
+      id: 'reports',
+      title: 'Account Reports',
+      type: 'item',
+      url: '/reports',
+      icon: icons.IconReceipt,
+      breadcrumbs: true
     }
   ]
 };

@@ -1,11 +1,11 @@
 export const DASHBOARD_PATH = '/';
-export const DEFAULT_THEME_MODE = 'system';
+export const DEFAULT_THEME_MODE = 'light';
 
 export const CSS_VAR_PREFIX = '';
 
 const config = {
   fontFamily: `'Poppins', sans-serif`,
-  borderRadius: 12,
+  borderRadius: 14,
   presetColor: 'default',
   outlinedFilled: true,
   miniDrawer: false

@@ -12,7 +12,12 @@ const ensureFolderExists = (folderPath) => {
 const createUpload = (folderName = '') => {
   const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      const dest = path.join('uploads/', folderName);
+      // Subfolder based on vendor name or generic 'unnamed'
+      // Try to get name from body (creation/registration) or user object (updates)
+      const rawName = req.body.name || req.user?.name || 'unnamed';
+      const sanitizedName = rawName.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+      
+      const dest = path.join('uploads/', folderName, sanitizedName);
       ensureFolderExists(dest);
       cb(null, dest);
     },
@@ -24,7 +29,10 @@ const createUpload = (folderName = '') => {
 
   return multer({ 
     storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 } 
+    limits: { 
+      fileSize: 50 * 1024 * 1024, // 50MB for files
+      fieldSize: 100 * 1024 * 1024 // 100MB for fields (fixes LIMIT_FIELD_VALUE error)
+    } 
   });
 };
 

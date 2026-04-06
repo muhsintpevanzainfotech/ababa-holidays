@@ -84,12 +84,14 @@ export default function NotificationSection() {
 
   return (
     <>
-      <Box sx={{ ml: 2 }}>
+      <Box sx={{ display: 'flex' }}>
         <Avatar
           variant="rounded"
           sx={{
             ...theme.typography.commonAvatar,
-            ...theme.typography.mediumAvatar,
+            width: '44px',
+            height: '44px',
+            borderRadius: '14px',
             transition: 'all .2s ease-in-out',
             color: theme.vars.palette.warning.dark,
             background: theme.vars.palette.warning.light,
@@ -103,7 +105,7 @@ export default function NotificationSection() {
           aria-haspopup="true"
           onClick={handleToggle}
         >
-          <IconBell stroke={1.5} size="20px" />
+          <IconBell stroke={1.5} size="22px" />
         </Avatar>
       </Box>
       <Popper

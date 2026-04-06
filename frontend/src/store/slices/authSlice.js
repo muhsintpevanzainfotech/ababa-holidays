@@ -22,6 +22,32 @@ export const login = createAsyncThunk('auth/login', async (userData, thunkAPI) =
     return response.data;
   } catch (error) {
     const message = error.response?.data?.message || error.message || error.toString();
+    return thunkAPI.rejectWithValue({ message, user: error.response?.data?.userId ? { _id: error.response?.data?.userId, needsVerification: true } : null });
+  }
+});
+
+// Register user
+export const register = createAsyncThunk('auth/register', async (userData, thunkAPI) => {
+  try {
+    const response = await api.post('/auth/register', userData);
+    return response.data;
+  } catch (error) {
+    const message = error.response?.data?.message || error.message || error.toString();
+    return thunkAPI.rejectWithValue(message);
+  }
+});
+
+// Verify OTP
+export const verifyOTP = createAsyncThunk('auth/verifyOTP', async (otpData, thunkAPI) => {
+  try {
+    const response = await api.post('/auth/verify-otp', otpData);
+    if (response.data && response.data.accessToken) {
+      localStorage.setItem('user', JSON.stringify(response.data));
+      localStorage.setItem('accessToken', response.data.accessToken);
+    }
+    return response.data;
+  } catch (error) {
+    const message = error.response?.data?.message || error.message || error.toString();
     return thunkAPI.rejectWithValue(message);
   }
 });
@@ -74,11 +100,36 @@ export const authSlice = createSlice({
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
-        state.message = action.payload;
-        state.user = null;
+        state.message = action.payload?.message || action.payload;
+        state.user = action.payload?.user || null;
       })
       .addCase(getProfile.fulfilled, (state, action) => {
         state.user = { ...state.user, ...action.payload };
+      })
+      .addCase(register.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(register.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.message = action.payload.message;
+      })
+      .addCase(register.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      .addCase(verifyOTP.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(verifyOTP.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload;
+        state.token = action.payload.accessToken;
+      })
+      .addCase(verifyOTP.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
       });
   },
 });

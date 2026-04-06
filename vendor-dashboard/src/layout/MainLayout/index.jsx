@@ -13,7 +13,6 @@ import Footer from './Footer';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import MainContentStyled from './MainContentStyled';
-import Customization from '../Customization';
 import Loader from 'ui-component/Loader';
 import Breadcrumbs from 'ui-component/extended/Breadcrumbs';
 
@@ -75,13 +74,11 @@ export default function MainLayout() {
       {/* main content */}
       <MainContentStyled {...{ borderRadius, open: drawerOpen }}>
         <Box sx={{ ...{ px: { xs: 0 } }, minHeight: 'calc(100vh - 128px)', display: 'flex', flexDirection: 'column' }}>
-          {/* breadcrumb */}
-          <Breadcrumbs />
+          {/* breadcrumb moved to header */}
           <Outlet />
           <Footer />
         </Box>
       </MainContentStyled>
-      <Customization />
     </Box>
   );
 }

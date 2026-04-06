@@ -56,6 +56,9 @@ const blogsSlice = createSlice({
     deleteBlogFailure: (state, action) => {
       state.loading = false;
       state.error = action.payload;
+    },
+    toggleBlogStatusRequest: (state) => {
+      state.loading = true;
     }
   }
 });
@@ -64,7 +67,8 @@ export const {
   fetchBlogsRequest, fetchBlogsSuccess, fetchBlogsFailure,
   addBlogRequest, addBlogSuccess, addBlogFailure,
   updateBlogRequest, updateBlogSuccess, updateBlogFailure,
-  deleteBlogRequest, deleteBlogSuccess, deleteBlogFailure
+  deleteBlogRequest, deleteBlogSuccess, deleteBlogFailure,
+  toggleBlogStatusRequest
 } = blogsSlice.actions;
 
 export default blogsSlice.reducer;

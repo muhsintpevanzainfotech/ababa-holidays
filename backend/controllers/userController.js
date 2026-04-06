@@ -246,12 +246,60 @@ const createUser = asyncHandler(async (req, res, next) => {
         if (req.files.tinUpload) profileData.tin = { ...profileData.tin, upload: req.files.tinUpload[0].path };
         if (req.files.gstUpload) profileData.gst = { ...profileData.gst, upload: req.files.gstUpload[0].path };
         if (req.files.bankUpload) profileData.bankDetails = { ...profileData.bankDetails, upload: req.files.bankUpload[0].path };
+        
+        // Handle Logos
+        if (req.files.logoS || req.files.logoM || req.files.logoL) {
+          profileData.companylogos = {
+            small: req.files.logoS ? req.files.logoS[0].path : undefined,
+            medium: req.files.logoM ? req.files.logoM[0].path : undefined,
+            large: req.files.logoL ? req.files.logoL[0].path : undefined
+          };
+        }
       }
 
       await VendorProfile.create(profileData);
     } catch (err) {
       console.error('Profile parsing error:', err);
     }
+  }
+
+  // Send Email with credentials
+  try {
+    const isVendor = role === 'Vendor';
+    const loginUrl = isVendor 
+      ? (process.env.VENDOR_LOGIN_URL || 'https://ababa-holidays-vendor.vercel.app/login')
+      : (process.env.ADMIN_LOGIN_URL || 'https://ababa-holidays-admin.vercel.app/login');
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+        <h2 style="color: #2c3e50; text-align: center;">Welcome to ABABA Holidays!</h2>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>Your ${isVendor ? 'vendor' : 'staff'} account has been successfully created. You can now log in to your dashboard using the credentials below.</p>
+        
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #34495e;">Your Login Credentials:</h3>
+          <p style="margin-bottom: 5px;"><strong>Email:</strong> ${email}</p>
+          <p style="margin-top: 0;"><strong>Password:</strong> ${password}</p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${loginUrl}" style="background-color: #3498db; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Dashboard</a>
+        </div>
+
+        <p style="color: #7f8c8d; font-size: 14px;">For security reasons, we recommend changing your password after your first login.</p>
+        
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="color: #95a5a6; font-size: 12px; text-align: center;">&copy; 2026 ABABA Holidays. All rights reserved.</p>
+      </div>
+    `;
+
+    await sendEmail({
+      email,
+      subject: `Welcome to ABABA Holidays - Your ${isVendor ? 'Vendor' : 'Staff'} account is ready`,
+      html
+    });
+  } catch (error) {
+    console.error('Error sending registration email:', error);
   }
 
   res.status(201).json({ success: true, data: user });
@@ -330,6 +378,25 @@ const updateUser = asyncHandler(async (req, res, next) => {
         if (req.files.bankUpload) {
           if (profile?.bankDetails?.upload) deleteFile(profile.bankDetails.upload);
           profileData.bankDetails = { ...profileData.bankDetails, upload: req.files.bankUpload[0].path };
+        }
+
+        // Handle Logos in Update
+        if (req.files.logoS || req.files.logoM || req.files.logoL) {
+          const existingLogos = profile?.companylogos || {};
+          profileData.companylogos = { ...existingLogos };
+
+          if (req.files.logoS) {
+            if (existingLogos.small && !existingLogos.small.includes('default')) deleteFile(existingLogos.small);
+            profileData.companylogos.small = req.files.logoS[0].path;
+          }
+          if (req.files.logoM) {
+            if (existingLogos.medium && !existingLogos.medium.includes('default')) deleteFile(existingLogos.medium);
+            profileData.companylogos.medium = req.files.logoM[0].path;
+          }
+          if (req.files.logoL) {
+            if (existingLogos.large && !existingLogos.large.includes('default')) deleteFile(existingLogos.large);
+            profileData.companylogos.large = req.files.logoL[0].path;
+          }
         }
       }
 

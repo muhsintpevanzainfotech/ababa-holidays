@@ -3,10 +3,11 @@ import { useTheme, useColorScheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 
 // project imports
 import LogoSection from '../LogoSection';
-import SearchSection from './SearchSection';
+import Breadcrumbs from 'ui-component/extended/Breadcrumbs';
 import ProfileSection from './ProfileSection';
 import NotificationSection from './NotificationSection';
 
@@ -52,37 +53,42 @@ export default function Header() {
         </Avatar>
       </Box>
 
-      {/* header search */}
-      <SearchSection />
-      <Box sx={{ flexGrow: 1 }} />
-      <Box sx={{ flexGrow: 1 }} />
-
-      {/* theme toggle */}
-      <Avatar
-        variant="rounded"
-        sx={{
-          ...theme.typography.commonAvatar,
-          ...theme.typography.mediumAvatar,
-          overflow: 'hidden',
-          transition: 'all .2s ease-in-out',
-          color: theme.vars.palette.secondary.dark,
-          background: theme.vars.palette.secondary.light,
-          '&:hover': {
-            color: theme.vars.palette.secondary.light,
-            background: theme.vars.palette.secondary.dark
-          }
-        }}
-        onClick={() => setMode(mode === 'light' ? 'dark' : 'light')}
-      >
-        {mode === 'light' ? <IconMoon stroke={1.5} size="20px" /> : <IconSun stroke={1.5} size="20px" />}
-      </Avatar>
-
-      <Box sx={{ ml: 2 }}>
-        <NotificationSection />
+      {/* breadcrumbs feed in center header area */}
+      <Box sx={{ flexGrow: 1, ml: 4, display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+        <Breadcrumbs card={false} title={false} divider={false} sx={{ mb: 0, '& .MuiTypography-root': { mt: 0 } }} />
       </Box>
+      <Box sx={{ flexGrow: 1 }} />
+      <Box sx={{ flexGrow: 1 }} />
 
-      {/* profile */}
-      <ProfileSection />
+      {/* theme toggle and actions standard group */}
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', ml: 2 }}>
+        <Avatar
+          variant="rounded"
+          sx={{
+            ...theme.typography.commonAvatar,
+            width: '44px',
+            height: '44px',
+            borderRadius: '14px',
+            overflow: 'hidden',
+            transition: 'all .2s ease-in-out',
+            color: theme.vars.palette.secondary.dark,
+            background: theme.vars.palette.secondary.light,
+            '&:hover': {
+              color: theme.vars.palette.secondary.light,
+              background: theme.vars.palette.secondary.dark
+            }
+          }}
+          onClick={() => setMode(mode === 'light' ? 'dark' : 'light')}
+        >
+          {mode === 'light' ? <IconMoon stroke={1.5} size="22px" /> : <IconSun stroke={1.5} size="22px" />}
+        </Avatar>
+
+        {/* notification */}
+        <NotificationSection />
+
+        {/* profile */}
+        <ProfileSection />
+      </Stack>
     </>
   );
 }

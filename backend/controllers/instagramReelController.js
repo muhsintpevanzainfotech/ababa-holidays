@@ -4,32 +4,34 @@ const Subscription = require('../models/Subscription');
 const { deleteFile } = require('../utils/fileHelpers');
 
 exports.createReel = async (req, res, next) => {
+  if (!req.body) req.body = {};
   try {
-    const vendorId = req.user.role === 'Vendor' ? req.user.id : req.body.vendor;
+    const vendorId = req.user.role === 'Vendor' ? req.user.id : (req.body && req.body.vendor ? req.body.vendor : null);
 
-    if (!vendorId) {
-      return res.status(400).json({ success: false, message: 'Vendor ID is required' });
+    // If it's a vendor, and no vendor ID was found (shouldn't happen with req.user), it's a 400.
+    if (req.user.role === 'Vendor' && !vendorId) {
+      return res.status(400).json({ success: false, message: 'Vendor context is missing' });
     }
 
-    // Check if vendor has permission for Instagram Reels in their subscription
-    const profile = await VendorProfile.findOne({ user: vendorId });
-    if (!profile) {
-      return res.status(404).json({ success: false, message: 'Vendor profile not found' });
-    }
+    // Only check subscription if it's being assigned to a vendor
+    if (vendorId) {
+      const profile = await VendorProfile.findOne({ user: vendorId });
+      if (!profile) {
+        return res.status(404).json({ success: false, message: 'Vendor profile not found' });
+      }
 
-    // We can check the subscription plan string OR look up the latest active Subscription record
-    // For now, let's look up the latest active subscription for this vendor
-    const activeSub = await Subscription.findOne({ 
-      vendor: vendorId, 
-      isActive: true,
-      endDate: { $gte: new Date() } 
-    }).sort('-createdAt');
+      const activeSub = await Subscription.findOne({ 
+        vendor: vendorId, 
+        isActive: true,
+        endDate: { $gte: new Date() } 
+      }).sort('-createdAt');
 
-    if (!activeSub || !activeSub.instagramReelsEnable) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Your current subscription plan does not support Instagram Reels' 
-      });
+      if (!activeSub || !activeSub.instagramReelsEnabled) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'This vendor’s current subscription plan does not support Instagram Reels' 
+        });
+      }
     }
 
     if (req.file) {
@@ -50,7 +52,18 @@ exports.createReel = async (req, res, next) => {
 
 exports.getReels = async (req, res, next) => {
   try {
-    const filter = { isActive: true };
+    let filter = { isActive: true };
+
+    // If authenticated, adjust filter
+    if (req.user) {
+      if (req.user.role === 'Admin' || req.user.role === 'Sub-Admin') {
+        filter = {}; // Admins see all (even inactive)
+      } else if (req.user.role === 'Vendor') {
+        filter = { vendor: req.user.id }; // Vendors see their own (even inactive)
+      }
+    }
+
+    // Manual override via query param
     if (req.query.vendor) {
       filter.vendor = req.query.vendor;
     }
@@ -86,6 +99,7 @@ exports.updateReel = async (req, res, next) => {
 
     if (req.file) {
       if (reel.video) deleteFile(reel.video);
+      if (!req.body) req.body = {};
       req.body.video = req.file.path;
     }
 

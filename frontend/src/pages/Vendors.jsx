@@ -64,7 +64,13 @@ const Vendors = () => {
   }, [dispatch]);
 
   const handleApprove = async (id) => {
-    dispatch(updateVendorRequest({ id, data: { 'profile.isApproved': true } }));
+    // Correctly structure the data for the backend userController
+    dispatch(updateVendorRequest({ 
+      id, 
+      data: { 
+        profile: JSON.stringify({ isApproved: true }) 
+      } 
+    }));
     showToast('Approved', 'Vendor account has been approved.', 'success');
   };
 
@@ -207,18 +213,31 @@ const Vendors = () => {
               {currentVendors.map((vendor) => (
                 <div key={vendor._id} className="card" style={{ position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid var(--bg-main)' }}>
-                      {vendor.avatar && !vendor.avatar.includes('ui-avatars') ? (
-                        <img src={getImageUrl(vendor.avatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', background: '#dbeafe', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '20px' }}>
-                          {vendor.name.charAt(0)}
-                        </div>
-                      )}
+                    <div style={{ position: 'relative', width: '60px', height: '60px' }}>
+                      <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid var(--bg-main)' }}>
+                        {vendor.avatar && !vendor.avatar.includes('ui-avatars') ? (
+                          <img src={getImageUrl(vendor.avatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', background: '#dbeafe', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '20px' }}>
+                            {vendor.name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ 
+                        position: 'absolute', bottom: '2px', right: '2px', 
+                        width: '12px', height: '12px', borderRadius: '50%', 
+                        background: vendor.isTrulyOnline ? '#22c55e' : '#94a3b8',
+                        border: '2px solid white',
+                        boxShadow: vendor.isTrulyOnline ? '0 0 10px rgba(34, 197, 94, 0.4)' : 'none'
+                      }} className={vendor.isTrulyOnline ? 'pulse-green' : ''}></div>
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{vendor.name}</h3>
-                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{vendor.name}</h3>
+                        <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: vendor.isTrulyOnline ? '#22c55e' : '#94a3b8' }}>
+                           {vendor.isTrulyOnline ? 'Live' : 'Offline'}
+                        </span>
+                      </div>
                         <span className="badge badge-primary" style={{ fontSize: '10px' }}>{vendor.role}</span>
                         <span style={{ padding: '0 8px', borderRadius: '12px', fontSize: '10px', background: '#e0f2fe', color: '#0369a1', fontWeight: '600' }}>{vendor.profile?.subscriptionPlan || 'Free'}</span>
                         {vendor.profile?.subscription && (
@@ -229,7 +248,6 @@ const Vendors = () => {
                         )}
                       </div>
                     </div>
-                  </div>
 
                   {vendor.profile?.subscription && (
                     <div style={{ background: 'var(--bg-main)', padding: '8px 12px', borderRadius: '8px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -246,6 +264,11 @@ const Vendors = () => {
                     {vendor.profile?.companyName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
                         <Building size={14} /> <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{vendor.profile.companyName}</span>
+                      </div>
+                    )}
+                    {vendor.brand && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--primary)', fontWeight: '700' }}>
+                         <ShieldCheck size={14} /> <span>{vendor.brand.title}</span>
                       </div>
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
@@ -295,18 +318,31 @@ const Vendors = () => {
                         </td>
                         <td style={{ padding: '16px 24px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                              {vendor.avatar && !vendor.avatar.includes('ui-avatars') ? (
-                                <img src={getImageUrl(vendor.avatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : (
-                                <div style={{ width: '100%', height: '100%', background: '#dbeafe', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
-                                  {vendor.name.charAt(0)}
-                                </div>
-                              )}
+                            <div style={{ position: 'relative', width: '36px', height: '36px' }}>
+                              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                {vendor.avatar && !vendor.avatar.includes('ui-avatars') ? (
+                                  <img src={getImageUrl(vendor.avatar)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  <div style={{ width: '100%', height: '100%', background: '#dbeafe', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
+                                    {vendor.name.charAt(0)}
+                                  </div>
+                                )}
+                              </div>
+                              <div style={{ 
+                                position: 'absolute', bottom: '0', right: '0', 
+                                width: '10px', height: '10px', borderRadius: '50%',
+                                background: vendor.isTrulyOnline ? '#22c55e' : '#94a3b8',
+                                border: '2px solid white'
+                              }}></div>
                             </div>
                             <div>
                               <p style={{ fontWeight: '600', fontSize: '14px' }}>{vendor.name}</p>
                               <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{vendor.email}</p>
+                              {vendor.brand && (
+                                <p style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '700' }}>
+                                  Brand: {vendor.brand.title}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </td>
