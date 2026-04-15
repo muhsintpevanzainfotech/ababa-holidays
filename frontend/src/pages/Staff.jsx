@@ -83,10 +83,13 @@ const Staff = () => {
     { id: 'manage_bookings', label: 'Reservation & Booking Control' },
     { id: 'manage_payments', label: 'Financial Reports & Payments' },
     { id: 'manage_complaints', label: 'Dispute & Incident Resolution' },
+    { id: 'manage_enquiries', label: 'Web Enquiries & Leads' },
+    { id: 'manage_contact_us', label: 'Web Contact Messages' },
     { id: 'manage_banners', label: 'Platform Studio: Web Banners' },
     { id: 'manage_blogs', label: 'Platform Studio: Web Blogs' },
     { id: 'manage_testimonials', label: 'Platform Studio: Global Reviews' },
     { id: 'manage_reels', label: 'Platform Studio: Web Shows (Reels)' },
+    { id: 'manage_brands', label: 'Platform Studio: Social Brands' },
     { id: 'manage_policies', label: 'System: Global Policies & Terms' },
   ];
 

@@ -27,6 +27,9 @@ import Complaints from './pages/Complaints';
 import UserView from './pages/UserView';
 import Shows from './pages/Shows';
 import Policies from './pages/Policies';
+import Enquiries from './pages/Enquiries';
+import ContactUs from './pages/ContactUs';
+import Brands from './pages/Brands';
 import Layout from './components/Layout';
 import DestinationLayout from './components/DestinationLayout';
 import { ToastProvider } from './context/ToastContext';
@@ -96,6 +99,9 @@ function App() {
                 <Route path="blogs" element={<Blogs userRole="Admin" />} />
                 <Route path="testimonials" element={<Testimonials userRole="Admin" />} />
                 <Route path="shows" element={<Shows userRole="Admin" />} />
+                <Route path="brands" element={<Brands userRole="Admin" />} />
+                <Route path="enquiries" element={<Enquiries />} />
+                <Route path="contact-us" element={<ContactUs />} />
               </Route>
 
               {/* Vendor Hub (Vendors) */}
@@ -104,6 +110,7 @@ function App() {
                 <Route path="blogs" element={<Blogs userRole="Vendor" />} />
                 <Route path="testimonials" element={<Testimonials userRole="Vendor" />} />
                 <Route path="shows" element={<Shows userRole="Vendor" />} />
+                <Route path="brands" element={<Brands userRole="Vendor" />} />
               </Route>
             </Route>
 

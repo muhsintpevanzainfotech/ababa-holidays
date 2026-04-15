@@ -165,7 +165,7 @@ const updatePackage = asyncHandler(async (req, res, next) => {
   }
 
   pkg = await Package.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true
   });
 

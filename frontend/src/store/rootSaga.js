@@ -15,6 +15,8 @@ import { watchBookingsSaga } from './sagas/bookingsSaga';
 import { watchPaymentsSaga } from './sagas/paymentsSaga';
 import { watchBrandsSaga } from './sagas/brandsSaga';
 import { watchReelsSaga } from './sagas/reelsSaga';
+import { watchEnquiriesSaga } from './sagas/enquiriesSaga';
+import { watchContactUsSaga } from './sagas/contactUsSaga';
 
 export default function* rootSaga() {
   yield all([
@@ -34,5 +36,7 @@ export default function* rootSaga() {
     fork(watchPaymentsSaga),
     fork(watchBrandsSaga),
     fork(watchReelsSaga),
+    fork(watchEnquiriesSaga),
+    fork(watchContactUsSaga),
   ]);
 }

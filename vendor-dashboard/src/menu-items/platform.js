@@ -1,14 +1,14 @@
 // assets
-import { IconPhoto, IconNews, IconMessage2, IconBrush, IconBriefcase, IconListDetails } from '@tabler/icons-react';
+import { IconPhoto, IconNews, IconMessage2, IconBrush, IconBriefcase, IconListDetails, IconMail, IconQuestionMark, IconWorld } from '@tabler/icons-react';
 
 // constant
-const icons = { IconPhoto, IconNews, IconMessage2, IconBrush, IconBriefcase, IconListDetails };
+const icons = { IconPhoto, IconNews, IconMessage2, IconBrush, IconBriefcase, IconListDetails, IconMail, IconQuestionMark, IconWorld };
 
 // ==============================|| PLATFORM MANAGEMENT MENU ITEMS ||============================== //
 
 const platform = {
   id: 'platform',
-  title: 'Platform Management',
+  title: 'Platform Studio',
   type: 'group',
   children: [
     {
@@ -49,6 +49,30 @@ const platform = {
       type: 'item',
       url: '/platform/services',
       icon: icons.IconBriefcase,
+      breadcrumbs: true
+    },
+    {
+      id: 'enquiries',
+      title: 'Web Enquiries',
+      type: 'item',
+      url: '/platform/enquiries',
+      icon: icons.IconQuestionMark,
+      breadcrumbs: true
+    },
+    {
+      id: 'contact-us',
+      title: 'Contact Messages',
+      type: 'item',
+      url: '/platform/contact-us',
+      icon: icons.IconMail,
+      breadcrumbs: true
+    },
+    {
+      id: 'brands',
+      title: 'Social Brands',
+      type: 'item',
+      url: '/platform/brands',
+      icon: icons.IconWorld,
       breadcrumbs: true
     }
   ]

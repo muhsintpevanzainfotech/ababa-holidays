@@ -17,6 +17,11 @@ const PlatformTestimonials = Loadable(lazy(() => import('views/platform-manageme
 const PlatformPolicies = Loadable(lazy(() => import('views/platform-management/Policies')));
 const ServicesManagement = Loadable(lazy(() => import('views/services-management')));
 
+// communication routing
+const WebEnquiries = Loadable(lazy(() => import('views/communications/Enquiries')));
+const WebContactUs = Loadable(lazy(() => import('views/communications/ContactUs')));
+const WebBrands = Loadable(lazy(() => import('views/communications/Brands')));
+
 const VendorSettings = Loadable(lazy(() => import('views/pages/settings')));
 
 // sample page routing
@@ -70,6 +75,18 @@ const MainRoutes = {
         {
           path: 'services',
           element: <ServicesManagement />
+        },
+        {
+          path: 'enquiries',
+          element: <WebEnquiries />
+        },
+        {
+          path: 'contact-us',
+          element: <WebContactUs />
+        },
+        {
+          path: 'brands',
+          element: <WebBrands />
         }
       ]
     },

@@ -25,9 +25,11 @@ import {
   Globe,
   FileText,
   MessageSquare,
+  Mail,
   Calendar,
   ShieldAlert,
-  Smartphone
+  Smartphone,
+  Fingerprint
 } from 'lucide-react';
 
 const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile, onToggleCollapse }) => {
@@ -218,6 +220,24 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile, onToggleCollapse })
                       <span>Web Shows</span>
                     </NavLink>
                   )}
+                  {hasPermission('manage_brands') && (
+                    <NavLink to="/website/brands" onClick={handleLinkClick} className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>
+                      <Globe size={14} />
+                      <span>Social Brands</span>
+                    </NavLink>
+                  )}
+                  {hasPermission('manage_enquiries') && (
+                    <NavLink to="/website/enquiries" onClick={handleLinkClick} className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>
+                      <MessageSquare size={14} />
+                      <span>Web Enquiries</span>
+                    </NavLink>
+                  )}
+                  {hasPermission('manage_contact_us') && (
+                    <NavLink to="/website/contact-us" onClick={handleLinkClick} className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>
+                      <Mail size={14} />
+                      <span>Contact Messages</span>
+                    </NavLink>
+                  )}
                 </div>
               </>
             )}
@@ -270,6 +290,10 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile, onToggleCollapse })
               <NavLink to="/vendor/shows" onClick={handleLinkClick} className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>
                 <Smartphone size={14} />
                 <span>Agency Highlights</span>
+              </NavLink>
+              <NavLink to="/vendor/brands" onClick={handleLinkClick} className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>
+                <Globe size={14} />
+                <span>Agency Brand</span>
               </NavLink>
             </div>
           </div>

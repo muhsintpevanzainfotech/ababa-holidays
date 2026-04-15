@@ -19,6 +19,8 @@ import complaintsReducer from './slices/complaintsSlice';
 import brandsReducer from './slices/brandsSlice';
 import globalReducer from './slices/globalSlice';
 import reelsReducer from './slices/reelsSlice';
+import enquiriesReducer from './slices/enquiriesSlice';
+import contactUsReducer from './slices/contactUsSlice';
 import rootSaga from './rootSaga';
 
 const sagaMiddleware = createSagaMiddleware();
@@ -46,6 +48,8 @@ export const store = configureStore({
     brands: brandsReducer,
     global: globalReducer,
     reels: reelsReducer,
+    enquiries: enquiriesReducer,
+    contactUs: contactUsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ thunk: true, serializableCheck: false }).concat(sagaMiddleware),

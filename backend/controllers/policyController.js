@@ -60,7 +60,7 @@ exports.upsertPolicy = asyncHandler(async (req, res, next) => {
   const payload = { title, content, type, target, vendor: vendorId, isGlobal };
 
   let policy = await Policy.findOneAndUpdate(query, payload, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
     upsert: true
   });
