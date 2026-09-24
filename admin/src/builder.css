@@ -1,0 +1,158 @@
+/* Figma Style Builder Layout */
+.builder-container {
+  display: flex;
+  height: calc(100vh - var(--header-height) - 40px);
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-premium);
+}
+
+.builder-left-panel {
+  width: 400px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.builder-right-panel {
+  flex: 1;
+  background: #f1f5f9;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.floating-zoom-controls {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 4px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
+  z-index: 1000;
+}
+
+.floating-zoom-controls button {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.floating-zoom-controls button:hover {
+  background: var(--bg-main);
+  color: var(--primary);
+}
+
+.zoom-display {
+  padding: 0 10px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  border-right: 1px solid var(--border);
+  margin-right: 4px;
+}
+
+.preview-canvas {
+  width: 100%;
+  max-width: 800px;
+  background: white;
+  border-radius: 12px;
+  padding: 48px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+  min-height: fit-content;
+}
+
+.field-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.field-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 8px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  background: var(--bg-main);
+}
+
+.field-item:hover {
+  background: white;
+  border-color: var(--border);
+}
+
+.field-item.active {
+  background: white;
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.1);
+}
+
+.settings-panel {
+  width: 380px;
+  border-left: 1px solid var(--border);
+  padding: 24px;
+  overflow-y: auto;
+  background: white;
+}
+
+.builder-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.drag-handle {
+  cursor: grab;
+  color: #cbd5e1;
+}
+
+/* Scrollbar for panels */
+.builder-left-panel ::-webkit-scrollbar,
+.settings-panel ::-webkit-scrollbar {
+  width: 4px;
+}
+
+.builder-left-panel ::-webkit-scrollbar-thumb,
+.settings-panel ::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+@media (max-width: 1024px) {
+  .builder-container {
+    flex-direction: column;
+    height: auto;
+  }
+  .builder-left-panel {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}

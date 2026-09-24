@@ -1,0 +1,169 @@
+const Country = require('../models/Country');
+const State = require('../models/State');
+const Destination = require('../models/Destination');
+const fs = require('fs');
+const path = require('path');
+
+// Helper to delete file
+const deleteFile = (filePath) => {
+  if (filePath && !filePath.startsWith('http')) {
+    const absolutePath = path.join(__dirname, '..', filePath);
+    if (fs.existsSync(absolutePath)) {
+      try {
+        fs.unlinkSync(absolutePath);
+      } catch (err) {
+        console.error('Failed to delete file:', err);
+      }
+    }
+  }
+};
+
+// @desc    Get all countries
+// @route   GET /api/countries
+// @access  Public
+exports.getCountries = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+    if (req.query.status && req.query.status !== 'all') {
+      filter.isActive = req.query.status === 'active';
+    }
+    if (req.query.search) {
+      filter.$or = [
+        { name: { $regex: req.query.search, $options: 'i' } },
+        { description: { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
+
+    const total = await Country.countDocuments(filter);
+    
+    let countries;
+    if (req.query.all === 'true') {
+      countries = await Country.find(filter).sort({ name: 1 });
+    } else {
+      countries = await Country.find(filter)
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit);
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      count: countries.length, 
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      },
+      data: countries 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get single country
+// @route   GET /api/countries/:id
+// @access  Public
+exports.getCountry = async (req, res, next) => {
+  try {
+    const country = await Country.findById(req.params.id);
+    if (!country) return res.status(404).json({ success: false, message: 'Country not found' });
+    res.status(200).json({ success: true, data: country });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Create country
+// @route   POST /api/countries
+// @access  Private/Admin
+exports.createCountry = async (req, res, next) => {
+  try {
+    if (req.file) {
+      const filePath = req.file.path.replace(/\\/g, '/');
+      req.body.coverImage = filePath;
+      req.body.image = filePath;
+    }
+
+    if (req.body.name && !req.body.slug) {
+      req.body.slug = req.body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    }
+
+    if (req.body.phoneCode) {
+      req.body.dialCode = req.body.phoneCode;
+    } else if (req.body.dialCode) {
+      req.body.phoneCode = req.body.dialCode;
+    }
+
+    const country = await Country.create(req.body);
+    res.status(201).json({ success: true, data: country });
+  } catch (error) {
+    if (req.file) deleteFile(req.file.path);
+    next(error);
+  }
+};
+
+// @desc    Update country
+// @route   PUT /api/countries/:id
+// @access  Private/Admin
+exports.updateCountry = async (req, res, next) => {
+  try {
+    let country = await Country.findById(req.params.id);
+    if (!country) return res.status(404).json({ success: false, message: 'Country not found' });
+
+    if (req.file) {
+      deleteFile(country.coverImage || country.image);
+      const filePath = req.file.path.replace(/\\/g, '/');
+      req.body.coverImage = filePath;
+      req.body.image = filePath;
+    }
+
+    if (req.body.name && !req.body.slug) {
+      req.body.slug = req.body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    }
+
+    if (req.body.phoneCode) {
+      req.body.dialCode = req.body.phoneCode;
+    } else if (req.body.dialCode) {
+      req.body.phoneCode = req.body.dialCode;
+    }
+
+    country = await Country.findByIdAndUpdate(req.params.id, req.body, {
+      returnDocument: 'after',
+      runValidators: true
+    });
+
+    res.status(200).json({ success: true, data: country });
+  } catch (error) {
+    if (req.file) deleteFile(req.file.path);
+    next(error);
+  }
+};
+
+// @desc    Delete country
+// @route   DELETE /api/countries/:id
+// @access  Private/Admin
+exports.deleteCountry = async (req, res, next) => {
+  try {
+    const country = await Country.findById(req.params.id);
+    if (!country) return res.status(404).json({ success: false, message: 'Country not found' });
+
+    // Check if states exist for this country
+    const states = await State.find({ country: req.params.id });
+    if (states.length > 0) {
+      return res.status(400).json({ success: false, message: 'Cannot delete country with associated states' });
+    }
+
+    deleteFile(country.image);
+    await country.deleteOne();
+
+    res.status(200).json({ success: true, data: {} });
+  } catch (error) {
+    next(error);
+  }
+};

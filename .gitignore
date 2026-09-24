@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment Variables (Critical Security)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+#!.env.example
+
+# Build & Output directories
+dist/
+build/
+out/
+.next/
+.vite/
+
+# Backend Uploads
+uploads/
+backend/uploads/
+
+# Logs & Caches
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+.cache/
+.eslintcache
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Antigravity & AI Tool Logs
+.antigravity/
+.gemini/
+brain/
