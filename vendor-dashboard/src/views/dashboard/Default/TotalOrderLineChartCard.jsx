@@ -26,7 +26,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 const monthlyData = [{ data: [45, 66, 41, 89, 25, 44, 9, 54] }];
 const yearlyData = [{ data: [35, 44, 9, 54, 45, 66, 41, 69] }];
 
-export default function TotalOrderLineChartCard({ isLoading }) {
+export default function TotalOrderLineChartCard({ isLoading, stats }) {
   const theme = useTheme();
 
   const [timeValue, setTimeValue] = React.useState(false);
@@ -40,6 +40,8 @@ export default function TotalOrderLineChartCard({ isLoading }) {
       setSeries(yearlyData);
     }
   };
+
+  const bookingCount = stats?.bookings !== undefined ? stats.bookings : 0;
 
   return (
     <>
@@ -122,8 +124,8 @@ export default function TotalOrderLineChartCard({ isLoading }) {
                 <Grid size={6}>
                   <Box>
                     <Stack direction="row" sx={{ alignItems: 'center' }}>
-                      <Typography sx={{ fontSize: '2.125rem', fontWeight: 500, mr: 1, mt: 1.75, mb: 0.75 }}>
-                        {timeValue ? '$108' : '$961'}
+                      <Typography sx={{ fontSize: '2.125rem', fontWeight: 700, mr: 1, mt: 1.75, mb: 0.75 }}>
+                        {bookingCount}
                       </Typography>
                       <Avatar sx={{ ...theme.typography.smallAvatar, bgcolor: 'primary.200', color: 'primary.dark' }}>
                         <ArrowDownwardIcon fontSize="inherit" sx={{ transform: 'rotate3d(1, 1, 1, 45deg)' }} />
@@ -132,11 +134,11 @@ export default function TotalOrderLineChartCard({ isLoading }) {
                     <Typography
                       sx={{
                         fontSize: '1rem',
-                        fontWeight: 500,
+                        fontWeight: 600,
                         color: 'primary.200'
                       }}
                     >
-                      Total Order
+                      Total Bookings
                     </Typography>
                   </Box>
                 </Grid>
@@ -160,4 +162,4 @@ export default function TotalOrderLineChartCard({ isLoading }) {
   );
 }
 
-TotalOrderLineChartCard.propTypes = { isLoading: PropTypes.bool };
+TotalOrderLineChartCard.propTypes = { isLoading: PropTypes.bool, stats: PropTypes.object };

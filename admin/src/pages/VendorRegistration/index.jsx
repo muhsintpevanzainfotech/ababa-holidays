@@ -84,18 +84,18 @@ const VendorRegistration = ({ isPublic = false }) => {
 
             {/* Navigation Buttons */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '40px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '800', flex: 1, textTransform: 'uppercase' }}>
-                MAX PAYLOAD: 100MB | FILE LIMIT: 50MB
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', flex: 1 }}>
+                Step {currentStep} of 7 &bull; All data encrypted & secure
               </div>
               
               {currentStep > 1 && (
                 <button 
                   type="button" 
                   className="btn" 
-                  style={{ height: '48px', padding: '0 32px', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-main)', fontWeight: '700', borderRadius: '12px' }} 
+                  style={{ height: '48px', padding: '0 28px', background: 'var(--bg-main)', border: '1px solid var(--border)', color: 'var(--text-main)', fontWeight: '700', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }} 
                   onClick={handlePrev}
                 >
-                  Previous
+                  <ChevronLeft size={18} /> Previous
                 </button>
               )}
 
@@ -103,7 +103,7 @@ const VendorRegistration = ({ isPublic = false }) => {
                 <button 
                   type="button" 
                   className="btn btn-primary" 
-                  style={{ height: '48px', padding: '0 40px', fontWeight: '700', borderRadius: '12px', background: 'var(--primary)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: '8px' }} 
+                  style={{ height: '48px', padding: '0 36px', fontWeight: '700', borderRadius: '12px', background: 'var(--primary)', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }} 
                   onClick={handleNext}
                 >
                   Continue <ChevronRight size={18} />
@@ -112,11 +112,11 @@ const VendorRegistration = ({ isPublic = false }) => {
                 <button 
                   type={isViewMode ? "button" : "submit"} 
                   className="btn btn-primary" 
-                  style={{ height: '48px', padding: '0 40px', fontWeight: '800', borderRadius: '12px', background: 'var(--primary)', color: '#fff', border: 'none' }} 
+                  style={{ height: '48px', padding: '0 36px', fontWeight: '800', borderRadius: '12px', background: 'var(--primary)', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }} 
                   disabled={isFinalizing} 
                   onClick={() => isViewMode && navigate('/vendors')}
                 >
-                  {isFinalizing ? 'Saving...' : (isViewMode ? 'Audit Complete' : (id ? 'Update Vendor' : 'Finalize Registration'))}
+                  {isFinalizing ? 'Saving...' : (isViewMode ? 'Audit Complete' : (id ? 'Update Vendor' : 'Submit Registration'))} <Check size={18} />
                 </button>
               )}
             </div>

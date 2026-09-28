@@ -16,14 +16,24 @@ const PlatformBlogs = Loadable(lazy(() => import('views/platform-management/Blog
 const PlatformTestimonials = Loadable(lazy(() => import('views/platform-management/Testimonials')));
 const PlatformPolicies = Loadable(lazy(() => import('views/platform-management/Policies')));
 const ServicesManagement = Loadable(lazy(() => import('views/services-management')));
+const PackagesManagement = Loadable(lazy(() => import('views/services-management/PackagesManagement')));
 const PlatformVendors = Loadable(lazy(() => import('views/platform-management/Vendors')));
 
 // communication routing
 const WebEnquiries = Loadable(lazy(() => import('views/communications/Enquiries')));
 const WebContactUs = Loadable(lazy(() => import('views/communications/ContactUs')));
-const WebBrands = Loadable(lazy(() => import('views/communications/Brands')));
 
 const VendorSettings = Loadable(lazy(() => import('views/pages/settings')));
+const SecuritySettings = Loadable(lazy(() => import('views/pages/settings/Security')));
+const NotificationSettings = Loadable(lazy(() => import('views/pages/settings/Notifications')));
+const VendorSubscriptionSettings = Loadable(lazy(() => import('views/pages/settings/Subscription')));
+
+// pages routing
+const VendorPolicyView = Loadable(lazy(() => import('views/pages/policies/VendorPolicyView')));
+const Error404 = Loadable(lazy(() => import('views/pages/maintenance/Error404')));
+const Error500 = Loadable(lazy(() => import('views/pages/maintenance/Error500')));
+const Error403 = Loadable(lazy(() => import('views/pages/maintenance/Error403')));
+const MaintenancePage = Loadable(lazy(() => import('views/pages/maintenance/Maintenance')));
 
 // sample page routing
 const SamplePage = Loadable(lazy(() => import('views/sample-page')));
@@ -55,6 +65,22 @@ const MainRoutes = {
       element: <DashboardReports />
     },
     {
+      path: 'privacy-policy',
+      element: <VendorPolicyView defaultType="Privacy Policy" />
+    },
+    {
+      path: 'terms-of-service',
+      element: <VendorPolicyView defaultType="Terms & Conditions" />
+    },
+    {
+      path: 'vendor-policies',
+      element: <VendorPolicyView />
+    },
+    {
+      path: 'packages',
+      element: <PackagesManagement />
+    },
+    {
       path: 'platform',
       children: [
         {
@@ -74,8 +100,20 @@ const MainRoutes = {
           element: <PlatformPolicies />
         },
         {
+          path: 'privacy-policy',
+          element: <VendorPolicyView defaultType="Privacy Policy" />
+        },
+        {
+          path: 'terms-of-service',
+          element: <VendorPolicyView defaultType="Terms & Conditions" />
+        },
+        {
           path: 'services',
           element: <ServicesManagement />
+        },
+        {
+          path: 'packages',
+          element: <PackagesManagement />
         },
         {
           path: 'vendors',
@@ -88,10 +126,6 @@ const MainRoutes = {
         {
           path: 'contact-us',
           element: <WebContactUs />
-        },
-        {
-          path: 'brands',
-          element: <WebBrands />
         }
       ]
     },
@@ -101,6 +135,43 @@ const MainRoutes = {
         {
           path: 'settings',
           element: <VendorSettings />
+        },
+        {
+          path: 'settings/profile',
+          element: <VendorSettings />
+        },
+        {
+          path: 'settings/security',
+          element: <SecuritySettings />
+        },
+        {
+          path: 'settings/notifications',
+          element: <NotificationSettings />
+        },
+        {
+          path: 'settings/subscription',
+          element: <VendorSubscriptionSettings />
+        }
+      ]
+    },
+    {
+      path: 'pages',
+      children: [
+        {
+          path: 'error/404',
+          element: <Error404 />
+        },
+        {
+          path: 'error/500',
+          element: <Error500 />
+        },
+        {
+          path: 'error/403',
+          element: <Error403 />
+        },
+        {
+          path: 'maintenance',
+          element: <MaintenancePage />
         }
       ]
     },

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 
 // material-ui
@@ -20,32 +20,36 @@ import {
   Stepper,
   Step,
   StepLabel,
-  Divider,
   TextField,
-  Avatar
+  Avatar,
+  Select,
+  MenuItem,
+  Alert,
+  AlertTitle
 } from '@mui/material';
 
 // project imports
 import AnimateButton from 'ui-component/extended/AnimateButton';
 import CustomFormControl from 'ui-component/extended/Form/CustomFormControl';
-import { registerRequest, verifyOTPRequest } from 'store/slices/authSlice';
+import { registerRequest, verifyOTPRequest, resetAuthError } from 'store/slices/authSlice';
 
 // assets
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import BusinessIcon from '@mui/icons-material/Business';
 import PersonIcon from '@mui/icons-material/Person';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import MailOutlineIcon from '@mui/icons-material/MailOutline';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 
 const steps = ['Account', 'Business', 'Location', 'Modules', 'Verify'];
 
 export default function AuthRegister() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error, token, needsOTP, email: userEmail } = useSelector((state) => state.auth);
+  const { loading, error, token, needsOTP, email: userEmail, approvalPending, infoMessage } = useSelector((state) => state.auth);
 
   const [activeStep, setActiveStep] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
@@ -143,7 +147,7 @@ export default function AuthRegister() {
   const handleRegister = (e) => {
     e.preventDefault();
     if (needsOTP) {
-        dispatch(verifyOTPRequest({ email: userEmail, otp }));
+        dispatch(verifyOTPRequest({ email: userEmail || formData.email, otp }));
     } else {
         const data = new FormData();
         
@@ -173,12 +177,48 @@ export default function AuthRegister() {
      if (token) navigate('/dashboard');
   }, [token, navigate]);
 
+  if (approvalPending) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 2 }}>
+        <Box sx={{ 
+          width: 64, 
+          height: 64, 
+          bgcolor: 'success.light', 
+          borderRadius: '50%', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          margin: '0 auto 16px',
+          color: 'success.dark'
+        }}>
+          <CheckCircleOutlineIcon sx={{ fontSize: 40 }} />
+        </Box>
+        <Typography variant="h3" sx={{ mb: 1, fontWeight: 700 }}>Verification Successful!</Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 3, px: 2 }}>
+          {infoMessage || 'Your account details have been verified and submitted for review. ABABA Holidays Admin will review your profile and activate your account shortly.'}
+        </Typography>
+        <Button 
+          variant="contained" 
+          color="secondary" 
+          onClick={() => {
+            dispatch(resetAuthError());
+            navigate('/login');
+          }}
+          fullWidth
+          size="large"
+        >
+          Go to Sign In Page
+        </Button>
+      </Box>
+    );
+  }
+
   const renderStepContent = (step) => {
     switch (step) {
       case 0:
         return (
           <Grid container spacing={2}>
-            <Grid item xs={12} sx={{ textAlign: 'center', mb: 2 }}>
+            <Grid size={12} sx={{ textAlign: 'center', mb: 1 }}>
                <input 
                  accept="image/*" 
                  id="avatar-up" 
@@ -199,7 +239,7 @@ export default function AuthRegister() {
                </label>
                <Typography variant="caption" display="block">Profile / Business Head Photo</Typography>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
                <Button
                  variant="outlined"
                  component="label"
@@ -212,32 +252,67 @@ export default function AuthRegister() {
                  <input type="file" name="idCard" hidden onChange={handleFileChange} accept="application/pdf,image/*" />
                </Button>
             </Grid>
-            <Grid item xs={12}>
-              <TextField fullWidth label="Full Name" name="name" value={formData.name} onChange={handleInputChange} required />
+            <Grid size={12}>
+              <TextField 
+                fullWidth 
+                label="Full Name" 
+                name="name" 
+                value={formData.name} 
+                onChange={handleInputChange} 
+                required 
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PersonIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                    </InputAdornment>
+                  )
+                }}
+              />
             </Grid>
-            <Grid item xs={12}>
-              <TextField fullWidth label="Email Address" type="email" name="email" value={formData.email} onChange={handleInputChange} required />
+            <Grid size={12}>
+              <TextField 
+                fullWidth 
+                label="Email Address" 
+                type="email" 
+                name="email" 
+                value={formData.email} 
+                onChange={handleInputChange} 
+                required 
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <MailOutlineIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                    </InputAdornment>
+                  )
+                }}
+              />
             </Grid>
-            <Grid item xs={12}>
-               <FormControl fullWidth>
-                <InputLabel>Password</InputLabel>
-                <OutlinedInput
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    label="Password"
-                    endAdornment={
-                        <InputAdornment position="end">
-                            <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                                {showPassword ? <Visibility /> : <VisibilityOff />}
-                            </IconButton>
-                        </InputAdornment>
-                    }
-                />
-               </FormControl>
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                required
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LockOutlinedIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                        {showPassword ? <Visibility /> : <VisibilityOff />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
+              />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField fullWidth label="Phone Number" name="phone" value={formData.phone} onChange={handleInputChange} required />
             </Grid>
           </Grid>
@@ -245,19 +320,36 @@ export default function AuthRegister() {
       case 1:
         return (
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={12}>
                 <TextField fullWidth label="Company/Business Name" name="companyName" value={formData.companyName} onChange={handleInputChange} required />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
                 <TextField fullWidth label="Business License/Reg No." name="businessLicense" value={formData.businessLicense} onChange={handleInputChange} />
             </Grid>
-            <Grid item xs={12}>
-                <TextField fullWidth label="Business Category" placeholder="e.g. Catering, Decorations, Photography" name="vendorType" value={formData.vendorType} onChange={handleInputChange} required />
+            <Grid size={12}>
+                <FormControl fullWidth required>
+                  <InputLabel id="vendor-type-select-label">Business Category / Type</InputLabel>
+                  <Select
+                    labelId="vendor-type-select-label"
+                    name="vendorType"
+                    value={formData.vendorType}
+                    onChange={handleInputChange}
+                    label="Business Category / Type"
+                  >
+                    <MenuItem value="Individual">Individual (Freelancer / Sole Proprietor)</MenuItem>
+                    <MenuItem value="Company">Registered Company</MenuItem>
+                    <MenuItem value="Business">Local Business / Event Service Provider</MenuItem>
+                    <MenuItem value="Travel Agent">Travel Agency / Tour Manager</MenuItem>
+                    <MenuItem value="Tour Operator">Tour Operator</MenuItem>
+                    <MenuItem value="Activity Provider">Activity / Experience Provider</MenuItem>
+                    <MenuItem value="Transport">Transportation / Logistics</MenuItem>
+                  </Select>
+                </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
                 <TextField fullWidth multiline rows={2} label="About Your Business" name="description" value={formData.description} onChange={handleInputChange} required />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Button
                 variant="outlined"
                 component="label"
@@ -280,7 +372,7 @@ export default function AuthRegister() {
                 sx={{ mt: 1 }}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Button
                 variant="outlined"
                 component="label"
@@ -308,16 +400,16 @@ export default function AuthRegister() {
       case 2:
         return (
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={12}>
                 <TextField fullWidth label="Full Business Address" name="address.fullAddress" value={formData.address.fullAddress} onChange={handleInputChange} required />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField fullWidth label="City" name="address.city" value={formData.address.city} onChange={handleInputChange} required />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField fullWidth label="State" name="address.state" value={formData.address.state} onChange={handleInputChange} required />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>Financial Credentials:</Typography>
               <Stack direction="row" spacing={2} sx={{ mb: 1.5 }}>
                 <TextField fullWidth label="Bank Name" size="small" name="bankDetails.bankName" value={formData.bankDetails.bankName} onChange={handleInputChange} />
@@ -334,18 +426,18 @@ export default function AuthRegister() {
                 </Button>
               </Stack>
               <Grid container spacing={2} sx={{ mb: 1.5 }}>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField fullWidth label="Account Holder Name" size="small" name="bankDetails.accountName" value={formData.bankDetails.accountName} onChange={handleInputChange} />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField fullWidth label="Branch Name" size="small" name="bankDetails.branch" value={formData.bankDetails.branch} onChange={handleInputChange} />
                 </Grid>
               </Grid>
               <Grid container spacing={2}>
-                <Grid item xs={8}>
+                <Grid size={{ xs: 12, sm: 8 }}>
                   <TextField fullWidth label="Account Number" size="small" name="bankDetails.accountNumber" value={formData.bankDetails.accountNumber} onChange={handleInputChange} />
                 </Grid>
-                <Grid item xs={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <TextField fullWidth label="IFSC Code" size="small" name="bankDetails.ifscCode" value={formData.bankDetails.ifscCode} onChange={handleInputChange} />
                 </Grid>
               </Grid>
@@ -357,16 +449,28 @@ export default function AuthRegister() {
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>Select Your Service Categories:</Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {services.map((service) => (
-                <Chip
-                  key={service._id}
-                  label={service.title}
-                  onClick={() => toggleService(service._id)}
-                  color={formData.selectedServices.includes(service._id) ? 'primary' : 'default'}
-                  variant={formData.selectedServices.includes(service._id) ? 'filled' : 'outlined'}
-                  sx={{ borderRadius: '8px', cursor: 'pointer' }}
-                />
-              ))}
+              {services.map((service) => {
+                const isSelected = formData.selectedServices.includes(service._id);
+                return (
+                  <Chip
+                    key={service._id}
+                    label={service.title}
+                    onClick={() => toggleService(service._id)}
+                    sx={{ 
+                      borderRadius: '8px', 
+                      cursor: 'pointer',
+                      bgcolor: isSelected ? '#043e38 !important' : 'transparent',
+                      color: isSelected ? '#ffffff !important' : '#043e38 !important',
+                      borderColor: '#043e38 !important',
+                      fontWeight: 600,
+                      '&:hover': {
+                        bgcolor: isSelected ? '#022925 !important' : 'rgba(4, 62, 56, 0.08) !important'
+                      }
+                    }}
+                    variant={isSelected ? 'filled' : 'outlined'}
+                  />
+                );
+              })}
             </Box>
             {formData.selectedServices.length === 0 && <FormHelperText sx={{ color: 'orange', mt: 1 }}>Select at least one module to provision your dashboard</FormHelperText>}
           </Box>
@@ -414,28 +518,28 @@ export default function AuthRegister() {
              <Box sx={{ 
                 p: 3, 
                 border: '1px dashed', 
-                borderColor: 'secondary.light', 
+                borderColor: '#043e38', 
                 borderRadius: '12px', 
-                bgcolor: 'rgba(103, 58, 183, 0.02)',
+                bgcolor: 'rgba(4, 62, 56, 0.03)',
                 textAlign: 'center',
                 mb: 2
             }}>
                 <Box sx={{ 
                     width: 48, 
                     height: 48, 
-                    bgcolor: 'secondary.light', 
+                    bgcolor: 'rgba(4, 62, 56, 0.1)', 
                     borderRadius: '12px', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center', 
                     margin: '0 auto 16px',
-                    color: 'secondary.main'
+                    color: '#043e38'
                 }}>
                     <VerifiedUserIcon sx={{ fontSize: 24 }} />
                 </Box>
-                <Typography variant="h4" sx={{ mb: 1, fontWeight: 700 }}>Identity Verification</Typography>
+                <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: '#043e38' }}>Identity Verification</Typography>
                 <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary', px: 2 }}>
-                    Your business partner account awaits. <br/>Enter the 6-digit code sent to <b>{userEmail}</b>
+                    Your business partner account awaits. <br/>Enter the 6-digit code sent to <b>{userEmail || formData.email}</b>
                 </Typography>
                 <CustomFormControl fullWidth error={Boolean(error)}>
                     <InputLabel htmlFor="outlined-adornment-otp-register">Verification Code</InputLabel>
@@ -462,7 +566,7 @@ export default function AuthRegister() {
                                         }
                                     }}
                                     size="small"
-                                    sx={{ minWidth: 'auto', fontWeight: 'bold' }}
+                                    sx={{ minWidth: 'auto', fontWeight: 'bold', color: '#043e38' }}
                                 >
                                     Paste
                                 </Button>
@@ -470,14 +574,32 @@ export default function AuthRegister() {
                         }
                         inputProps={{ 
                           maxLength: 6,
-                          style: { textAlign: 'center', fontSize: '1.5rem', letterSpacing: '8px', fontWeight: 'bold' } 
+                          style: { textAlign: 'center', fontSize: '1.5rem', letterSpacing: '8px', fontWeight: 'bold', color: '#043e38' } 
                         }}
                     />
                 </CustomFormControl>
             </Box>
-            {error && <FormHelperText error sx={{ mb: 2 }}>{error}</FormHelperText>}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2, borderRadius: '8px' }}>
+                {error}
+              </Alert>
+            )}
             <AnimateButton>
-                <Button disableElevation fullWidth size="large" type="submit" variant="contained" color="secondary" disabled={loading}>
+                <Button 
+                  disableElevation 
+                  fullWidth 
+                  size="large" 
+                  type="submit" 
+                  variant="contained" 
+                  disabled={loading}
+                  sx={{ 
+                    bgcolor: '#043e38', 
+                    '&:hover': { bgcolor: '#022925' }, 
+                    py: 1.5, 
+                    borderRadius: '10px',
+                    fontWeight: 700
+                  }}
+                >
                     {loading ? <CircularProgress size={24} color="inherit" /> : 'Verify & Setup Dashboard'}
                 </Button>
             </AnimateButton>
@@ -487,7 +609,15 @@ export default function AuthRegister() {
 
   return (
     <>
-      <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+      <Stepper 
+        activeStep={activeStep} 
+        alternativeLabel 
+        sx={{ 
+          mb: 3,
+          '& .MuiStepIcon-root.Mui-active': { color: '#043e38' },
+          '& .MuiStepIcon-root.Mui-completed': { color: '#043e38' }
+        }}
+      >
         {steps.map((label) => (
           <Step key={label}>
             <StepLabel sx={{ '& .MuiStepLabel-label': { fontSize: '0.75rem' } }}>{label}</StepLabel>
@@ -496,28 +626,34 @@ export default function AuthRegister() {
       </Stepper>
 
       <form noValidate onSubmit={handleRegister}>
-        <Box sx={{ minHeight: 300 }}>
+        <Box sx={{ minHeight: 280 }}>
             {renderStepContent(activeStep)}
         </Box>
 
         {error && (
           <Box sx={{ mt: 2 }}>
-            <FormHelperText error>{error}</FormHelperText>
+            <Alert severity="error" sx={{ borderRadius: '8px' }}>
+              <AlertTitle>Registration Failed</AlertTitle>
+              {error}
+            </Alert>
           </Box>
         )}
 
-        <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
+        <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
           {activeStep > 0 && (
-            <Button color="secondary" onClick={handleBack} sx={{ flex: 1 }}>
+            <Button 
+              variant="outlined"
+              onClick={handleBack} 
+              sx={{ flex: 1, borderColor: '#043e38', color: '#043e38', borderRadius: '10px' }}
+            >
               Back
             </Button>
           )}
           {activeStep < steps.length - 1 ? (
             <Button 
                 variant="contained" 
-                color="secondary" 
                 onClick={handleNext} 
-                sx={{ flex: 2 }}
+                sx={{ flex: 2, bgcolor: '#043e38', '&:hover': { bgcolor: '#022925' }, py: 1.2, borderRadius: '10px', fontWeight: 700 }}
                 disabled={activeStep === 0 && (!formData.name || !formData.email || !formData.password)}
             >
               Continue
@@ -529,9 +665,9 @@ export default function AuthRegister() {
                     size="large" 
                     type="submit" 
                     variant="contained" 
-                    color="secondary"
                     disabled={loading || formData.selectedServices.length === 0}
                     startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                    sx={{ bgcolor: '#043e38', '&:hover': { bgcolor: '#022925' }, py: 1.2, borderRadius: '10px', fontWeight: 700 }}
                 >
                   {loading ? 'Processing...' : 'Register Business'}
                 </Button>

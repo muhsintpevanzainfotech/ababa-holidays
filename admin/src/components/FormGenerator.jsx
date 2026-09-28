@@ -113,6 +113,26 @@ const FormGenerator = ({ fields, values, onChange, errors }) => {
       case 'textarea':
         return <textarea {...commonProps} rows={config.rows || 3} style={{ minHeight: '100px', resize: 'vertical' }} />;
 
+      case 'editor':
+      case 'html':
+      case 'htmleditor':
+        return (
+          <div style={{ width: '100%' }}>
+            <textarea
+              {...commonProps}
+              rows={config.rows || 6}
+              style={{
+                minHeight: '130px',
+                fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                fontSize: '13px',
+                resize: 'vertical',
+                backgroundColor: 'var(--bg-main)'
+              }}
+              placeholder={config.placeholder || '<h1>Title</h1>\n<p>Write HTML content here...</p>'}
+            />
+          </div>
+        );
+
       case 'checkbox':
         return (
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>

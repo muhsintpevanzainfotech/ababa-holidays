@@ -34,7 +34,7 @@ const series = [
   { name: 'Maintenance', data: [0, 0, 75, 0, 0, 115, 0, 0, 0, 0, 150, 0] }
 ];
 
-export default function TotalGrowthBarChart({ isLoading }) {
+export default function TotalGrowthBarChart({ isLoading, stats }) {
   const theme = useTheme();
   const {
     state: { fontFamily }
@@ -51,6 +51,8 @@ export default function TotalGrowthBarChart({ isLoading }) {
   const primaryDark = theme.vars.palette.primary.dark;
   const secondaryMain = theme.vars.palette.secondary.main;
   const secondaryLight = theme.vars.palette.secondary.light;
+
+  const formattedRevenue = stats?.revenue !== undefined ? `₹${stats.revenue.toLocaleString('en-IN')}` : '₹0';
 
   useEffect(() => {
     setChartOptions({
@@ -74,8 +76,8 @@ export default function TotalGrowthBarChart({ isLoading }) {
           <Stack sx={{ gap: gridSpacing }}>
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <Stack sx={{ gap: 1 }}>
-                <Typography variant="subtitle2">Total Growth</Typography>
-                <Typography variant="h3">$2,324.00</Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Total Growth & Revenue</Typography>
+                <Typography variant="h3" sx={{ fontWeight: 800, color: 'primary.main' }}>{formattedRevenue}</Typography>
               </Stack>
               <TextField id="standard-select-currency" select value={value} onChange={(e) => setValue(e.target.value)}>
                 {status.map((option) => (
@@ -104,4 +106,4 @@ export default function TotalGrowthBarChart({ isLoading }) {
   );
 }
 
-TotalGrowthBarChart.propTypes = { isLoading: PropTypes.bool };
+TotalGrowthBarChart.propTypes = { isLoading: PropTypes.bool, stats: PropTypes.object };

@@ -29,7 +29,7 @@ exports.getBrands = async (req, res) => {
     const filter = {};
     if (req.user && req.user.role === 'Vendor') {
       filter.vendor = req.user.id;
-    } else if (req.query.vendor) {
+    } else if (req.query.vendor && req.query.vendor !== 'undefined' && req.query.vendor !== 'null' && req.query.vendor.match(/^[0-9a-fA-F]{24}$/)) {
       filter.vendor = req.query.vendor;
     }
 

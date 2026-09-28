@@ -38,9 +38,27 @@ const vendorsSlice = createSlice({
     },
     updateVendorSuccess: (state, action) => {
       state.loading = false;
-      state.vendors = state.vendors.map(v => 
-        v._id === action.payload._id ? action.payload : v
-      );
+      const updated = action.payload;
+      if (!updated) return;
+      state.vendors = state.vendors.map(v => {
+        // Match User ID or combined payload
+        if (v._id === updated._id) {
+          return {
+            ...v,
+            ...updated,
+            profile: updated.profile ? { ...(v.profile || {}), ...updated.profile } : v.profile
+          };
+        }
+        // Match VendorProfile user field or profile ID
+        const profileUserId = typeof updated.user === 'object' ? updated.user?._id : updated.user;
+        if (profileUserId && (v._id === profileUserId || v.profile?._id === updated._id)) {
+          return {
+            ...v,
+            profile: { ...(v.profile || {}), ...updated }
+          };
+        }
+        return v;
+      });
     },
     updateVendorFailure: (state, action) => {
       state.loading = false;

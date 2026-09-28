@@ -94,6 +94,7 @@ const Packages = () => {
     description: '',
     itinerary: '',
     price: 0,
+    priceType: 'Per Person',
     duration: '',
     location: '',
     serviceCategory: '',
@@ -155,6 +156,7 @@ const Packages = () => {
         description: pkg.description || '',
         itinerary: pkg.itinerary || '',
         price: pkg.price || 0,
+        priceType: pkg.priceType || 'Per Person',
         duration: pkg.duration || '',
         location: pkg.location || '',
         serviceCategory: pkgSvcId,
@@ -178,7 +180,7 @@ const Packages = () => {
     } else {
       const activeSvcId = selectedService?._id || (serviceFilter !== 'all' ? serviceFilter : (services[0]?._id || ''));
       setFormData({
-        title: '', description: '', itinerary: '', price: 0, 
+        title: '', description: '', itinerary: '', price: 0, priceType: 'Per Person', 
         duration: '', location: '', 
         serviceCategory: activeSvcId, 
         subService: '',
@@ -465,7 +467,10 @@ const Packages = () => {
             <div key={pkg._id} className="card" style={{ padding: '0', overflow: 'hidden' }}>
               <div style={{ height: '180px', background: '#f8fafc', position: 'relative' }}>
                 <img src={pkg.images?.[0] ? getImageUrl(pkg.images[0]) : '/public/defaults/default_travel.png'} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <div style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'rgba(255,255,255,0.9)', padding: '4px 10px', borderRadius: '12px', fontWeight: '800', fontSize: '14px', color: 'var(--primary)' }}>₹{pkg.price}</div>
+                <div style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '12px', fontWeight: '800', fontSize: '13px', color: 'var(--primary)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>{pkg.currency === 'USD' ? '$' : pkg.currency === 'EUR' ? '€' : pkg.currency === 'AED' ? 'AED ' : '₹'}{pkg.discountPrice && pkg.discountPrice > 0 ? pkg.discountPrice : pkg.price}</span>
+                  {pkg.priceType && <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600' }}>/ {pkg.priceType}</span>}
+                </div>
               </div>
               <div style={{ padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -513,7 +518,7 @@ const Packages = () => {
               <thead>
                 <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border)' }}>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Package ID & Title</th>
-                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Price</th>
+                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Price & Billing</th>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Status</th>
                   <th style={{ padding: '16px 24px', textAlign: 'right' }}>Actions</th>
                 </tr>
@@ -535,7 +540,17 @@ const Packages = () => {
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '16px 24px', fontWeight: '700' }}>₹{pkg.price}</td>
+                    <td style={{ padding: '16px 24px' }}>
+                      <div style={{ fontWeight: '800', color: 'var(--primary)', fontSize: '14px' }}>
+                        {pkg.currency === 'USD' ? '$' : pkg.currency === 'EUR' ? '€' : pkg.currency === 'AED' ? 'AED ' : '₹'}{pkg.discountPrice && pkg.discountPrice > 0 ? pkg.discountPrice : pkg.price}
+                        {pkg.priceType && <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', marginLeft: '4px' }}>/ {pkg.priceType}</span>}
+                      </div>
+                      {pkg.originalPrice > (pkg.discountPrice || pkg.price) && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
+                          {pkg.currency === 'USD' ? '$' : pkg.currency === 'EUR' ? '€' : pkg.currency === 'AED' ? 'AED ' : '₹'}{pkg.originalPrice}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ padding: '16px 24px' }}>
                       <span style={{ 
                         color: (pkg.status || (pkg.isActive ? 'Active' : 'Inactive')) === 'Active' ? '#16a34a' : ((pkg.status || (pkg.isActive ? 'Active' : 'Inactive')) === 'Inactive' ? '#dc2626' : '#d97706'), 
@@ -697,7 +712,7 @@ const Packages = () => {
             </button>
           </div>
         ) : (
-        <form onSubmit={handleSubmit} style={{ paddingBottom: '40px' }}>
+        <form onSubmit={handleSubmit} className="package-form packages-form" style={{ paddingBottom: '40px' }}>
           <div className="form-group">
             <label>Package Title</label>
             <input type="text" className="form-control" required value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />

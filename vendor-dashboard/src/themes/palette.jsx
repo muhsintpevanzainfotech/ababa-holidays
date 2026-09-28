@@ -123,9 +123,9 @@ export function buildPalette(presetColor) {
       50: colors.darkBackground,
       100: colors.darkLevel2,
       200: colors.darkLevel1,
-      300: '#2d3b2a',
+      300: '#374151',
       500: colors.darkTextSecondary,
-      600: '#a3b38c',
+      600: '#9ca3af',
       700: colors.darkTextPrimary,
       900: colors.darkTextTitle
     },

@@ -64,14 +64,24 @@ const Vendors = () => {
   }, [dispatch]);
 
   const handleApprove = async (id) => {
-    // Correctly structure the data for the backend userController
     dispatch(updateVendorRequest({ 
       id, 
-      data: { 
-        profile: JSON.stringify({ isApproved: true }) 
-      } 
+      isApproveAction: true 
     }));
-    showToast('Approved', 'Vendor account has been approved.', 'success');
+    showToast('Approved', 'Vendor account approved & activation email sent.', 'success');
+  };
+
+  const handleToggleVerification = async (vendor) => {
+    const nextVerified = !vendor.isVerified;
+    const isConfirmed = await confirm(
+      `${nextVerified ? 'Verify' : 'Unverify'} Account?`,
+      `Are you sure you want to mark ${vendor.name} as ${nextVerified ? 'Verified' : 'Unverified'}?`
+    );
+
+    if (isConfirmed) {
+      dispatch(updateVendorRequest({ id: vendor._id, data: { isVerified: nextVerified } }));
+      showToast('Status Updated', `Vendor marked as ${nextVerified ? 'Verified' : 'Unverified'}.`, 'success');
+    }
   };
 
   const handleDelete = async (id) => {
@@ -276,9 +286,10 @@ const Vendors = () => {
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
                       <span style={{
-                        padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '700',
-                        background: vendor.profile?.isApproved ? '#dcfce7' : '#fee2e2',
-                        color: vendor.profile?.isApproved ? '#166534' : '#b91c1c'
+                        padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700',
+                        background: vendor.profile?.isApproved ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                        color: vendor.profile?.isApproved ? '#22c55e' : '#f59e0b',
+                        border: `1px solid ${vendor.profile?.isApproved ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
                       }}>
                         {vendor.profile?.isApproved ? 'Approved' : 'Pending Approval'}
                       </span>
@@ -288,6 +299,16 @@ const Vendors = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Created {new Date(vendor.createdAt).toLocaleDateString()}</div>
                     <div className="action-group">
+                      {!vendor.profile?.isApproved && (
+                        <button 
+                          className="action-btn" 
+                          onClick={() => handleApprove(vendor._id)} 
+                          title="Approve Partner Account"
+                          style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', borderColor: 'rgba(34, 197, 94, 0.3)' }}
+                        >
+                          <Check size={16} />
+                        </button>
+                      )}
                       <button className={`action-btn ${vendor.isSuspended ? 'view' : 'delete'}`} onClick={() => handleToggleSuspension(vendor)} title={vendor.isSuspended ? 'Unsuspend Account' : 'Suspend Account'}>
                         {vendor.isSuspended ? <CheckCircle size={16} /> : <UserX size={16} />}
                       </button>
@@ -352,8 +373,8 @@ const Vendors = () => {
                         <td style={{ padding: '16px 24px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span className="badge" style={{
-                              background: vendor.profile?.subscriptionPlan === 'Free' ? '#f1f5f9' : '#dbeafe',
-                              color: vendor.profile?.subscriptionPlan === 'Free' ? '#64748b' : '#1e40af',
+                              background: vendor.profile?.subscriptionPlan === 'Free' ? 'rgba(148, 163, 184, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                              color: vendor.profile?.subscriptionPlan === 'Free' ? 'var(--text-muted)' : '#3b82f6',
                               width: 'fit-content'
                             }}>
                               {vendor.profile?.subscriptionPlan || 'Free'}
@@ -379,17 +400,24 @@ const Vendors = () => {
                             {vendor.isSuspended ? (
                               <span style={{
                                 padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
-                                background: '#fee2e2', color: '#b91c1c'
+                                background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)'
                               }}>Suspended</span>
                             ) : (
-                              <span style={{
-                                padding: '4px 10px',
-                                borderRadius: '20px',
-                                fontSize: '11px',
-                                fontWeight: '600',
-                                background: vendor.isVerified ? '#dcfce7' : '#fee2e2',
-                                color: vendor.isVerified ? '#166534' : '#b91c1c'
-                              }}>
+                              <span 
+                                onClick={() => handleToggleVerification(vendor)}
+                                title="Click to toggle vendor verification status"
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: '20px',
+                                  fontSize: '11px',
+                                  fontWeight: '700',
+                                  background: vendor.isVerified ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                  color: vendor.isVerified ? '#22c55e' : '#ef4444',
+                                  border: `1px solid ${vendor.isVerified ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                  cursor: 'pointer',
+                                  userSelect: 'none'
+                                }}
+                              >
                                 {vendor.isVerified ? 'Verified' : 'Unverified'}
                               </span>
                             )}
@@ -397,16 +425,38 @@ const Vendors = () => {
                         </td>
                         <td style={{ padding: '16px 24px' }}>
                           {vendor.profile?.isApproved ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#166534', fontSize: '13px' }}>
-                              <CheckCircle size={16} /> Approved
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#22c55e', fontWeight: '700', fontSize: '13px' }}>
+                              <CheckCircle size={16} color="#22c55e" /> Approved
                             </div>
                           ) : (
                             <button
                               className="btn"
-                              style={{ padding: '4px 12px', fontSize: '12px', background: '#f8fafc', border: '1px solid var(--border)', width: 'auto' }}
+                              style={{ 
+                                padding: '6px 14px', 
+                                fontSize: '12px', 
+                                fontWeight: '700',
+                                background: 'rgba(34, 197, 94, 0.15)', 
+                                color: '#22c55e', 
+                                border: '1px solid rgba(34, 197, 94, 0.4)', 
+                                borderRadius: '8px', 
+                                width: 'auto',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                transition: 'all 0.2s ease'
+                              }}
                               onClick={() => handleApprove(vendor._id)}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#22c55e';
+                                e.currentTarget.style.color = '#ffffff';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)';
+                                e.currentTarget.style.color = '#22c55e';
+                              }}
                             >
-                              Approve Now
+                              <Check size={14} /> Approve Now
                             </button>
                           )}
                         </td>

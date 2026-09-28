@@ -20,10 +20,10 @@ const Step2Business = ({
         <Briefcase color="var(--primary)" /> Business Intelligence & Branding
       </h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', marginBottom: '24px' }}>
         <div>
-          <div className="form-group">
-            <label>Legal Company / Business Name *</label>
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700' }}>Legal Company / Business Name *</label>
             <input
               type="text"
               className="form-control"
@@ -35,8 +35,8 @@ const Step2Business = ({
             {getFieldError(formik, 'companyName')}
           </div>
 
-          <div className="form-group">
-            <label>Trade / Business License Number</label>
+          <div className="form-group" style={{ marginBottom: '0' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700' }}>Trade / Business License Number</label>
             <input
               type="text"
               className="form-control"
@@ -44,19 +44,6 @@ const Step2Business = ({
               placeholder="e.g. LIC-2026-987654"
               {...formik.getFieldProps('businessLicense')}
             />
-          </div>
-
-          <div className="form-group">
-            <label>About Vendor / Business Overview *</label>
-            <textarea
-              className="form-control"
-              rows="4"
-              disabled={isViewMode}
-              {...formik.getFieldProps('description')}
-              style={{ ...getInputFieldStyle(formik, 'description'), resize: 'none' }}
-              placeholder="Describe your travel services, specializations, coverage, experience..."
-            />
-            {getFieldError(formik, 'description')}
           </div>
         </div>
 
@@ -110,7 +97,7 @@ const Step2Business = ({
           </div>
           {getFieldError(formik, 'vendorType')}
 
-          <div style={{ marginTop: '24px' }}>
+          <div style={{ marginTop: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
               Company Logos (Small / Mid / Large)
             </label>
@@ -134,6 +121,31 @@ const Step2Business = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Full-width About Vendor / Business Overview Textarea */}
+      <div className="form-group" style={{ marginBottom: '28px', width: '100%' }}>
+        <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '700' }}>
+          About Vendor / Business Overview *
+        </label>
+        <textarea
+          className="form-control"
+          rows={4}
+          disabled={isViewMode}
+          {...formik.getFieldProps('description')}
+          style={{ 
+            ...getInputFieldStyle(formik, 'description'), 
+            width: '100%', 
+            minHeight: '120px',
+            resize: 'vertical',
+            padding: '14px 16px',
+            borderRadius: '12px',
+            fontSize: '14px',
+            lineHeight: '1.6'
+          }}
+          placeholder="Describe your travel services, specializations, coverage, experience..."
+        />
+        {getFieldError(formik, 'description')}
       </div>
 
       {/* SPOC MAPPING */}

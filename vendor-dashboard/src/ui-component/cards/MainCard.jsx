@@ -28,8 +28,8 @@ export default function MainCard({
   ref,
   ...others
 }) {
-  const defaultShadow = '0 8px 32px -4px rgba(53, 133, 142, 0.08)';
-  const hoverShadow = '0 20px 40px -12px rgba(53, 133, 142, 0.16)';
+  const defaultShadow = '0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02)';
+  const hoverShadow = '0 12px 30px -4px rgba(15, 23, 42, 0.09), 0 4px 10px -2px rgba(15, 23, 42, 0.03)';
 
   return (
     <Card
@@ -37,22 +37,22 @@ export default function MainCard({
       {...others}
       sx={(theme) => ({
         border: border ? '1px solid' : 'none',
-        borderColor: 'rgba(53, 133, 142, 0.15)',
+        borderColor: theme.vars.palette.divider,
         borderRadius: '16px !important',
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(8px)',
+        background: border ? 'rgba(255, 255, 255, 0.96)' : 'inherit',
+        backdropFilter: 'blur(12px)',
         boxShadow: boxShadow ? shadow || defaultShadow : 'none',
-        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s ease',
+        transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease',
         ':hover': {
-          transform: 'translateY(-4px)',
+          transform: 'translateY(-2px)',
           boxShadow: boxShadow ? hoverShadow : 'none',
-          borderColor: 'rgba(53, 133, 142, 0.3)'
+          borderColor: 'rgba(37, 99, 235, 0.3)'
         },
         ...theme.applyStyles('dark', {
-          borderColor: 'rgba(255, 255, 255, 0.08)',
-          background: 'rgba(26, 34, 24, 0.9)',
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          background: 'rgba(17, 24, 39, 0.92)',
           ':hover': {
-            borderColor: 'rgba(255, 255, 255, 0.18)'
+            borderColor: 'rgba(59, 130, 246, 0.4)'
           }
         }),
         ...(typeof sx === 'function' ? sx(theme) : sx || {})

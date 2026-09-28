@@ -24,7 +24,7 @@ import FileCopyTwoToneIcon from '@mui/icons-material/FileCopyOutlined';
 import PictureAsPdfTwoToneIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import ArchiveTwoToneIcon from '@mui/icons-material/ArchiveOutlined';
 
-export default function EarningCard({ isLoading }) {
+export default function EarningCard({ isLoading, stats }) {
   const theme = useTheme();
 
   const [anchorEl, setAnchorEl] = React.useState(null);
@@ -36,6 +36,8 @@ export default function EarningCard({ isLoading }) {
   const handleClose = () => {
     setAnchorEl(null);
   };
+
+  const formattedRevenue = stats?.revenue !== undefined ? `₹${stats.revenue.toLocaleString('en-IN')}` : '₹0';
 
   return (
     <>
@@ -119,20 +121,16 @@ export default function EarningCard({ isLoading }) {
               }}
             >
               <MenuItem onClick={handleClose}>
-                <GetAppTwoToneIcon sx={{ mr: 1.75 }} /> Import Card
+                <GetAppTwoToneIcon sx={{ mr: 1.75 }} /> Refresh Stats
               </MenuItem>
               <MenuItem onClick={handleClose}>
-                <FileCopyTwoToneIcon sx={{ mr: 1.75 }} /> Copy Data
-              </MenuItem>
-              <MenuItem onClick={handleClose}>
-                <PictureAsPdfTwoToneIcon sx={{ mr: 1.75 }} /> Export
-              </MenuItem>
-              <MenuItem onClick={handleClose}>
-                <ArchiveTwoToneIcon sx={{ mr: 1.75 }} /> Archive File
+                <FileCopyTwoToneIcon sx={{ mr: 1.75 }} /> Export Summary
               </MenuItem>
             </Menu>
             <Stack direction="row" sx={{ alignItems: 'center' }}>
-              <Typography sx={{ fontSize: '2.125rem', fontWeight: 500, mr: 1, mt: 1.75, mb: 0.75 }}>$500.00</Typography>
+              <Typography sx={{ fontSize: '2.125rem', fontWeight: 700, mr: 1, mt: 1.75, mb: 0.75 }}>
+                {formattedRevenue}
+              </Typography>
               <Avatar sx={{ ...theme.typography.smallAvatar, bgcolor: 'secondary.200', color: 'secondary.dark' }}>
                 <ArrowUpwardIcon fontSize="inherit" sx={{ transform: 'rotate3d(1, 1, 1, 45deg)' }} />
               </Avatar>
@@ -141,11 +139,11 @@ export default function EarningCard({ isLoading }) {
               sx={{
                 mb: 1.25,
                 fontSize: '1rem',
-                fontWeight: 500,
+                fontWeight: 600,
                 color: 'secondary.200'
               }}
             >
-              Total Earning
+              Total Revenue (₹)
             </Typography>
           </Box>
         </MainCard>
@@ -154,4 +152,4 @@ export default function EarningCard({ isLoading }) {
   );
 }
 
-EarningCard.propTypes = { isLoading: PropTypes.bool };
+EarningCard.propTypes = { isLoading: PropTypes.bool, stats: PropTypes.object };

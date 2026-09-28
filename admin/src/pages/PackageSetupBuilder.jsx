@@ -330,7 +330,7 @@ const PackageSetupBuilder = () => {
         title={modalType === 'add' ? 'Add Custom Field' : 'Edit Field'}
         width="500px"
       >
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="package-form package-setup-form">
           {/* Field Set / Section Grouping */}
           <div style={{ background: 'var(--bg-main)', padding: '16px', borderRadius: '12px', marginBottom: '20px', border: '1px solid var(--border)' }}>
             <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '12px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -391,6 +391,7 @@ const PackageSetupBuilder = () => {
                 <option value="url">URL Address</option>
                 <option value="search">Search Bar</option>
                 <option value="textarea">Textarea Multi</option>
+                <option value="editor">HTML Editor</option>
               </optgroup>
               <optgroup label="NUMERIC & CHRONO">
                 <option value="number">Number Field</option>

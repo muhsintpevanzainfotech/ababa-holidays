@@ -63,9 +63,55 @@ const approveVendor = asyncHandler(async (req, res, next) => {
   profile.isApproved = true;
   await profile.save();
 
+  // Send Welcome & Account Activation Email to Vendor
+  const user = await User.findById(req.params.id);
+  if (user && user.email) {
+    try {
+      const loginUrl = process.env.VENDOR_LOGIN_URL || 'https://ababa-holidays-vendor.vercel.app/login';
+      const welcomeHtml = `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #1e293b; margin: 0; font-size: 26px; font-weight: 800;">ABABA Holidays</h1>
+            <div style="width: 48px; height: 4px; background: #3b82f6; margin: 12px auto; border-radius: 2px;"></div>
+          </div>
+          
+          <h2 style="color: #0f172a; font-size: 20px; font-weight: 700; margin-bottom: 16px;">🎉 Congratulations! Your Vendor Account is Approved</h2>
+          
+          <p style="color: #475569; font-size: 15px; line-height: 1.6;">Hello <strong>${user.name}</strong>,</p>
+          <p style="color: #475569; font-size: 15px; line-height: 1.6;">Great news! Your vendor agency profile for <strong>${profile.companyName || 'your business'}</strong> has been reviewed and officially approved by the ABABA Holidays Admin team.</p>
+          
+          <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 12px; margin: 24px 0;">
+            <h3 style="margin-top: 0; color: #166534; font-size: 15px; font-weight: 700;">Account Status: Active & Operational</h3>
+            <p style="margin: 6px 0 0 0; color: #15803d; font-size: 13.5px; line-height: 1.5;">You can now log in to your Vendor Dashboard to create travel packages, manage bookings, and access full platform features.</p>
+          </div>
+
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${loginUrl}" style="background-color: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">Login to Vendor Dashboard</a>
+          </div>
+
+          <p style="color: #64748b; font-size: 13.5px; line-height: 1.5;">If you have any questions or need onboarding assistance, please reach out to our support team.</p>
+          
+          <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 32px; text-align: center;">
+            <p style="margin: 0; color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">
+              &copy; 2026 ABABA Holidays &bull; Vendor Platform
+            </p>
+          </div>
+        </div>
+      `;
+
+      await sendEmail({
+        email: user.email,
+        subject: '🎉 ABABA Holidays: Vendor Account Approved & Activated!',
+        html: welcomeHtml
+      });
+    } catch (err) {
+      console.error('Failed to send vendor approval email:', err);
+    }
+  }
+
   res.status(200).json({
     success: true,
-    message: 'Vendor approved successfully',
+    message: 'Vendor approved successfully and welcome email sent.',
     data: profile
   });
 });
@@ -117,6 +163,30 @@ const getVendors = asyncHandler(async (req, res, next) => {
   res.json({ success: true, count: data.length, data });
 });
 
+// @desc    Get Current Vendor Profile (Vendor only)
+// @route   GET /api/vendors/profile
+// @access  Private/Vendor
+const getVendorProfile = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user.id).select('-password');
+
+  if (!user) {
+    return next(new ErrorResponse('User account not found', 404));
+  }
+
+  let profile = await VendorProfile.findOne({ user: req.user.id })
+    .populate('selectedServices', 'title description image')
+    .populate('subscription');
+
+  if (!profile) {
+    profile = await VendorProfile.create({ user: req.user.id, companyName: user.name || 'Vendor Partner' });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: { ...user.toObject(), profile }
+  });
+});
+
 // @desc    Update Vendor Profile
 // @route   PUT /api/vendors/profile
 // @access  Private/Vendor
@@ -127,8 +197,16 @@ const updateVendorProfile = asyncHandler(async (req, res, next) => {
     profile = new VendorProfile({ user: req.user.id });
   }
 
+  // Update User model fields if provided
+  if (req.body.name || req.body.phone) {
+    const userUpdates = {};
+    if (req.body.name) userUpdates.name = req.body.name;
+    if (req.body.phone) userUpdates.phone = req.body.phone;
+    await User.findByIdAndUpdate(req.user.id, userUpdates);
+  }
+
   // Parse nested objects if they are strings (from multipart/form-data)
-  ['spoc', 'tin', 'gst', 'bankDetails', 'seo', 'address', 'selectedServices', 'socialMedia'].forEach(key => {
+  ['spoc', 'tin', 'gst', 'bankDetails', 'seo', 'address', 'selectedServices', 'socialLinks'].forEach(key => {
     if (typeof req.body[key] === 'string') {
       try {
         req.body[key] = JSON.parse(req.body[key]);
@@ -149,24 +227,40 @@ const updateVendorProfile = asyncHandler(async (req, res, next) => {
       if (user && user.avatar && !user.avatar.startsWith('http')) deleteFile(user.avatar);
       await User.findByIdAndUpdate(req.user.id, { avatar: req.files.avatar[0].path }, { returnDocument: 'after' });
     }
-    if (req.files.idCard) {
+    if (req.files.coverBanner) {
+      if (profile.coverBanner) deleteFile(profile.coverBanner);
+      details.coverBanner = req.files.coverBanner[0].path;
+    }
+    if (req.files.tradeLicenseUpload || req.files.tradeLicenseFile) {
+      const file = req.files.tradeLicenseUpload ? req.files.tradeLicenseUpload[0] : req.files.tradeLicenseFile[0];
+      if (profile.tradeLicenseDoc) deleteFile(profile.tradeLicenseDoc);
+      details.tradeLicenseDoc = file.path;
+    }
+    if (req.files.panUpload || req.files.panFile || req.files.tinUpload || req.files.tinFile) {
+      const file = (req.files.panUpload || req.files.panFile || req.files.tinUpload || req.files.tinFile)[0];
+      if (profile.panDoc) deleteFile(profile.panDoc);
+      details.panDoc = file.path;
+      const existingTin = details.tin || profile.tin || {};
+      details.tin = { ...existingTin, upload: file.path };
+    }
+    if (req.files.gstUpload || req.files.gstFile) {
+      const file = req.files.gstUpload ? req.files.gstUpload[0] : req.files.gstFile[0];
+      if (profile.gstDoc) deleteFile(profile.gstDoc);
+      details.gstDoc = file.path;
+      const existingGst = details.gst || profile.gst || {};
+      details.gst = { ...existingGst, upload: file.path };
+    }
+    if (req.files.passbookUpload || req.files.passbookFile || req.files.bankUpload || req.files.bankFile) {
+      const file = (req.files.passbookUpload || req.files.passbookFile || req.files.bankUpload || req.files.bankFile)[0];
+      if (profile.passbookDoc) deleteFile(profile.passbookDoc);
+      details.passbookDoc = file.path;
+      const existingBank = details.bankDetails || profile.bankDetails || {};
+      details.bankDetails = { ...existingBank, upload: file.path };
+    }
+    if (req.files.idCard || req.files.idCardFile) {
+      const file = (req.files.idCard || req.files.idCardFile)[0];
       if (profile.idCard) deleteFile(profile.idCard);
-      details.idCard = req.files.idCard[0].path;
-    }
-    if (req.files.tinUpload) {
-      const existingTin = details.tin || {};
-      if (profile.tin && profile.tin.upload) deleteFile(profile.tin.upload);
-      details.tin = { ...existingTin, upload: req.files.tinUpload[0].path };
-    }
-    if (req.files.gstUpload) {
-      const existingGst = details.gst || {};
-      if (profile.gst && profile.gst.upload) deleteFile(profile.gst.upload);
-      details.gst = { ...existingGst, upload: req.files.gstUpload[0].path };
-    }
-    if (req.files.bankUpload) {
-      const existingBank = details.bankDetails || {};
-      if (profile.bankDetails && profile.bankDetails.upload) deleteFile(profile.bankDetails.upload);
-      details.bankDetails = { ...existingBank, upload: req.files.bankUpload[0].path };
+      details.idCard = file.path;
     }
     if (req.files.logoS) {
       const existingLogos = details.companylogos || profile.companylogos || {};
@@ -340,16 +434,32 @@ const createVendor = asyncHandler(async (req, res, next) => {
 // @route   GET /api/vendors/:id
 // @access  Private/Admin
 const getVendor = asyncHandler(async (req, res, next) => {
-  const vendor = await User.findById(req.params.id)
-    .select('-password');
+  let vendor = null;
+  if (req.params.id && req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+    vendor = await User.findById(req.params.id).select('-password');
+  }
+
+  let profile = null;
+  if (!vendor || vendor.role !== 'Vendor') {
+    if (req.params.id && req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      profile = await VendorProfile.findById(req.params.id)
+        .populate('selectedServices', 'title description image')
+        .populate('subscription');
+      if (profile) {
+        vendor = await User.findById(profile.user).select('-password');
+      }
+    }
+  }
 
   if (!vendor || vendor.role !== 'Vendor') {
     return next(new ErrorResponse('Vendor not found', 404));
   }
 
-  const profile = await VendorProfile.findOne({ user: vendor._id })
-    .populate('selectedServices', 'title description image')
-    .populate('subscription');
+  if (!profile) {
+    profile = await VendorProfile.findOne({ user: vendor._id })
+      .populate('selectedServices', 'title description image')
+      .populate('subscription');
+  }
 
   res.status(200).json({
     success: true,
@@ -357,8 +467,111 @@ const getVendor = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Update Vendor by ID (Admin)
+// @route   PUT /api/vendors/:id
+// @access  Private/Admin
+const updateVendor = asyncHandler(async (req, res, next) => {
+  let user = null;
+  if (req.params.id && req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+    user = await User.findById(req.params.id);
+  }
+
+  let profile = null;
+  if (!user) {
+    if (req.params.id && req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      profile = await VendorProfile.findById(req.params.id);
+      if (profile) {
+        user = await User.findById(profile.user);
+      }
+    }
+  }
+
+  if (!user || user.role !== 'Vendor') {
+    return next(new ErrorResponse('Vendor not found', 404));
+  }
+
+  if (!profile) {
+    profile = await VendorProfile.findOne({ user: user._id });
+    if (!profile) {
+      profile = new VendorProfile({ user: user._id });
+    }
+  }
+
+  // Update user fields
+  const { name, email, phone, password, isVerified, isSuspended } = req.body;
+  if (name) user.name = name;
+  if (email) user.email = email;
+  if (phone) user.phone = phone;
+  if (isVerified !== undefined) user.isVerified = isVerified;
+  if (isSuspended !== undefined) user.isSuspended = isSuspended;
+  if (password && password.trim() !== '') user.password = password;
+
+  if (req.files && req.files.avatar) {
+    user.avatar = req.files.avatar[0].path;
+  }
+  await user.save();
+
+  // Parse nested JSON fields if present
+  ['spoc', 'tin', 'gst', 'bankDetails', 'seo', 'address', 'selectedServices', 'socialLinks'].forEach(key => {
+    if (typeof req.body[key] === 'string') {
+      try {
+        req.body[key] = JSON.parse(req.body[key]);
+      } catch (e) { }
+    }
+  });
+
+  if (req.body.address) {
+    req.body.address = await resolveAddressIds(req.body.address);
+  }
+
+  const profileUpdates = { ...req.body };
+  delete profileUpdates.password;
+
+  // Handle uploaded files for profile
+  if (req.files) {
+    if (req.files.idCard || req.files.idCardFile) {
+      const file = req.files.idCard ? req.files.idCard[0] : req.files.idCardFile[0];
+      profileUpdates.idCard = file.path;
+    }
+    if (req.files.tinUpload || req.files.tinFile) {
+      const file = req.files.tinUpload ? req.files.tinUpload[0] : req.files.tinFile[0];
+      const existingTin = profileUpdates.tin || profile.tin || {};
+      profileUpdates.tin = { ...existingTin, upload: file.path };
+    }
+    if (req.files.gstUpload || req.files.gstFile) {
+      const file = req.files.gstUpload ? req.files.gstUpload[0] : req.files.gstFile[0];
+      const existingGst = profileUpdates.gst || profile.gst || {};
+      profileUpdates.gst = { ...existingGst, upload: file.path };
+    }
+    if (req.files.bankUpload || req.files.bankFile) {
+      const file = req.files.bankUpload ? req.files.bankUpload[0] : req.files.bankFile[0];
+      const existingBank = profileUpdates.bankDetails || profile.bankDetails || {};
+      profileUpdates.bankDetails = { ...existingBank, upload: file.path };
+    }
+    if (req.files.logoS || req.files.logoM || req.files.logoL) {
+      const existingLogos = profileUpdates.companylogos || profile.companylogos || {};
+      profileUpdates.companylogos = {
+        small: req.files.logoS ? req.files.logoS[0].path : existingLogos.small,
+        medium: req.files.logoM ? req.files.logoM[0].path : existingLogos.medium,
+        large: req.files.logoL ? req.files.logoL[0].path : existingLogos.large
+      };
+    }
+  }
+
+  Object.assign(profile, profileUpdates);
+  await profile.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Vendor updated successfully',
+    data: { ...user.toObject(), profile }
+  });
+});
+
 module.exports = {
   getVendor,
+  getVendorProfile,
+  updateVendor,
   approveVendor,
   updateSubscription,
   updateVendorProfile,

@@ -1,8 +1,8 @@
 // assets
-import { IconPhoto, IconNews, IconMessage2, IconBrush, IconBriefcase, IconListDetails, IconMail, IconQuestionMark, IconWorld, IconUsers } from '@tabler/icons-react';
+import { IconPhoto, IconNews, IconMessage2, IconBrush, IconBriefcase, IconListDetails, IconMail, IconQuestionMark, IconWorld, IconUsers, IconBox } from '@tabler/icons-react';
 
 // constant
-const icons = { IconPhoto, IconNews, IconMessage2, IconBrush, IconBriefcase, IconListDetails, IconMail, IconQuestionMark, IconWorld, IconUsers };
+const icons = { IconPhoto, IconNews, IconMessage2, IconBrush, IconBriefcase, IconListDetails, IconMail, IconQuestionMark, IconWorld, IconUsers, IconBox };
 
 // ==============================|| PLATFORM MANAGEMENT MENU ITEMS ||============================== //
 
@@ -36,40 +36,19 @@ const platform = {
       breadcrumbs: true
     },
     {
-      id: 'policies',
-      title: 'Policies Editor',
-      type: 'collapse',
-      icon: icons.IconListDetails,
-      children: [
-        {
-          id: 'terms-conditions',
-          title: 'Terms & Conditions',
-          type: 'item',
-          url: '/platform/policies?type=terms-conditions',
-          breadcrumbs: true
-        },
-        {
-          id: 'refund-cancellation',
-          title: 'Refund & Cancellation',
-          type: 'item',
-          url: '/platform/policies?type=refund-cancellation',
-          breadcrumbs: true
-        },
-        {
-          id: 'privacy-policy',
-          title: 'Privacy Policy',
-          type: 'item',
-          url: '/platform/policies?type=privacy-policy',
-          breadcrumbs: true
-        }
-      ]
-    },
-    {
       id: 'services',
       title: 'Services Catalog',
       type: 'item',
       url: '/platform/services',
       icon: icons.IconBriefcase,
+      breadcrumbs: true
+    },
+    {
+      id: 'packages',
+      title: 'Packages & Listings',
+      type: 'item',
+      url: '/platform/packages',
+      icon: icons.IconBox,
       breadcrumbs: true
     },
     {
@@ -94,14 +73,6 @@ const platform = {
       type: 'item',
       url: '/platform/contact-us',
       icon: icons.IconMail,
-      breadcrumbs: true
-    },
-    {
-      id: 'brands',
-      title: 'Social Brands',
-      type: 'item',
-      url: '/platform/brands',
-      icon: icons.IconWorld,
       breadcrumbs: true
     }
   ]

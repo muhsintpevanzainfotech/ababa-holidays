@@ -139,14 +139,25 @@ const createPackage = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Vendor is not approved yet. Cannot create packages.', 403));
   }
 
-  // Service entitlement check
-  if (req.body.serviceCategory && !vendorProfile.selectedServices.includes(req.body.serviceCategory)) {
-    return next(new ErrorResponse('Vendor is not authorized to offer services in this category.', 403));
+  // Service entitlement check: Ensure vendor only creates packages for services they registered/handled
+  if (req.body.serviceCategory && vendorProfile.selectedServices && vendorProfile.selectedServices.length > 0) {
+    const allowedServiceIds = vendorProfile.selectedServices.map(s => (s._id ? s._id.toString() : s.toString()));
+    if (!allowedServiceIds.includes(req.body.serviceCategory.toString())) {
+      return next(new ErrorResponse('Vendor is only authorized to create packages for services they handle. Please update your handled services in Account Settings.', 403));
+    }
   }
 
   if (req.files && req.files.length > 0) {
-    const images = req.files.filter(f => f.fieldname === 'images').map(f => f.path);
-    if (images.length > 0) req.body.images = images;
+    const uploadedImages = req.files.filter(f => f.fieldname === 'images' || f.fieldname.startsWith('image')).map(f => f.path);
+    let existingImages = [];
+    if (req.body.images) {
+      if (Array.isArray(req.body.images)) existingImages = req.body.images;
+      else if (typeof req.body.images === 'string') {
+        try { existingImages = JSON.parse(req.body.images); }
+        catch (e) { existingImages = req.body.images.split(',').map(s => s.trim()).filter(Boolean); }
+      }
+    }
+    req.body.images = [...uploadedImages, ...existingImages];
 
     // Handle customData files
     if (req.body.customData) {
@@ -168,10 +179,19 @@ const createPackage = asyncHandler(async (req, res, next) => {
         console.error('Error parsing customData:', e);
       }
     }
-  } else if (req.body.customData && typeof req.body.customData === 'string') {
-    try {
-      req.body.customData = JSON.parse(req.body.customData);
-    } catch (e) {}
+  } else {
+    if (typeof req.body.images === 'string') {
+      try {
+        req.body.images = JSON.parse(req.body.images);
+      } catch (e) {
+        req.body.images = req.body.images.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+    if (req.body.customData && typeof req.body.customData === 'string') {
+      try {
+        req.body.customData = JSON.parse(req.body.customData);
+      } catch (e) {}
+    }
   }
 
   sanitizeObjectIds(req.body);
@@ -204,22 +224,25 @@ const updatePackage = asyncHandler(async (req, res, next) => {
   // If service category is changing, check entitlements
   if (req.body.serviceCategory && req.body.serviceCategory !== pkg.serviceCategory.toString()) {
      const vendorProfile = await VendorProfile.findOne({ user: req.user.id });
-     if (!vendorProfile || !vendorProfile.selectedServices.includes(req.body.serviceCategory)) {
-        return next(new ErrorResponse('Vendor is not authorized to offer services in this new category.', 403));
+     if (vendorProfile && vendorProfile.selectedServices && vendorProfile.selectedServices.length > 0) {
+        const allowedServiceIds = vendorProfile.selectedServices.map(s => (s._id ? s._id.toString() : s.toString()));
+        if (!allowedServiceIds.includes(req.body.serviceCategory.toString())) {
+           return next(new ErrorResponse('Vendor is not authorized to offer services in this new category.', 403));
+        }
      }
   }
 
   if (req.files && req.files.length > 0) {
-    const images = req.files.filter(f => f.fieldname === 'images').map(f => f.path);
-    if (images.length > 0) {
-      // Delete old images
-      if (pkg.images && pkg.images.length > 0) {
-        pkg.images.forEach(img => {
-           if (!img.includes('default_travel.png')) deleteFile(img);
-        });
+    const uploadedImages = req.files.filter(f => f.fieldname === 'images' || f.fieldname.startsWith('image')).map(f => f.path);
+    let existingImages = [];
+    if (req.body.images) {
+      if (Array.isArray(req.body.images)) existingImages = req.body.images;
+      else if (typeof req.body.images === 'string') {
+        try { existingImages = JSON.parse(req.body.images); }
+        catch (e) { existingImages = req.body.images.split(',').map(s => s.trim()).filter(Boolean); }
       }
-      req.body.images = images;
     }
+    req.body.images = [...uploadedImages, ...existingImages];
 
     // Handle customData files
     if (req.body.customData) {
@@ -244,10 +267,19 @@ const updatePackage = asyncHandler(async (req, res, next) => {
         console.error('Error parsing customData:', e);
       }
     }
-  } else if (req.body.customData && typeof req.body.customData === 'string') {
-    try {
-      req.body.customData = JSON.parse(req.body.customData);
-    } catch (e) {}
+  } else {
+    if (typeof req.body.images === 'string') {
+      try {
+        req.body.images = JSON.parse(req.body.images);
+      } catch (e) {
+        req.body.images = req.body.images.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+    if (req.body.customData && typeof req.body.customData === 'string') {
+      try {
+        req.body.customData = JSON.parse(req.body.customData);
+      } catch (e) {}
+    }
   }
 
   sanitizeObjectIds(req.body);

@@ -32,7 +32,10 @@ exports.createBlog = async (req, res, next) => {
 
 exports.getBlogs = async (req, res, next) => {
   try {
-    const blogs = await Blog.find({ status: 'Published' }).populate('author', 'name email').sort('-createdAt');
+    const blogs = await Blog.find({ status: 'Published' })
+      .populate('author', 'name email role')
+      .populate('createdBy', 'name email role')
+      .sort('-createdAt');
     res.status(200).json({ success: true, count: blogs.length, data: blogs });
   } catch (error) {
     next(error);
@@ -41,7 +44,14 @@ exports.getBlogs = async (req, res, next) => {
 
 exports.getAdminBlogs = async (req, res, next) => {
   try {
-    const blogs = await Blog.find({ userRole: 'Admin', status: 'Published' }).populate('author', 'name email').sort('-createdAt');
+    const filter = { userRole: 'Admin' };
+    if (req.query.status && req.query.status !== 'all') {
+      filter.status = req.query.status;
+    }
+    const blogs = await Blog.find(filter)
+      .populate('author', 'name email role')
+      .populate('createdBy', 'name email role')
+      .sort('-createdAt');
     res.status(200).json({ success: true, count: blogs.length, data: blogs });
   } catch (error) {
     next(error);
@@ -50,10 +60,29 @@ exports.getAdminBlogs = async (req, res, next) => {
 
 exports.getVendorBlogs = async (req, res, next) => {
   try {
-    const query = { userRole: 'Vendor', status: 'Published' };
-    if (req.params.id) query.createdBy = req.params.id; // Specific Vendor
+    const query = { userRole: 'Vendor' };
+    if (req.user && (req.user.role === 'Vendor' || req.user.role === 'Vendor-Staff')) {
+      query.createdBy = req.user.id;
+    } else if (req.params.id) {
+      query.createdBy = req.params.id;
+    }
 
-    const blogs = await Blog.find(query).populate('author', 'name email').sort('-createdAt');
+    const blogs = await Blog.find(query)
+      .populate('author', 'name email role')
+      .populate('createdBy', 'name email role')
+      .sort('-createdAt');
+    res.status(200).json({ success: true, count: blogs.length, data: blogs });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getMyBlogs = async (req, res, next) => {
+  try {
+    const blogs = await Blog.find({ createdBy: req.user.id })
+      .populate('author', 'name email role')
+      .populate('createdBy', 'name email role')
+      .sort('-createdAt');
     res.status(200).json({ success: true, count: blogs.length, data: blogs });
   } catch (error) {
     next(error);

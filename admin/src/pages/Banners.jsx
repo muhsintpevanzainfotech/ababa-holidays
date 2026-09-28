@@ -234,10 +234,16 @@ const Banners = ({ userRole = 'Admin' }) => {
                   {banner.description || 'No description provided.'}
                 </p>
 
+                <div style={{ marginBottom: '12px' }}>
+                  <span className="badge" style={{ background: banner.userRole === 'Vendor' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(148, 163, 184, 0.15)', color: banner.userRole === 'Vendor' ? '#3b82f6' : 'var(--text-muted)', fontSize: '11px', fontWeight: 700 }}>
+                    {banner.userRole === 'Vendor' ? `Vendor: ${banner.createdBy?.name || 'Partner'}` : 'Official Admin'}
+                  </span>
+                </div>
+
                 <div style={{ display: 'flex', gap: '8px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
                   <button
                     onClick={() => toggleStatus(banner._id)}
-                    className="btn" style={{ background: banner.isActive ? '#fff1f2' : '#f0fdf4', color: banner.isActive ? '#ef4444' : '#22c55e', border: 'none', fontSize: '12px', flex: 1 }}
+                    className="btn" style={{ background: banner.isActive ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)', color: banner.isActive ? '#ef4444' : '#22c55e', border: 'none', fontSize: '12px', flex: 1, fontWeight: 700 }}
                   >
                     <Power size={14} /> {banner.isActive ? 'Deactivate' : 'Activate'}
                   </button>
@@ -259,6 +265,7 @@ const Banners = ({ userRole = 'Admin' }) => {
                 <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border)' }}>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', width: '50px' }}>#</th>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Banner</th>
+                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Creator / Vendor</th>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Link</th>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</th>
                   <th style={{ padding: '16px 24px', textAlign: 'right' }}>Actions</th>
@@ -273,6 +280,11 @@ const Banners = ({ userRole = 'Admin' }) => {
                         <img src={banner.image?.startsWith('http') ? banner.image : getImageUrl(banner.image)} alt="" style={{ width: '80px', height: '45px', borderRadius: '4px', objectFit: 'cover' }} />
                         <div style={{ fontWeight: '600', fontSize: '14px' }}>{banner.title}</div>
                       </div>
+                    </td>
+                    <td style={{ padding: '16px 24px' }}>
+                      <span className="badge" style={{ background: banner.userRole === 'Vendor' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(148, 163, 184, 0.15)', color: banner.userRole === 'Vendor' ? '#3b82f6' : 'var(--text-muted)', fontWeight: 700 }}>
+                        {banner.userRole === 'Vendor' ? `Vendor: ${banner.createdBy?.name || 'Partner'}` : 'Official Admin'}
+                      </span>
                     </td>
                     <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)' }}>{banner.link || '-'}</td>
                     <td style={{ padding: '16px 24px' }}>

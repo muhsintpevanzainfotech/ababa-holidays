@@ -149,12 +149,12 @@ const Users = () => {
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.customId?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesRole = user.role !== 'Admin';
+    const isTraveler = user.role && (user.role.toLowerCase() === 'user' || user.role.toLowerCase() === 'traveler');
     const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'suspended' ? user.isSuspended : !user.isSuspended);
     const isNotCurrentUser = !authUser || user._id !== authUser._id;
 
-    return matchesSearch && matchesRole && matchesStatus && isNotCurrentUser;
+    return matchesSearch && isTraveler && matchesStatus && isNotCurrentUser;
   }).reverse();
 
   // Pagination calculations
@@ -163,18 +163,18 @@ const Users = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
-  const allTravelers = users.filter(u => u.role !== 'Admin' && (!authUser || u._id !== authUser._id));
+  const allTravelers = users.filter(u => u.role && (u.role.toLowerCase() === 'user' || u.role.toLowerCase() === 'traveler') && (!authUser || u._id !== authUser._id));
   const roles = ['Admin', 'Sub-Admin', 'Vendor', 'Vendor-Staff', 'User'];
 
   return (
     <div className="fade-in">
       <div className="page-header">
         <div>
-          <h1>Platform Users</h1>
-          <p>Manage all registered accounts, roles, and access levels.</p>
+          <h1>Travelers</h1>
+          <p>Manage all registered traveler accounts (Role: User).</p>
         </div>
         <button className="btn btn-primary" onClick={() => handleOpenModal('add')}>
-          <Plus size={20} /> Add New User
+          <Plus size={20} /> Add New Traveler
         </button>
       </div>
 

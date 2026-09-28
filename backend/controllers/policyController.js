@@ -12,7 +12,9 @@ exports.getPolicies = asyncHandler(async (req, res, next) => {
   if (type) query.type = type;
   if (target) query.target = target;
   
-  if (vendorId) {
+  const isValidVendorId = vendorId && vendorId !== 'undefined' && vendorId !== 'null' && Boolean(vendorId.match(/^[0-9a-fA-F]{24}$/));
+
+  if (isValidVendorId) {
     query.$or = [
       { vendor: vendorId },
       { isGlobal: true }

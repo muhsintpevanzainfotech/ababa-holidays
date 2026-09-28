@@ -64,7 +64,7 @@ exports.getReels = async (req, res, next) => {
     }
 
     // Manual override via query param
-    if (req.query.vendor) {
+    if (req.query.vendor && req.query.vendor !== 'undefined' && req.query.vendor !== 'null' && req.query.vendor.match(/^[0-9a-fA-F]{24}$/)) {
       filter.vendor = req.query.vendor;
     }
 

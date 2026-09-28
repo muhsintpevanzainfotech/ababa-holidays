@@ -22,7 +22,9 @@ import {
   CheckCircle,
   XCircle,
   MoreVertical,
-  Info
+  Info,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import FilterSelect from '../components/FilterSelect';
 import { useToast } from '../context/ToastContext';
@@ -95,6 +97,8 @@ const Subscriptions = () => {
   const [currentSub, setCurrentSub] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [planFilter, setPlanFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [visibilityFilter, setVisibilityFilter] = useState('all');
   const [newFeature, setNewFeature] = useState('');
   const { showToast } = useToast();
   const { confirm } = useConfirm();
@@ -115,7 +119,8 @@ const Subscriptions = () => {
     contactUsEnabled: false,
     instagramReelsEnabled: false,
     enquiriesFollowupEnabled: false,
-    isActive: true
+    isActive: true,
+    isVisible: true
   });
 
   useEffect(() => {
@@ -166,7 +171,8 @@ const Subscriptions = () => {
         contactUsEnabled: sub.contactUsEnabled || false,
         instagramReelsEnabled: sub.instagramReelsEnabled || false,
         enquiriesFollowupEnabled: sub.enquiriesFollowupEnabled || false,
-        isActive: sub.isActive !== undefined ? sub.isActive : true
+        isActive: sub.isActive !== undefined ? sub.isActive : true,
+        isVisible: sub.isVisible !== undefined ? sub.isVisible : true
       });
     } else {
       setFormData({
@@ -175,11 +181,26 @@ const Subscriptions = () => {
         userLimit: 5, packageLimit: 10, staffLimit: 5,
         crmEnabled: false, websiteEnabled: false, testimonialEnabled: false,
         contactUsEnabled: false, instagramReelsEnabled: false, enquiriesFollowupEnabled: false,
-        isActive: true
+        isActive: true, isVisible: true
       });
     }
     setNewFeature('');
     setShowModal(true);
+  };
+
+  const handleToggleField = (sub, field) => {
+    if (!isAdmin) return;
+    if (!isSessionUnlocked()) {
+      setPendingAction(() => () => handleToggleField(sub, field));
+      setShowSecurityModal(true);
+      return;
+    }
+    const currentVal = sub[field] !== undefined ? sub[field] : true;
+    const newVal = !currentVal;
+    dispatch(updateSubscriptionRequest({ id: sub._id, data: { [field]: newVal } }));
+    const label = field === 'isActive' ? 'Active Status' : 'Visibility Status';
+    const stateLabel = newVal ? (field === 'isActive' ? 'Active' : 'Visible') : (field === 'isActive' ? 'Non-Active' : 'Non-Visible');
+    showToast('Success', `${sub.title} updated to ${stateLabel}`, 'success');
   };
 
   const handleLockToggleInternal = () => {
@@ -247,7 +268,16 @@ const Subscriptions = () => {
     const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.plan.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPlan = planFilter === 'all' ? true : p.plan === planFilter;
-    return matchesSearch && matchesPlan;
+
+    const isSubActive = p.isActive !== false;
+    const matchesStatus = statusFilter === 'all' ? true :
+      statusFilter === 'active' ? isSubActive : !isSubActive;
+
+    const isSubVisible = p.isVisible !== false;
+    const matchesVisibility = visibilityFilter === 'all' ? true :
+      visibilityFilter === 'visible' ? isSubVisible : !isSubVisible;
+
+    return matchesSearch && matchesPlan && matchesStatus && matchesVisibility;
   });
 
   return (
@@ -255,7 +285,7 @@ const Subscriptions = () => {
       <div className="page-header">
         <div>
           <h1>Platform Subscriptions</h1>
-          <p>Manage tiers, pricing models, and feature access permissions for vendors</p>
+          <p>Manage tiers, pricing models, active status, visibility, and feature permissions for vendors</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           {isAdmin && (
@@ -270,7 +300,7 @@ const Subscriptions = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="stats-grid">
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
         <div className="stat-card">
           <div className="stat-icon" style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary)' }}><CreditCard size={24} /></div>
           <div className="stat-info"><h3>Total Plans</h3><p>{subscriptions.length}</p></div>
@@ -280,8 +310,16 @@ const Subscriptions = () => {
           <div className="stat-info"><h3>Active Tiers</h3><p>{subscriptions.filter(s => s.isActive !== false).length}</p></div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(var(--primary-rgb), 0.1)', color: 'var(--primary)' }}><ShieldCheck size={24} /></div>
-          <div className="stat-info"><h3>Premium Plans</h3><p>{subscriptions.filter(s => s.price > 0).length}</p></div>
+          <div className="stat-icon" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}><Power size={24} /></div>
+          <div className="stat-info"><h3>Non-Active</h3><p>{subscriptions.filter(s => s.isActive === false).length}</p></div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}><Eye size={24} /></div>
+          <div className="stat-info"><h3>Visible Plans</h3><p>{subscriptions.filter(s => s.isVisible !== false).length}</p></div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: 'rgba(100, 116, 139, 0.1)', color: '#64748b' }}><EyeOff size={24} /></div>
+          <div className="stat-info"><h3>Non-Visible</h3><p>{subscriptions.filter(s => s.isVisible === false).length}</p></div>
         </div>
       </div>
 
@@ -300,8 +338,8 @@ const Subscriptions = () => {
             {searchTerm && <X size={16} onClick={() => setSearchTerm('')} style={{ position: 'absolute', right: '12px', cursor: 'pointer', color: 'var(--text-muted)' }} />}
           </div>
 
-          <div className="filter-actions">
-            <div className="filter-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="filter-actions" style={{ flexWrap: 'wrap', gap: '12px' }}>
+            <div className="filter-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <Filter size={16} style={{ color: 'var(--text-muted)' }} />
               <FilterSelect
                 options={[
@@ -313,7 +351,27 @@ const Subscriptions = () => {
                 ]}
                 value={planFilter}
                 onChange={setPlanFilter}
-                width="160px"
+                width="140px"
+              />
+              <FilterSelect
+                options={[
+                  { value: 'all', label: 'All Status' },
+                  { value: 'active', label: 'Active', color: '#22c55e' },
+                  { value: 'inactive', label: 'Non-Active', color: '#ef4444' }
+                ]}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                width="140px"
+              />
+              <FilterSelect
+                options={[
+                  { value: 'all', label: 'All Visibility' },
+                  { value: 'visible', label: 'Visible', color: '#3b82f6' },
+                  { value: 'hidden', label: 'Non-Visible', color: '#64748b' }
+                ]}
+                value={visibilityFilter}
+                onChange={setVisibilityFilter}
+                width="145px"
               />
             </div>
             <div className="results-count">
@@ -346,7 +404,7 @@ const Subscriptions = () => {
       ) : filteredPlans.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '48px' }}>
           <AlertTriangle size={48} color="#cbd5e1" style={{ marginBottom: '16px', margin: 'auto' }} />
-          <p style={{ color: 'var(--text-muted)' }}>No subscription plans found matching your search.</p>
+          <p style={{ color: 'var(--text-muted)' }}>No subscription plans found matching your search or filters.</p>
         </div>
       ) : view === 'grid' ? (
         <div style={{
@@ -357,6 +415,9 @@ const Subscriptions = () => {
         }}>
           {filteredPlans.map((sub) => {
             const planStyle = getPlanStyle(sub.plan);
+            const isSubActive = sub.isActive !== false;
+            const isSubVisible = sub.isVisible !== false;
+
             return (
               <div 
                 key={sub._id} 
@@ -367,7 +428,8 @@ const Subscriptions = () => {
                   position: 'relative',
                   border: planStyle.border,
                   boxShadow: planStyle.shadow || 'var(--shadow-premium)',
-                  overflow: 'visible'
+                  overflow: 'visible',
+                  opacity: !isSubActive ? 0.75 : 1
                 }}
               >
                 {planStyle.popular && (
@@ -390,7 +452,7 @@ const Subscriptions = () => {
                   </div>
                 )}
                 
-                <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <span style={{
                       padding: '5px 12px', 
@@ -405,7 +467,58 @@ const Subscriptions = () => {
                     }}>
                       {sub.plan}
                     </span>
-                    <h2 style={{ fontSize: '19px', fontWeight: '800', marginTop: '12px', color: 'var(--text-main)' }}>{sub.title}</h2>
+                    <h2 style={{ fontSize: '19px', fontWeight: '800', marginTop: '10px', color: 'var(--text-main)' }}>{sub.title}</h2>
+                    
+                    {/* Active & Visible Status Badges */}
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleField(sub, 'isActive')}
+                        disabled={!isAdmin}
+                        style={{
+                          border: 'none',
+                          cursor: isAdmin ? 'pointer' : 'default',
+                          padding: '4px 10px',
+                          borderRadius: '20px',
+                          fontSize: '10px',
+                          fontWeight: '700',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: isSubActive ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                          color: isSubActive ? '#16a34a' : '#dc2626',
+                          transition: 'all 0.2s ease'
+                        }}
+                        title={isAdmin ? `Click to toggle Active status` : ''}
+                      >
+                        <Power size={11} />
+                        {isSubActive ? 'Active' : 'Non-Active'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleField(sub, 'isVisible')}
+                        disabled={!isAdmin}
+                        style={{
+                          border: 'none',
+                          cursor: isAdmin ? 'pointer' : 'default',
+                          padding: '4px 10px',
+                          borderRadius: '20px',
+                          fontSize: '10px',
+                          fontWeight: '700',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: isSubVisible ? 'rgba(59, 130, 246, 0.12)' : 'rgba(100, 116, 139, 0.12)',
+                          color: isSubVisible ? '#2563eb' : '#475569',
+                          transition: 'all 0.2s ease'
+                        }}
+                        title={isAdmin ? `Click to toggle Visibility status` : ''}
+                      >
+                        {isSubVisible ? <Eye size={11} /> : <EyeOff size={11} />}
+                        {isSubVisible ? 'Visible' : 'Non-Visible'}
+                      </button>
+                    </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontSize: '24px', fontWeight: '900', color: 'var(--primary)', lineHeight: 1 }}>₹{sub.price}</p>
@@ -416,9 +529,9 @@ const Subscriptions = () => {
                 </div>
 
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px', minHeight: '40px', lineHeight: '1.5' }}>{sub.description}</p>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', minHeight: '36px', lineHeight: '1.5' }}>{sub.description}</p>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '24px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '20px' }}>
                     <div style={{ background: 'var(--bg-main)', padding: '10px 4px', borderRadius: '12px', border: '1px solid var(--border)', textAlign: 'center' }}>
                       <Users size={14} color="var(--primary)" style={{ marginBottom: '4px', margin: '0 auto' }} />
                       <p style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Users</p>
@@ -472,7 +585,7 @@ const Subscriptions = () => {
                 </div>
 
                 {isAdmin && (
-                  <div style={{ marginTop: '32px', display: 'flex', gap: '8px' }}>
+                  <div style={{ marginTop: '24px', display: 'flex', gap: '8px' }}>
                     <button className="btn" style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', color: 'var(--text-main)', width: '42px', height: '42px', minWidth: 'auto', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => handleOpenModal('view', sub)} title="View Details">
                       <Info size={18} />
                     </button>
@@ -499,72 +612,119 @@ const Subscriptions = () => {
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Price/Dur</th>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Limits (U/P/S)</th>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Features</th>
-                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</th>
+                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Active Status</th>
+                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Visibility</th>
                   <th style={{ padding: '16px 24px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredPlans.map((sub, index) => (
-                  <tr key={sub._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>{index + 1}</td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <div>
-                        <div style={{ fontWeight: '700', fontSize: '15px' }}>{sub.title}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '2px' }}>{sub.plan} Plan</div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ fontWeight: '800', color: 'var(--primary)', marginBottom: '4px' }}>₹{sub.price}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sub.durationInDays === -1 ? '∞ / Lifetime' : `${sub.durationInDays} Days`}</div>
-                    </td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <span className="badge" style={{ background: '#f5f3ff', color: '#5b21b6', fontSize: '11px' }}>{sub.userLimit === -1 ? '∞' : sub.userLimit} Users</span>
-                        <span className="badge" style={{ background: '#eff6ff', color: '#1e40af', fontSize: '11px' }}>{sub.packageLimit === -1 ? '∞' : sub.packageLimit} Pkgs</span>
-                        <span className="badge" style={{ background: '#f0fdf4', color: '#166534', fontSize: '11px' }}>{sub.staffLimit === -1 ? '∞' : sub.staffLimit} Staff</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                        {sub.crmEnabled && <div title="CRM Access" style={{ color: '#22c55e' }}><ShieldCheck size={16} /></div>}
-                        {sub.websiteEnabled && <div title="Website Module" style={{ color: '#3b82f6' }}><Globe size={16} /></div>}
-                        {sub.instagramReelsEnabled && <div title="Instagram Reels" style={{ color: '#d946ef' }}><Smartphone size={16} /></div>}
-                        {sub.enquiriesFollowupEnabled && <div title="Enquiries Follow-up" style={{ color: '#f59e0b' }}><Check size={16} /></div>}
-                        {sub.features && sub.features.length > 0 && (
-                          <span style={{ marginLeft: '4px', fontSize: '10px', background: '#f1f5f9', padding: '2px 6px', borderRadius: '12px', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>
-                            +{sub.features.length} custom
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <span style={{
-                        padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
-                        background: (sub.isActive !== false) ? '#dcfce7' : '#fee2e2',
-                        color: (sub.isActive !== false) ? '#166534' : '#b91c1c'
-                      }}>
-                        {(sub.isActive !== false) ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                      {isAdmin ? (
-                        <div className="action-group">
-                          <button className="action-btn" title="View Details" onClick={() => handleOpenModal('view', sub)}>
-                            <Info size={16} />
-                          </button>
-                          <button className="action-btn" title="Edit Plan" onClick={() => handleOpenModal('edit', sub)}>
-                            <Edit size={16} />
-                          </button>
-                          <button className="action-btn danger" title="Delete Plan" onClick={() => handleDelete(sub._id)}>
-                            <Trash2 size={16} />
-                          </button>
+                {filteredPlans.map((sub, index) => {
+                  const isSubActive = sub.isActive !== false;
+                  const isSubVisible = sub.isVisible !== false;
+
+                  return (
+                    <tr key={sub._id} style={{ borderBottom: '1px solid var(--border)', opacity: !isSubActive ? 0.75 : 1 }}>
+                      <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>{index + 1}</td>
+                      <td style={{ padding: '16px 24px' }}>
+                        <div>
+                          <div style={{ fontWeight: '700', fontSize: '15px' }}>{sub.title}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '2px' }}>{sub.plan} Plan</div>
                         </div>
-                      ) : (
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Read Only</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td style={{ padding: '16px 24px' }}>
+                        <div style={{ fontWeight: '800', color: 'var(--primary)', marginBottom: '4px' }}>₹{sub.price}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sub.durationInDays === -1 ? '∞ / Lifetime' : `${sub.durationInDays} Days`}</div>
+                      </td>
+                      <td style={{ padding: '16px 24px' }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <span className="badge" style={{ background: '#f5f3ff', color: '#5b21b6', fontSize: '11px' }}>{sub.userLimit === -1 ? '∞' : sub.userLimit} Users</span>
+                          <span className="badge" style={{ background: '#eff6ff', color: '#1e40af', fontSize: '11px' }}>{sub.packageLimit === -1 ? '∞' : sub.packageLimit} Pkgs</span>
+                          <span className="badge" style={{ background: '#f0fdf4', color: '#166534', fontSize: '11px' }}>{sub.staffLimit === -1 ? '∞' : sub.staffLimit} Staff</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '16px 24px' }}>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                          {sub.crmEnabled && <div title="CRM Access" style={{ color: '#22c55e' }}><ShieldCheck size={16} /></div>}
+                          {sub.websiteEnabled && <div title="Website Module" style={{ color: '#3b82f6' }}><Globe size={16} /></div>}
+                          {sub.instagramReelsEnabled && <div title="Instagram Reels" style={{ color: '#d946ef' }}><Smartphone size={16} /></div>}
+                          {sub.enquiriesFollowupEnabled && <div title="Enquiries Follow-up" style={{ color: '#f59e0b' }}><Check size={16} /></div>}
+                          {sub.features && sub.features.length > 0 && (
+                            <span style={{ marginLeft: '4px', fontSize: '10px', background: '#f1f5f9', padding: '2px 6px', borderRadius: '12px', color: '#475569', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                              +{sub.features.length} custom
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: '16px 24px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleField(sub, 'isActive')}
+                          disabled={!isAdmin}
+                          style={{
+                            border: 'none',
+                            cursor: isAdmin ? 'pointer' : 'default',
+                            padding: '5px 12px',
+                            borderRadius: '20px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: isSubActive ? '#dcfce7' : '#fee2e2',
+                            color: isSubActive ? '#166534' : '#b91c1c',
+                            whiteSpace: 'nowrap'
+                          }}
+                          title={isAdmin ? `Click to toggle Active status` : ''}
+                        >
+                          <Power size={12} />
+                          {isSubActive ? 'Active' : 'Non-Active'}
+                        </button>
+                      </td>
+                      <td style={{ padding: '16px 24px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleField(sub, 'isVisible')}
+                          disabled={!isAdmin}
+                          style={{
+                            border: 'none',
+                            cursor: isAdmin ? 'pointer' : 'default',
+                            padding: '5px 12px',
+                            borderRadius: '20px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background: isSubVisible ? '#dbeafe' : '#f1f5f9',
+                            color: isSubVisible ? '#1e40af' : '#475569',
+                            whiteSpace: 'nowrap'
+                          }}
+                          title={isAdmin ? `Click to toggle Visibility status` : ''}
+                        >
+                          {isSubVisible ? <Eye size={12} /> : <EyeOff size={12} />}
+                          {isSubVisible ? 'Visible' : 'Non-Visible'}
+                        </button>
+                      </td>
+                      <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                        {isAdmin ? (
+                          <div className="action-group">
+                            <button className="action-btn" title="View Details" onClick={() => handleOpenModal('view', sub)}>
+                              <Info size={16} />
+                            </button>
+                            <button className="action-btn" title="Edit Plan" onClick={() => handleOpenModal('edit', sub)}>
+                              <Edit size={16} />
+                            </button>
+                            <button className="action-btn danger" title="Delete Plan" onClick={() => handleDelete(sub._id)}>
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Read Only</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -577,6 +737,136 @@ const Subscriptions = () => {
         title={modalType === 'add' ? 'Create Subscription Plan' : modalType === 'view' ? 'View Subscription Plan' : 'Edit Subscription Plan'}
       >
         <form onSubmit={handleSubmit}>
+          {/* Status & Visibility Settings */}
+          <div style={{
+            padding: '16px',
+            background: 'var(--bg-main)',
+            borderRadius: '12px',
+            marginBottom: '24px',
+            border: '1px solid var(--border)'
+          }}>
+            <h4 style={{ fontSize: '12px', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+              Status & Visibility Controls
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              {/* Active Status Switch Card */}
+              <div style={{
+                padding: '14px 16px',
+                background: 'var(--bg-card)',
+                borderRadius: '12px',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'space-between',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '10px',
+                    background: formData.isActive ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                    color: formData.isActive ? '#16a34a' : '#dc2626',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Power size={18} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>
+                      Active Status
+                    </div>
+                    <div style={{ fontSize: '11px', color: formData.isActive ? '#16a34a' : '#dc2626', fontWeight: '600', marginTop: '2px' }}>
+                      {formData.isActive ? 'Active (Enabled)' : 'Non-Active (Disabled)'}
+                    </div>
+                  </div>
+                </div>
+                <label style={{ position: 'relative', display: 'inline-block', width: '46px', height: '24px', margin: 0, cursor: modalType === 'view' ? 'default' : 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    disabled={modalType === 'view'}
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: formData.isActive ? '#22c55e' : '#cbd5e1',
+                    borderRadius: '24px', transition: 'all 0.2s ease',
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)'
+                  }}>
+                    <span style={{
+                      position: 'absolute', content: '""', height: '18px', width: '18px',
+                      left: formData.isActive ? '24px' : '3px', bottom: '3px',
+                      backgroundColor: 'white', borderRadius: '50%', transition: 'all 0.2s ease',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }} />
+                  </span>
+                </label>
+              </div>
+
+              {/* Visibility Status Switch Card */}
+              <div style={{
+                padding: '14px 16px',
+                background: 'var(--bg-card)',
+                borderRadius: '12px',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'space-between',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '10px',
+                    background: formData.isVisible ? 'rgba(59, 130, 246, 0.12)' : 'rgba(100, 116, 139, 0.12)',
+                    color: formData.isVisible ? '#2563eb' : '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'center',
+                    flexShrink: 0
+                  }}>
+                    {formData.isVisible ? <Eye size={18} /> : <EyeOff size={18} />}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>
+                      Visibility Status
+                    </div>
+                    <div style={{ fontSize: '11px', color: formData.isVisible ? '#2563eb' : '#64748b', fontWeight: '600', marginTop: '2px' }}>
+                      {formData.isVisible ? 'Visible (Public)' : 'Non-Visible (Hidden)'}
+                    </div>
+                  </div>
+                </div>
+                <label style={{ position: 'relative', display: 'inline-block', width: '46px', height: '24px', margin: 0, cursor: modalType === 'view' ? 'default' : 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    disabled={modalType === 'view'}
+                    checked={formData.isVisible}
+                    onChange={(e) => setFormData({ ...formData, isVisible: e.target.checked })}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: formData.isVisible ? '#3b82f6' : '#cbd5e1',
+                    borderRadius: '24px', transition: 'all 0.2s ease',
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)'
+                  }}>
+                    <span style={{
+                      position: 'absolute', content: '""', height: '18px', width: '18px',
+                      left: formData.isVisible ? '24px' : '3px', bottom: '3px',
+                      backgroundColor: 'white', borderRadius: '50%', transition: 'all 0.2s ease',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }} />
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
           <div className="form-group">
             <label>Plan Name</label>
             <input
@@ -614,23 +904,36 @@ const Subscriptions = () => {
             </div>
             <div className="form-group">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label style={{ margin: 0 }}>Duration (Days)</label>
-                <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'var(--primary)', fontWeight: '700' }}>
+                <label style={{ margin: 0, fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>Duration (Days)</label>
+                <label style={{
+                  fontSize: '11px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: modalType === 'view' ? 'default' : 'pointer',
+                  color: formData.durationInDays === -1 ? 'var(--primary)' : 'var(--text-muted)',
+                  fontWeight: '700',
+                  userSelect: 'none',
+                  background: formData.durationInDays === -1 ? 'rgba(var(--primary-rgb), 0.1)' : 'transparent',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  transition: 'all 0.2s ease'
+                }}>
                   <input
                     type="checkbox"
                     disabled={modalType === 'view'}
                     checked={formData.durationInDays === -1}
                     onChange={(e) => setFormData({ ...formData, durationInDays: e.target.checked ? -1 : 30 })}
-                    style={{ width: '15px', height: '15px' }}
+                    style={{ width: '14px', height: '14px', accentColor: 'var(--primary)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
                   />
-                  Unlimited / Permanent
+                  Unlimited
                 </label>
               </div>
               <input
                 type="number" className="form-control" required
                 disabled={modalType === 'view' || formData.durationInDays === -1}
                 value={formData.durationInDays === -1 ? '' : formData.durationInDays}
-                placeholder={formData.durationInDays === -1 ? '∞ (No Expiry)' : '30'}
+                placeholder={formData.durationInDays === -1 ? '∞ Unlimited (Permanent)' : '30'}
                 onChange={(e) => setFormData({ ...formData, durationInDays: Number(e.target.value) })}
               />
             </div>
@@ -648,18 +951,33 @@ const Subscriptions = () => {
           </div>
 
           <div style={{ padding: '16px', background: 'var(--bg-main)', borderRadius: '12px', marginBottom: '24px', border: '1px solid var(--border)' }}>
-            <h4 style={{ fontSize: '13px', fontWeight: '800', marginBottom: '16px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Resource Limits</h4>
+            <h4 style={{ fontSize: '12px', fontWeight: '800', marginBottom: '16px', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+              Resource Limits
+            </h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '11px', margin: 0 }}>Max Users</label>
-                  <label style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: 'var(--primary)', fontWeight: '700' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '12px', margin: 0, fontWeight: '700', color: 'var(--text-main)' }}>Max Users</label>
+                  <label style={{
+                    fontSize: '11px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: modalType === 'view' ? 'default' : 'pointer',
+                    color: formData.userLimit === -1 ? 'var(--primary)' : 'var(--text-muted)',
+                    fontWeight: '700',
+                    userSelect: 'none',
+                    background: formData.userLimit === -1 ? 'rgba(var(--primary-rgb), 0.1)' : 'transparent',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    transition: 'all 0.2s ease'
+                  }}>
                     <input 
                       type="checkbox" 
                       disabled={modalType === 'view'}
                       checked={formData.userLimit === -1} 
-                      onChange={(e) => setFormData({ ...formData, userLimit: e.target.checked ? -1 : 0 })}
-                      style={{ width: '12px', height: '12px' }}
+                      onChange={(e) => setFormData({ ...formData, userLimit: e.target.checked ? -1 : 5 })}
+                      style={{ width: '14px', height: '14px', accentColor: 'var(--primary)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
                     />
                     Unlimited
                   </label>
@@ -668,20 +986,33 @@ const Subscriptions = () => {
                   type="number" className="form-control"
                   disabled={modalType === 'view' || formData.userLimit === -1}
                   value={formData.userLimit === -1 ? '' : formData.userLimit}
-                  placeholder={formData.userLimit === -1 ? '∞' : '0'}
+                  placeholder={formData.userLimit === -1 ? '∞ Unlimited' : '5'}
                   onChange={(e) => setFormData({ ...formData, userLimit: Number(e.target.value) })}
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '11px', margin: 0 }}>Max Pkgs</label>
-                  <label style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: 'var(--primary)', fontWeight: '700' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '12px', margin: 0, fontWeight: '700', color: 'var(--text-main)' }}>Max Packages</label>
+                  <label style={{
+                    fontSize: '11px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: modalType === 'view' ? 'default' : 'pointer',
+                    color: formData.packageLimit === -1 ? 'var(--primary)' : 'var(--text-muted)',
+                    fontWeight: '700',
+                    userSelect: 'none',
+                    background: formData.packageLimit === -1 ? 'rgba(var(--primary-rgb), 0.1)' : 'transparent',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    transition: 'all 0.2s ease'
+                  }}>
                     <input 
                       type="checkbox" 
                       disabled={modalType === 'view'}
                       checked={formData.packageLimit === -1} 
-                      onChange={(e) => setFormData({ ...formData, packageLimit: e.target.checked ? -1 : 0 })}
-                      style={{ width: '12px', height: '12px' }}
+                      onChange={(e) => setFormData({ ...formData, packageLimit: e.target.checked ? -1 : 10 })}
+                      style={{ width: '14px', height: '14px', accentColor: 'var(--primary)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
                     />
                     Unlimited
                   </label>
@@ -690,20 +1021,33 @@ const Subscriptions = () => {
                   type="number" className="form-control"
                   disabled={modalType === 'view' || formData.packageLimit === -1}
                   value={formData.packageLimit === -1 ? '' : formData.packageLimit}
-                  placeholder={formData.packageLimit === -1 ? '∞' : '0'}
+                  placeholder={formData.packageLimit === -1 ? '∞ Unlimited' : '10'}
                   onChange={(e) => setFormData({ ...formData, packageLimit: Number(e.target.value) })}
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '11px', margin: 0 }}>Max Staff</label>
-                  <label style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: 'var(--primary)', fontWeight: '700' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '12px', margin: 0, fontWeight: '700', color: 'var(--text-main)' }}>Max Staff</label>
+                  <label style={{
+                    fontSize: '11px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: modalType === 'view' ? 'default' : 'pointer',
+                    color: formData.staffLimit === -1 ? 'var(--primary)' : 'var(--text-muted)',
+                    fontWeight: '700',
+                    userSelect: 'none',
+                    background: formData.staffLimit === -1 ? 'rgba(var(--primary-rgb), 0.1)' : 'transparent',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    transition: 'all 0.2s ease'
+                  }}>
                     <input 
                       type="checkbox" 
                       disabled={modalType === 'view'}
                       checked={formData.staffLimit === -1} 
-                      onChange={(e) => setFormData({ ...formData, staffLimit: e.target.checked ? -1 : 0 })}
-                      style={{ width: '12px', height: '12px' }}
+                      onChange={(e) => setFormData({ ...formData, staffLimit: e.target.checked ? -1 : 5 })}
+                      style={{ width: '14px', height: '14px', accentColor: 'var(--primary)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
                     />
                     Unlimited
                   </label>
@@ -712,7 +1056,7 @@ const Subscriptions = () => {
                   type="number" className="form-control"
                   disabled={modalType === 'view' || formData.staffLimit === -1}
                   value={formData.staffLimit === -1 ? '' : formData.staffLimit}
-                  placeholder={formData.staffLimit === -1 ? '∞' : '0'}
+                  placeholder={formData.staffLimit === -1 ? '∞ Unlimited' : '5'}
                   onChange={(e) => setFormData({ ...formData, staffLimit: Number(e.target.value) })}
                 />
               </div>
@@ -765,21 +1109,36 @@ const Subscriptions = () => {
             )}
           </div>
 
-          <h4 style={{ fontSize: '13px', fontWeight: '800', marginBottom: '16px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Feature Access</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '32px' }}>
+          <h4 style={{ fontSize: '12px', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+            Feature Access Permissions
+          </h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '32px' }}>
             {[
               { key: 'crmEnabled', label: 'CRM Access' },
               { key: 'websiteEnabled', label: 'Website Module' },
               { key: 'testimonialEnabled', label: 'Testimonials' },
               { key: 'contactUsEnabled', label: 'Contact Us' },
-              { key: 'instagramReelsEnabled', label: 'Instagram' },
-              { key: 'enquiriesFollowupEnabled', label: 'Enquiries' },
+              { key: 'instagramReelsEnabled', label: 'Instagram Reels' },
+              { key: 'enquiriesFollowupEnabled', label: 'Enquiries Follow-up' },
             ].map((f) => (
-              <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+              <label key={f.key} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                cursor: modalType === 'view' ? 'default' : 'pointer',
+                padding: '10px 14px',
+                background: 'var(--bg-main)',
+                borderRadius: '10px',
+                border: '1px solid var(--border)',
+                userSelect: 'none',
+                color: formData[f.key] ? 'var(--text-main)' : 'var(--text-muted)'
+              }}>
                 <input
                   type="checkbox"
                   disabled={modalType === 'view'}
-                  style={{ width: '17px', height: '17px' }}
+                  style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
                   checked={formData[f.key]}
                   onChange={(e) => setFormData({ ...formData, [f.key]: e.target.checked })}
                 />

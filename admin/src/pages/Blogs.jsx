@@ -314,10 +314,12 @@ const Blogs = ({ userRole = 'Admin' }) => {
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <User size={12} color="var(--text-muted)" />
+                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: blog.userRole === 'Vendor' ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <User size={12} color={blog.userRole === 'Vendor' ? '#3b82f6' : 'var(--text-muted)'} />
                     </div>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>{blog.author?.name || 'Admin'}</span>
+                    <span style={{ fontSize: '12px', color: blog.userRole === 'Vendor' ? '#3b82f6' : 'var(--text-muted)', fontWeight: '700' }}>
+                      {blog.userRole === 'Vendor' ? `Vendor: ${blog.author?.name || blog.createdBy?.name || 'Partner'}` : (blog.author?.name || 'Official Admin')}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button className="action-btn" onClick={() => handleOpenModal('view', blog)} title="View Intelligence">
@@ -343,6 +345,7 @@ const Blogs = ({ userRole = 'Admin' }) => {
                 <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border)' }}>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Post</th>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Category</th>
+                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Author / Vendor</th>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</th>
                   <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Date</th>
                   <th style={{ padding: '16px 24px', textAlign: 'right' }}>Actions</th>
@@ -364,6 +367,11 @@ const Blogs = ({ userRole = 'Admin' }) => {
                     </td>
                     <td style={{ padding: '16px 24px' }}>
                       <span className="badge" style={{ background: 'rgba(var(--primary-rgb), 0.1)', color: 'var(--primary)' }}>{blog.category || 'General'}</span>
+                    </td>
+                    <td style={{ padding: '16px 24px' }}>
+                      <span className="badge" style={{ background: blog.userRole === 'Vendor' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(148, 163, 184, 0.15)', color: blog.userRole === 'Vendor' ? '#3b82f6' : 'var(--text-muted)', fontWeight: 700 }}>
+                        {blog.userRole === 'Vendor' ? `Vendor: ${blog.author?.name || blog.createdBy?.name || 'Partner'}` : 'Official Admin'}
+                      </span>
                     </td>
                     <td style={{ padding: '16px 24px' }}>
                       <span style={{ 

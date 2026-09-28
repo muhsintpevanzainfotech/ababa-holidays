@@ -4,6 +4,7 @@ import { Grid, Typography, Stack, Box, Chip } from '@mui/material';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
+import StatCard from 'ui-component/cards/StatCard';
 import { gridSpacing } from 'store/constant';
 
 // assets
@@ -36,45 +37,33 @@ const AnalyticsDashboard = () => {
 
             {/* Top Stat Cards */}
             <Grid size={{ lg: 4, md: 6, xs: 12 }}>
-                <MainCard border={false} sx={{ bgcolor: theme.vars.palette.primary.light }}>
-                    <Stack sx={{ gap: 1 }}>
-                        <Typography variant="subtitle1" sx={{ color: 'primary.800' }}>Engagement Rate</Typography>
-                        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Typography variant="h2">64.2%</Typography>
-                            <Box sx={{ color: 'success.main', display: 'flex', alignItems: 'center' }}>
-                                <TrendingUpIcon fontSize="small" /> +12%
-                            </Box>
-                        </Stack>
-                    </Stack>
-                </MainCard>
+                <StatCard 
+                    count="64.2%" 
+                    label="Engagement Rate (+12%)" 
+                    icon={<TrendingUpIcon />} 
+                    variant="dark" 
+                    colorScheme="primary"
+                />
             </Grid>
 
             <Grid size={{ lg: 4, md: 6, xs: 12 }}>
-                <MainCard border={false} sx={{ bgcolor: theme.vars.palette.secondary.light }}>
-                    <Stack sx={{ gap: 1 }}>
-                        <Typography variant="subtitle1" sx={{ color: 'secondary.800' }}>Conversion Analytics</Typography>
-                        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Typography variant="h2">18.5%</Typography>
-                            <Box sx={{ color: 'primary.main', display: 'flex', alignItems: 'center' }}>
-                                <BarChartIcon fontSize="small" /> Healthy
-                            </Box>
-                        </Stack>
-                    </Stack>
-                </MainCard>
+                <StatCard 
+                    count="18.5%" 
+                    label="Conversion Rate" 
+                    icon={<BarChartIcon />} 
+                    variant="light" 
+                    colorScheme="secondary"
+                />
             </Grid>
 
             <Grid size={{ lg: 4, md: 12, xs: 12 }}>
-                <MainCard border={false} sx={{ bgcolor: 'orange.light' }}>
-                    <Stack sx={{ gap: 1 }}>
-                        <Typography variant="subtitle1" sx={{ color: 'orange.dark' }}>Total Pending Requests</Typography>
-                        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Typography variant="h2">24</Typography>
-                            <Box sx={{ color: 'orange.dark', display: 'flex', alignItems: 'center' }}>
-                                <BookOnlineIcon fontSize="small" /> Requires Action
-                            </Box>
-                        </Stack>
-                    </Stack>
-                </MainCard>
+                <StatCard 
+                    count="24" 
+                    label="Pending Action Items" 
+                    icon={<BookOnlineIcon />} 
+                    variant="light" 
+                    colorScheme="warning"
+                />
             </Grid>
 
             {/* Main Content Area */}

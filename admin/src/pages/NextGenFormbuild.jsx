@@ -7,7 +7,7 @@ import {
   Trash2, GripVertical, Search, Globe, Shield, Rocket,
   Activity, Command, Cpu, Hexagon, ChevronLeft, ChevronRight,
   RotateCcw, RotateCw, CheckSquare, List, Minus,
-  Phone, Link, Lock, Clock, Upload, ToggleLeft,
+  Phone, Link, Lock, Clock, Upload, ToggleLeft, Code,
   AlertCircle, AlertTriangle, Grid, HelpCircle, Info, Columns, Sliders
 } from 'lucide-react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
@@ -333,6 +333,52 @@ const renderInputField = (field, value, onChange) => {
         />
       );
     }
+    case 'editor':
+    case 'html':
+    case 'htmleditor': {
+      const activeValue = value !== undefined ? value : (field.attributes?.value || '');
+      return (
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justify: 'space-between',
+            padding: '6px 12px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderBottom: 'none',
+            borderTopLeftRadius: '10px',
+            borderTopRightRadius: '10px',
+            fontSize: '11px',
+            color: 'var(--ai-text-muted)'
+          }}>
+            <span style={{ fontWeight: '700', color: 'var(--ai-neon-purple)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Code size={13} /> HTML Editor
+            </span>
+            <span style={{ fontSize: '10px', opacity: 0.6 }}>HTML / Markup Code</span>
+          </div>
+          <textarea
+            style={{
+              ...inputStyle,
+              minHeight: '110px',
+              fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+              fontSize: '12.5px',
+              resize: 'vertical',
+              borderTopLeftRadius: 0,
+              borderTopRightRadius: 0,
+              backgroundColor: 'rgba(4, 4, 10, 0.85)'
+            }}
+            placeholder={field.placeholder || '<h1>Title</h1>\n<p>Write HTML elements or rich formatting here...</p>'}
+            value={activeValue}
+            disabled={field.attributes?.disabled}
+            readOnly={field.attributes?.readonly}
+            rows={field.attributes?.rows || 6}
+            onChange={(e) => onChange(field.id, e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      );
+    }
     case 'file upload':
       return (
         <div style={{ width: '100%' }}>
@@ -490,6 +536,9 @@ const getFieldIcon = (type) => {
     case 'text': return <Type size={16} />;
     case 'number': return <Hash size={16} />;
     case 'textarea': return <AlignLeft size={16} />;
+    case 'editor':
+    case 'html':
+    case 'htmleditor': return <Code size={16} />;
     case 'email': return <Mail size={16} />;
     case 'password': return <Lock size={16} />;
     case 'tel': return <Phone size={16} />;
@@ -525,7 +574,7 @@ const SortableCanvasItem = ({
   deviceMode = 'desktop'
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id, disabled: isPreviewMode });
-  const isFullWidth = ['textarea', 'file upload', 'url', 'editor'].includes(field.type);
+  const isFullWidth = ['textarea', 'file upload', 'url', 'editor', 'html', 'htmleditor'].includes(field.type);
   
   const getColSpan = () => {
     const attrs = field.attributes || {};
@@ -1750,7 +1799,8 @@ If you cannot fulfill the request, return: { "error": "Reason" }.`
                         { id: 'tel', label: 'Telephone', icon: Phone },
                         { id: 'url', label: 'URL Address', icon: Link },
                         { id: 'search', label: 'Search Bar', icon: Search },
-                        { id: 'textarea', label: 'Textarea Multi', icon: AlignLeft }
+                        { id: 'textarea', label: 'Textarea Multi', icon: AlignLeft },
+                        { id: 'editor', label: 'HTML Editor', icon: Code }
                       ].filter(t => !toolSearchQuery || t.label.toLowerCase().includes(toolSearchQuery.toLowerCase())).map(tool => (
                         <button key={tool.id} onClick={() => addField(tool.id, tool.label)} className="ai-form-tool-btn">
                           <div className="ai-form-tool-info">

@@ -15,7 +15,7 @@ const AuthGuard = ({ children }) => {
 
   useEffect(() => {
     if (!token) {
-      navigate('/pages/login', { replace: true });
+      navigate('/login', { replace: true });
     }
   }, [token, navigate]);
 

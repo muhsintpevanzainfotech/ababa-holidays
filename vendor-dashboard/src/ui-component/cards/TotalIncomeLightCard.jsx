@@ -41,8 +41,11 @@ const CardWrapper = styled(MainCard)(({ theme }) => ({
   }
 }));
 
-export default function TotalIncomeLightCard({ isLoading, total, icon, label }) {
+export default function TotalIncomeLightCard({ isLoading, total, icon, label, stats }) {
   const theme = useTheme();
+
+  const countValue = stats?.users !== undefined ? stats.users : (total !== undefined ? total : 0);
+  const displayLabel = label || 'Active Customers';
 
   return (
     <>
@@ -59,8 +62,8 @@ export default function TotalIncomeLightCard({ isLoading, total, icon, label }) 
                     sx={{
                       ...theme.typography.largeAvatar,
                       borderRadius: 2,
-                      bgcolor: label === 'Meeting attends' ? withAlpha(theme.vars.palette.error.light, 0.25) : 'warning.light',
-                      color: label === 'Meeting attends' ? 'error.dark' : 'warning.dark'
+                      bgcolor: displayLabel === 'Meeting attends' ? withAlpha(theme.vars.palette.error.light, 0.25) : 'warning.light',
+                      color: displayLabel === 'Meeting attends' ? 'error.dark' : 'warning.dark'
                     }}
                   >
                     {icon}
@@ -68,10 +71,10 @@ export default function TotalIncomeLightCard({ isLoading, total, icon, label }) 
                 </ListItemAvatar>
                 <ListItemText
                   sx={{ py: 0, mt: 0.45, mb: 0.45 }}
-                  primary={<Typography variant="h4">${total}k</Typography>}
+                  primary={<Typography variant="h4" sx={{ fontWeight: 800 }}>{countValue}</Typography>}
                   secondary={
-                    <Typography variant="subtitle2" sx={{ color: 'grey.500', mt: 0.5 }}>
-                      {label}
+                    <Typography variant="subtitle2" sx={{ color: 'grey.600', mt: 0.5, fontWeight: 600 }}>
+                      {displayLabel}
                     </Typography>
                   }
                 />
@@ -84,4 +87,4 @@ export default function TotalIncomeLightCard({ isLoading, total, icon, label }) 
   );
 }
 
-TotalIncomeLightCard.propTypes = { isLoading: PropTypes.bool, total: PropTypes.number, icon: PropTypes.node, label: PropTypes.string };
+TotalIncomeLightCard.propTypes = { isLoading: PropTypes.bool, total: PropTypes.number, icon: PropTypes.node, label: PropTypes.string, stats: PropTypes.object };

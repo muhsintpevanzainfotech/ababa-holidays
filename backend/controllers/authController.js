@@ -68,36 +68,42 @@ const resolveAddressIds = async (address) => {
   const mongoose = require('mongoose');
 
   // Resolve Country
-  if (address.country && !mongoose.Types.ObjectId.isValid(address.country)) {
-    const Country = require('../models/Country');
-    const countryName = String(address.country).trim();
-    let countryObj = await Country.findOne({ name: { $regex: new RegExp(`^${countryName}$`, 'i') } });
-    if (!countryObj) {
-      // If not found, look for India or create a default country
-      countryObj = await Country.findOne({ name: { $regex: /^india$/i } });
+  if (address.country && String(address.country).trim()) {
+    if (!mongoose.Types.ObjectId.isValid(address.country)) {
+      const Country = require('../models/Country');
+      const countryName = String(address.country).trim();
+      let countryObj = await Country.findOne({ name: { $regex: new RegExp(`^${countryName}$`, 'i') } });
       if (!countryObj) {
-        countryObj = await Country.create({ name: countryName || 'India', code: 'IN', dialCode: '+91' });
+        countryObj = await Country.findOne({ name: { $regex: /^india$/i } });
+        if (!countryObj) {
+          countryObj = await Country.create({ name: countryName || 'India', code: 'IN', dialCode: '+91' });
+        }
       }
+      address.country = countryObj._id;
     }
-    address.country = countryObj._id;
+  } else {
+    delete address.country;
   }
 
   // Resolve State
-  if (address.state && !mongoose.Types.ObjectId.isValid(address.state)) {
-    const State = require('../models/State');
-    const stateName = String(address.state).trim();
-    let stateObj = await State.findOne({ 
-      name: { $regex: new RegExp(`^${stateName}$`, 'i') },
-      country: address.country
-    });
-    if (!stateObj) {
-      // Create the state
-      stateObj = await State.create({ 
-        name: stateName, 
-        country: address.country 
+  if (address.state && String(address.state).trim()) {
+    if (!mongoose.Types.ObjectId.isValid(address.state)) {
+      const State = require('../models/State');
+      const stateName = String(address.state).trim();
+      let stateObj = await State.findOne({ 
+        name: { $regex: new RegExp(`^${stateName}$`, 'i') },
+        country: address.country
       });
+      if (!stateObj) {
+        stateObj = await State.create({ 
+          name: stateName, 
+          country: address.country 
+        });
+      }
+      address.state = stateObj._id;
     }
-    address.state = stateObj._id;
+  } else {
+    delete address.state;
   }
 
   return address;
@@ -146,7 +152,7 @@ const register = asyncHandler(async (req, res, next) => {
       let profile = await VendorProfile.findOne({ user: user._id });
       
       // Parse nested objects if they are strings (from multipart/form-data)
-      ['spoc', 'tin', 'gst', 'bankDetails', 'seo', 'address', 'selectedServices', 'socialMedia'].forEach(key => {
+      ['spoc', 'tin', 'gst', 'bankDetails', 'seo', 'address', 'selectedServices', 'socialLinks'].forEach(key => {
         if (typeof req.body[key] === 'string') {
           try {
             req.body[key] = JSON.parse(req.body[key]);
@@ -273,7 +279,7 @@ const register = asyncHandler(async (req, res, next) => {
     }
 
     // Parse nested objects if they are strings (from multipart/form-data)
-    ['spoc', 'tin', 'gst', 'bankDetails', 'seo', 'address', 'selectedServices', 'socialMedia'].forEach(key => {
+    ['spoc', 'tin', 'gst', 'bankDetails', 'seo', 'address', 'selectedServices', 'socialLinks'].forEach(key => {
       if (typeof req.body[key] === 'string') {
         try {
           req.body[key] = JSON.parse(req.body[key]);
@@ -396,6 +402,22 @@ const verifyOTP = asyncHandler(async (req, res, next) => {
   user.otpExpire = undefined;
   await user.save();
 
+  if (user.role === 'Vendor') {
+    const profile = await VendorProfile.findOne({ user: user._id });
+    if (!profile || !profile.isApproved) {
+      return res.json({
+        success: true,
+        isApproved: false,
+        message: 'Account verified successfully! Your profile is currently under review by the ABABA Holidays Admin team. You will be notified once activated.',
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isVerified: user.isVerified
+      });
+    }
+  }
+
   const accessToken = generateAccessToken(user._id);
   const refreshToken = generateRefreshToken(user._id);
 
@@ -406,6 +428,7 @@ const verifyOTP = asyncHandler(async (req, res, next) => {
 
   res.json({
     success: true,
+    isApproved: true,
     message: 'Account verified',
     _id: user._id,
     name: user.name,

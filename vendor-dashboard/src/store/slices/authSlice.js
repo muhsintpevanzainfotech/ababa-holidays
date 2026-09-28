@@ -7,6 +7,8 @@ const initialState = {
   error: null,
   needsOTP: false,
   email: null,
+  approvalPending: false,
+  infoMessage: null,
   isUnlocked: false,
   unlockedUntil: null,
 };
@@ -23,10 +25,17 @@ const authSlice = createSlice({
       state.isUnlocked = false;
       state.unlockedUntil = null;
     },
+    resetAuthError: (state) => {
+      state.error = null;
+      state.infoMessage = null;
+      state.approvalPending = false;
+    },
     loginRequest: (state) => {
       state.loading = true;
       state.error = null;
       state.needsOTP = false;
+      state.approvalPending = false;
+      state.infoMessage = null;
     },
     loginSuccess: (state, action) => {
       state.loading = false;
@@ -47,6 +56,8 @@ const authSlice = createSlice({
       state.loading = true;
       state.error = null;
       state.needsOTP = false;
+      state.approvalPending = false;
+      state.infoMessage = null;
     },
     registerSuccess: (state, action) => {
       state.loading = false;
@@ -63,10 +74,22 @@ const authSlice = createSlice({
     },
     verifyOTPSuccess: (state, action) => {
       state.loading = false;
-      state.user = action.payload;
-      state.token = action.payload.accessToken;
-      state.needsOTP = false;
-      localStorage.setItem('token', action.payload.accessToken);
+      if (action.payload.isApproved === false) {
+        state.needsOTP = false;
+        state.approvalPending = true;
+        state.infoMessage = action.payload.message;
+        state.token = null;
+        state.user = null;
+      } else {
+        state.user = action.payload;
+        state.token = action.payload.accessToken || null;
+        state.needsOTP = false;
+        state.approvalPending = false;
+        state.infoMessage = null;
+        if (action.payload.accessToken) {
+          localStorage.setItem('token', action.payload.accessToken);
+        }
+      }
     },
     verifyOTPFailure: (state, action) => {
       state.loading = false;
@@ -77,13 +100,15 @@ const authSlice = createSlice({
       state.token = null;
       state.needsOTP = false;
       state.email = null;
+      state.approvalPending = false;
+      state.infoMessage = null;
       localStorage.removeItem('token');
     },
   },
 });
 
 export const { 
-  setUnlocked, lockSession,
+  setUnlocked, lockSession, resetAuthError,
   loginRequest, loginSuccess, loginFailure, 
   registerRequest, registerSuccess, registerFailure,
   verifyOTPRequest, verifyOTPSuccess, verifyOTPFailure,

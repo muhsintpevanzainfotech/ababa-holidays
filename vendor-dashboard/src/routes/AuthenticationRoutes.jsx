@@ -29,6 +29,10 @@ const AuthenticationRoutes = {
       element: <LoginPage />
     },
     {
+      path: '/register',
+      element: <RegisterPage />
+    },
+    {
       path: '/pages/register',
       element: <RegisterPage />
     },

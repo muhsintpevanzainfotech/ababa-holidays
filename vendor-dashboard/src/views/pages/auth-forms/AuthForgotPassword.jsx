@@ -5,21 +5,22 @@ import { useNavigate } from 'react-router-dom';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
-import InputLabel from '@mui/material/InputLabel';
-import OutlinedInput from '@mui/material/OutlinedInput';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import FormHelperText from '@mui/material/FormHelperText';
 import CircularProgress from '@mui/material/CircularProgress';
+import TextField from '@mui/material/TextField';
 
 // project imports
 import AnimateButton from 'ui-component/extended/AnimateButton';
-import CustomFormControl from 'ui-component/extended/Form/CustomFormControl';
 
 // assets
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline';
+import MailOutlineIcon from '@mui/icons-material/MailOutline';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import KeyIcon from '@mui/icons-material/Key';
 
 export default function AuthForgotPassword() {
   const navigate = useNavigate();
@@ -105,7 +106,7 @@ export default function AuthForgotPassword() {
 
       setSuccess('Password reset successfully! Redirecting you to login...');
       setTimeout(() => {
-        navigate('/pages/login');
+        navigate('/login');
       }, 3000);
     } catch (err) {
       setError(err.message);
@@ -121,16 +122,16 @@ export default function AuthForgotPassword() {
           p: 2, 
           mb: 2, 
           border: '1px solid', 
-          borderColor: 'success.light', 
+          borderColor: '#043e38', 
           borderRadius: '8px', 
-          bgcolor: 'rgba(76, 175, 80, 0.08)',
+          bgcolor: 'rgba(4, 62, 56, 0.08)',
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
-          color: 'success.dark'
+          color: '#043e38'
         }}>
-          <CheckCircleOutline color="success" />
-          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          <CheckCircleOutline sx={{ color: '#043e38' }} />
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
             {success}
           </Typography>
         </Box>
@@ -138,22 +139,38 @@ export default function AuthForgotPassword() {
 
       {step === 1 ? (
         <form noValidate onSubmit={handleSendOTP}>
-          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ mb: 2, color: '#64748b' }}>
             Enter your email address associated with your vendor account, and we'll send you a 6-digit OTP code to verify and reset your password.
           </Typography>
 
-          <CustomFormControl fullWidth error={Boolean(error)}>
-            <InputLabel htmlFor="outlined-adornment-email-forgot">Email Address</InputLabel>
-            <OutlinedInput
-              id="outlined-adornment-email-forgot"
-              type="email"
-              value={email}
-              name="email"
-              onChange={(e) => setEmail(e.target.value)}
-              label="Email Address"
-              autoFocus
-            />
-          </CustomFormControl>
+          <TextField
+            fullWidth
+            id="outlined-adornment-email-forgot"
+            type="email"
+            value={email}
+            name="email"
+            label="Email Address"
+            placeholder="Enter your email"
+            onChange={(e) => setEmail(e.target.value)}
+            error={Boolean(error)}
+            margin="normal"
+            autoFocus
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <MailOutlineIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                </InputAdornment>
+              ),
+              sx: { borderRadius: '10px' }
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': { borderColor: '#043e38' },
+                '&.Mui-focused fieldset': { borderColor: '#043e38' }
+              },
+              '& .MuiInputLabel-root.Mui-focused': { color: '#043e38', fontWeight: 600 }
+            }}
+          />
 
           {error && (
             <Box sx={{ mt: 1 }}>
@@ -164,13 +181,22 @@ export default function AuthForgotPassword() {
           <Box sx={{ mt: 3 }}>
             <AnimateButton>
               <Button
-                color="secondary"
                 fullWidth
                 size="large"
                 type="submit"
                 variant="contained"
                 disabled={loading}
                 startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                sx={{ 
+                  bgcolor: '#043e38', 
+                  '&:hover': { bgcolor: '#022925' }, 
+                  py: 1.5, 
+                  borderRadius: '10px',
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 14px rgba(4, 62, 56, 0.25)'
+                }}
               >
                 {loading ? 'Sending Code...' : 'Send Reset Code'}
               </Button>
@@ -183,44 +209,87 @@ export default function AuthForgotPassword() {
             p: 3, 
             mb: 3, 
             border: '1px dashed', 
-            borderColor: 'secondary.light', 
+            borderColor: '#043e38', 
             borderRadius: '12px', 
-            bgcolor: 'rgba(103, 58, 183, 0.02)',
+            bgcolor: 'rgba(4, 62, 56, 0.03)',
             textAlign: 'center'
           }}>
-            <Typography variant="h4" sx={{ mb: 1, fontWeight: 700 }}>Reset Password</Typography>
+            <Box sx={{ 
+              width: 48, 
+              height: 48, 
+              bgcolor: 'rgba(4, 62, 56, 0.1)', 
+              borderRadius: '12px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              margin: '0 auto 16px',
+              color: '#043e38'
+            }}>
+              <KeyIcon sx={{ fontSize: 24 }} />
+            </Box>
+            <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: '#043e38' }}>Reset Password</Typography>
             <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
               We've sent a 6-digit verification code to <br/><b>{email}</b>
             </Typography>
 
-            <CustomFormControl fullWidth error={Boolean(error)}>
-              <InputLabel htmlFor="outlined-adornment-otp-forgot">Secure OTP Code</InputLabel>
-              <OutlinedInput
+            <TextField
+                fullWidth
                 id="outlined-adornment-otp-forgot"
                 type="text"
                 value={otp}
                 name="otp"
+                label="Secure OTP Code"
                 onChange={(e) => setOtp(e.target.value)}
                 autoFocus
                 placeholder="000000"
-                label="Secure OTP Code"
-                inputProps={{ 
-                  maxLength: 6,
-                  style: { textAlign: 'center', fontSize: '1.5rem', letterSpacing: '8px', fontWeight: '900', paddingLeft: '48px', color: '#673ab7' } 
+                error={Boolean(error)}
+                margin="normal"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <KeyIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                    </InputAdornment>
+                  ),
+                  sx: { 
+                    borderRadius: '10px',
+                    '& .MuiInputBase-input': {
+                      textAlign: 'center',
+                      fontSize: '1.4rem',
+                      letterSpacing: '6px',
+                      fontWeight: '800',
+                      color: '#043e38'
+                    }
+                  }
                 }}
-              />
-            </CustomFormControl>
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderColor: '#043e38' },
+                    '&.Mui-focused fieldset': { borderColor: '#043e38' }
+                  },
+                  '& .MuiInputLabel-root': { color: '#043e38', fontWeight: 600 }
+                }}
+                inputProps={{ maxLength: 6 }}
+            />
           </Box>
 
-          <CustomFormControl fullWidth error={Boolean(error)}>
-            <InputLabel htmlFor="outlined-adornment-password-forgot">New Password</InputLabel>
-            <OutlinedInput
-              id="outlined-adornment-password-forgot"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              name="password"
-              onChange={(e) => setPassword(e.target.value)}
-              endAdornment={
+          <TextField
+            fullWidth
+            id="outlined-adornment-password-forgot"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            name="password"
+            label="New Password"
+            placeholder="Enter new password"
+            onChange={(e) => setPassword(e.target.value)}
+            error={Boolean(error)}
+            margin="normal"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LockOutlinedIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                </InputAdornment>
+              ),
+              endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
                     aria-label="toggle password visibility"
@@ -231,20 +300,36 @@ export default function AuthForgotPassword() {
                     {showPassword ? <Visibility /> : <VisibilityOff />}
                   </IconButton>
                 </InputAdornment>
-              }
-              label="New Password"
-            />
-          </CustomFormControl>
+              ),
+              sx: { borderRadius: '10px' }
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': { borderColor: '#043e38' },
+                '&.Mui-focused fieldset': { borderColor: '#043e38' }
+              },
+              '& .MuiInputLabel-root.Mui-focused': { color: '#043e38', fontWeight: 600 }
+            }}
+          />
 
-          <CustomFormControl fullWidth error={Boolean(error)}>
-            <InputLabel htmlFor="outlined-adornment-confirm-password-forgot">Confirm Password</InputLabel>
-            <OutlinedInput
-              id="outlined-adornment-confirm-password-forgot"
-              type={showConfirmPassword ? 'text' : 'password'}
-              value={confirmPassword}
-              name="confirmPassword"
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              endAdornment={
+          <TextField
+            fullWidth
+            id="outlined-adornment-confirm-password-forgot"
+            type={showConfirmPassword ? 'text' : 'password'}
+            value={confirmPassword}
+            name="confirmPassword"
+            label="Confirm Password"
+            placeholder="Confirm new password"
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            error={Boolean(error)}
+            margin="normal"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LockOutlinedIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                </InputAdornment>
+              ),
+              endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
                     aria-label="toggle password visibility"
@@ -255,10 +340,17 @@ export default function AuthForgotPassword() {
                     {showConfirmPassword ? <Visibility /> : <VisibilityOff />}
                   </IconButton>
                 </InputAdornment>
-              }
-              label="Confirm Password"
-            />
-          </CustomFormControl>
+              ),
+              sx: { borderRadius: '10px' }
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '&:hover fieldset': { borderColor: '#043e38' },
+                '&.Mui-focused fieldset': { borderColor: '#043e38' }
+              },
+              '& .MuiInputLabel-root.Mui-focused': { color: '#043e38', fontWeight: 600 }
+            }}
+          />
 
           {error && (
             <Box sx={{ mt: 1 }}>
@@ -269,13 +361,22 @@ export default function AuthForgotPassword() {
           <Box sx={{ mt: 3 }}>
             <AnimateButton>
               <Button
-                color="secondary"
                 fullWidth
                 size="large"
                 type="submit"
                 variant="contained"
                 disabled={loading}
                 startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                sx={{ 
+                  bgcolor: '#043e38', 
+                  '&:hover': { bgcolor: '#022925' }, 
+                  py: 1.5, 
+                  borderRadius: '10px',
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 14px rgba(4, 62, 56, 0.25)'
+                }}
               >
                 {loading ? 'Resetting Password...' : 'Reset Password'}
               </Button>
@@ -284,10 +385,9 @@ export default function AuthForgotPassword() {
           
           <Box sx={{ mt: 2, textAlign: 'center' }}>
             <Button
-              color="primary"
               variant="text"
               onClick={() => setStep(1)}
-              sx={{ textTransform: 'none', fontWeight: 600 }}
+              sx={{ textTransform: 'none', fontWeight: 700, color: '#043e38' }}
             >
               Change Email / Resend Code
             </Button>

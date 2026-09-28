@@ -34,7 +34,7 @@ exports.createBanner = asyncHandler(async (req, res, next) => {
 // @route   GET /api/banners
 // @access  Public
 exports.getBanners = asyncHandler(async (req, res, next) => {
-  const banners = await OfferBanner.find({ isActive: true }).populate('createdBy', 'name email');
+  const banners = await OfferBanner.find({ isActive: true }).populate('createdBy', 'name email role');
   res.status(200).json({ success: true, count: banners.length, data: banners });
 });
 
@@ -42,7 +42,7 @@ exports.getBanners = asyncHandler(async (req, res, next) => {
 // @route   GET /api/banners/admin
 // @access  Public
 exports.getAdminBanners = asyncHandler(async (req, res, next) => {
-  const banners = await OfferBanner.find({ userRole: 'Admin', isActive: true }).populate('createdBy', 'name email');
+  const banners = await OfferBanner.find({ userRole: 'Admin' }).sort('-createdAt').populate('createdBy', 'name email role');
   res.status(200).json({ success: true, count: banners.length, data: banners });
 });
 
@@ -50,7 +50,11 @@ exports.getAdminBanners = asyncHandler(async (req, res, next) => {
 // @route   GET /api/banners/vendor
 // @access  Public
 exports.getVendorBanners = asyncHandler(async (req, res, next) => {
-  const banners = await OfferBanner.find({ userRole: 'Vendor', isActive: true }).populate('createdBy', 'name email');
+  const query = { userRole: 'Vendor' };
+  if (req.user && (req.user.role === 'Vendor' || req.user.role === 'Vendor-Staff')) {
+    query.createdBy = req.user.id;
+  }
+  const banners = await OfferBanner.find(query).sort('-createdAt').populate('createdBy', 'name email role');
   res.status(200).json({ success: true, count: banners.length, data: banners });
 });
 
@@ -60,9 +64,8 @@ exports.getVendorBanners = asyncHandler(async (req, res, next) => {
 exports.getSpecificVendorBanners = asyncHandler(async (req, res, next) => {
   const banners = await OfferBanner.find({ 
     createdBy: req.params.vendorId, 
-    userRole: 'Vendor', 
-    isActive: true 
-  }).populate('createdBy', 'name email');
+    userRole: 'Vendor' 
+  }).sort('-createdAt').populate('createdBy', 'name email role');
 
   res.status(200).json({ success: true, count: banners.length, data: banners });
 });
@@ -71,7 +74,7 @@ exports.getSpecificVendorBanners = asyncHandler(async (req, res, next) => {
 // @route   GET /api/banners/my-banners
 // @access  Private
 exports.getMyBanners = asyncHandler(async (req, res, next) => {
-  const banners = await OfferBanner.find({ createdBy: req.user.id }).populate('createdBy', 'name email');
+  const banners = await OfferBanner.find({ createdBy: req.user.id }).populate('createdBy', 'name email role');
   res.status(200).json({ success: true, count: banners.length, data: banners });
 });
 

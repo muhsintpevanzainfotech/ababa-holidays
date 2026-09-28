@@ -17,7 +17,7 @@ export default function Footer() {
       <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center', justifyContent: 'space-between' }}>
         <Link
           component={RouterLink}
-          to="/platform/policies?type=privacy-policy"
+          to="/privacy-policy"
           underline="hover"
           variant="caption"
           color="text.primary"
@@ -26,7 +26,7 @@ export default function Footer() {
         </Link>
         <Link
           component={RouterLink}
-          to="/platform/policies?type=terms-conditions"
+          to="/terms-of-service"
           underline="hover"
           variant="caption"
           color="text.primary"

@@ -12,10 +12,11 @@ export default function Button(theme) {
           textTransform: 'none',
           borderRadius: '10px',
           padding: '8px 20px',
+          letterSpacing: '0.01em',
           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           '&:hover': {
-            transform: 'translateY(-1px)',
-            boxShadow: '0 4px 12px rgba(53, 133, 142, 0.15)'
+            transform: 'translateY(-1.5px)',
+            boxShadow: '0 6px 16px rgba(37, 99, 235, 0.2)'
           },
           '&:active': {
             transform: 'translateY(0)'
@@ -26,7 +27,7 @@ export default function Button(theme) {
           color: '#ffffff',
           '&:hover': {
             background: `linear-gradient(135deg, ${theme.vars.palette.primary.dark} 0%, ${theme.vars.palette.primary.main} 100%)`,
-            boxShadow: '0 6px 20px rgba(53, 133, 142, 0.25)'
+            boxShadow: '0 8px 22px rgba(37, 99, 235, 0.35)'
           }
         },
         containedSecondary: {
@@ -34,19 +35,35 @@ export default function Button(theme) {
           color: '#ffffff',
           '&:hover': {
             background: `linear-gradient(135deg, ${theme.vars.palette.secondary.dark} 0%, ${theme.vars.palette.secondary.main} 100%)`,
-            boxShadow: '0 6px 20px rgba(125, 167, 140, 0.25)'
+            boxShadow: '0 8px 22px rgba(124, 58, 237, 0.35)'
+          }
+        },
+        containedSuccess: {
+          background: `linear-gradient(135deg, ${theme.vars.palette.success.main} 0%, ${theme.vars.palette.success.dark} 100%)`,
+          color: '#ffffff',
+          '&:hover': {
+            boxShadow: '0 8px 22px rgba(16, 185, 129, 0.35)'
           }
         },
         outlined: {
           borderWidth: '1.5px',
-          borderColor: 'rgba(53, 133, 142, 0.25)',
+          borderColor: theme.vars.palette.grey[300],
           '&:hover': {
             borderWidth: '1.5px',
             borderColor: theme.vars.palette.primary.main,
-            backgroundColor: 'rgba(53, 133, 142, 0.04)'
+            backgroundColor: 'rgba(37, 99, 235, 0.04)'
           }
+        },
+        sizeSmall: {
+          padding: '5px 14px',
+          fontSize: '0.8125rem'
+        },
+        sizeLarge: {
+          padding: '12px 28px',
+          fontSize: '1rem'
         }
       }
     }
   };
 }
+

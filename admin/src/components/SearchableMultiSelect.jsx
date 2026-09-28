@@ -149,7 +149,7 @@ const SearchableMultiSelect = ({
           </div>
 
           {/* Options List */}
-          <div className="custom-dropdown-scroll" style={{ maxHeight: '210px', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <div className="custom-dropdown-scroll" style={{ maxHeight: '360px', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: '2px' }}>
             {filteredOptions.length === 0 ? (
               <div style={{ padding: '10px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted, #94a3b8)' }}>
                 No matching items found

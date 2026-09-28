@@ -8,14 +8,28 @@ const vendorProfileSchema = new mongoose.Schema({
   },
   vendorType: {
     type: String,
-    enum: ['Individual', 'Company', 'Business', 'Travel Agent', 'Tour Operator', 'Activity Provider', 'Transport'],
     default: 'Individual'
   },
   companyName: {
     type: String,
     required: [true, 'Please add a company name']
   },
-  businessLicense: {
+  description: {
+    type: String
+  },
+  coverBanner: {
+    type: String
+  },
+  tradeLicenseDoc: {
+    type: String
+  },
+  panDoc: {
+    type: String
+  },
+  gstDoc: {
+    type: String
+  },
+  passbookDoc: {
     type: String
   },
   idCard: {
@@ -47,8 +61,15 @@ const vendorProfileSchema = new mongoose.Schema({
   spoc: {
     name: String,
     email: String,
-    phone: String
+    phone: String,
+    designation: String
   },
+  customerHelpline: { type: String },
+  emergencyHelpline: { type: String },
+  primaryEmail: { type: String },
+  supportEmail: { type: String },
+  bookingEmail: { type: String },
+  operatingHours: { type: String },
   tin: {
     number: String,
     issueDate: Date,
@@ -68,11 +89,17 @@ const vendorProfileSchema = new mongoose.Schema({
     medium: { type: String, default: '/public/defaults/default_travel.png' },
     large: { type: String, default: '/public/defaults/default_travel.png' }
   },
-  socialMedia: [{
-    title: { type: String },
-    icon: { type: String },
-    link: { type: String }
-  }],
+  websiteUrl: {
+    type: String
+  },
+  socialLinks: {
+    website: { type: String },
+    instagram: { type: String },
+    facebook: { type: String },
+    linkedin: { type: String },
+    twitter: { type: String },
+    youtube: { type: String }
+  },
   bankDetails: {
     accountName: String,
     accountNumber: String,

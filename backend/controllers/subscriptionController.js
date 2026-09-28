@@ -66,7 +66,14 @@ const getMySubscriptions = async (req, res, next) => {
 // @access  Public
 const getAllSubscriptions = async (req, res, next) => {
   try {
-    const subscriptions = await Subscription.find().sort('-createdAt');
+    const filter = {};
+    if (req.query.activeOnly === 'true') {
+      filter.isActive = true;
+    }
+    if (req.query.visibleOnly === 'true') {
+      filter.isVisible = true;
+    }
+    const subscriptions = await Subscription.find(filter).sort('-createdAt');
     
     res.status(200).json({
       success: true,

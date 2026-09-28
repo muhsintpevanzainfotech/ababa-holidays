@@ -4,6 +4,7 @@ import { useTheme } from '@mui/material/styles';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
+import StatCard from 'ui-component/cards/StatCard';
 import { gridSpacing } from 'store/constant';
 
 // assets
@@ -37,45 +38,33 @@ const AccountReportDashboard = () => {
 
             {/* Quick Summary Cards */}
             <Grid size={{ lg: 4, md: 6, xs: 12 }}>
-                <MainCard border={false} sx={{ bgcolor: 'success.light' }}>
-                    <Stack sx={{ gap: 1 }}>
-                        <Typography variant="subtitle1" sx={{ color: 'success.dark' }}>Total Disbursed Balance</Typography>
-                        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Typography variant="h2">₹ 48,250</Typography>
-                            <Box sx={{ color: 'success.dark', display: 'flex', alignItems: 'center' }}>
-                                <FileDownloadIcon fontSize="small" /> Statement
-                            </Box>
-                        </Stack>
-                    </Stack>
-                </MainCard>
+                <StatCard 
+                    count="₹ 48,250" 
+                    label="Total Disbursed Balance" 
+                    icon={<AccountBalanceWalletIcon />} 
+                    variant="dark" 
+                    colorScheme="success"
+                />
             </Grid>
 
             <Grid size={{ lg: 4, md: 6, xs: 12 }}>
-                <MainCard border={false} sx={{ bgcolor: 'primary.light' }}>
-                    <Stack sx={{ gap: 1 }}>
-                        <Typography variant="subtitle1" sx={{ color: 'primary.800' }}>Uncleared / Pending Payouts</Typography>
-                        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Typography variant="h2">₹ 15,400</Typography>
-                            <Box sx={{ color: 'primary.main', display: 'flex', alignItems: 'center' }}>
-                                In Process
-                            </Box>
-                        </Stack>
-                    </Stack>
-                </MainCard>
+                <StatCard 
+                    count="₹ 15,400" 
+                    label="Uncleared / Pending Payouts" 
+                    icon={<ReceiptLongIcon />} 
+                    variant="light" 
+                    colorScheme="primary"
+                />
             </Grid>
 
             <Grid size={{ lg: 4, md: 12, xs: 12 }}>
-                <MainCard border={false} sx={{ bgcolor: 'secondary.light' }}>
-                    <Stack sx={{ gap: 1 }}>
-                        <Typography variant="subtitle1" sx={{ color: 'secondary.800' }}>Platform Service Fees</Typography>
-                        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Typography variant="h2">₹ 2,140</Typography>
-                            <Box sx={{ color: 'secondary.main', display: 'flex', alignItems: 'center' }}>
-                                Monthly Total
-                            </Box>
-                        </Stack>
-                    </Stack>
-                </MainCard>
+                <StatCard 
+                    count="₹ 2,140" 
+                    label="Platform Service Fees" 
+                    icon={<FileDownloadIcon />} 
+                    variant="light" 
+                    colorScheme="secondary"
+                />
             </Grid>
 
             {/* Transaction List */}

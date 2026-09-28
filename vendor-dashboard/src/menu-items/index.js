@@ -1,12 +1,11 @@
 import dashboard from './dashboard';
 import platform from './platform';
 import system from './system';
-import other from './other';
 
 // ==============================|| MENU ITEMS ||============================== //
 
 const menuItems = {
-  items: [dashboard, platform, system, other]
+  items: [dashboard, platform, system]
 };
 
 export default menuItems;

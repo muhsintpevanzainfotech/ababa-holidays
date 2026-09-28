@@ -94,6 +94,10 @@ const subscriptionSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  isVisible: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true

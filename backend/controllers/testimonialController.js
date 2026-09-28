@@ -51,20 +51,22 @@ exports.createTestimonial = async (req, res, next) => {
 exports.getTestimonials = async (req, res, next) => {
   try {
     const filter = {};
-    if (req.query.userRole) {
-      filter.userRole = req.query.userRole;
-    }
 
-    if (req.query.vendor === 'global') {
+    if (req.user && (req.user.role === 'Vendor' || req.user.role === 'Vendor-Staff')) {
+      filter.$or = [{ vendor: req.user.id }, { createdBy: req.user.id }];
+    } else if (req.query.userRole) {
+      filter.userRole = req.query.userRole;
+    } else if (req.query.vendor === 'global') {
       filter.vendor = null;
       filter.userRole = 'Admin';
-    } else if (req.query.vendor) {
-      filter.vendor = req.query.vendor;
-    } else if (req.user && req.user.role === 'Vendor') {
-      filter.vendor = req.user.id;
+    } else if (req.query.vendor && req.query.vendor !== 'undefined' && req.query.vendor !== 'null' && req.query.vendor.match(/^[0-9a-fA-F]{24}$/)) {
+      filter.$or = [{ vendor: req.query.vendor }, { createdBy: req.query.vendor }];
     }
 
-    const testimonials = await Testimonial.find(filter).populate('vendor', 'name email').sort('-createdAt');
+    const testimonials = await Testimonial.find(filter)
+      .populate('vendor', 'name email role')
+      .populate('createdBy', 'name email role')
+      .sort('-createdAt');
     res.status(200).json({ success: true, count: testimonials.length, data: testimonials });
   } catch (error) {
     next(error);

@@ -63,6 +63,34 @@ const packageSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  originalPrice: {
+    type: Number,
+    default: 0
+  },
+  discountPrice: {
+    type: Number,
+    default: 0
+  },
+  priceType: {
+    type: String,
+    default: 'Per Person'
+  },
+  currency: {
+    type: String,
+    default: 'INR'
+  },
+  taxPercentage: {
+    type: Number,
+    default: 0
+  },
+  isTaxIncluded: {
+    type: Boolean,
+    default: true
+  },
+  priceNotes: {
+    type: String,
+    default: ''
+  },
   location: {
     type: String
   },

@@ -838,6 +838,8 @@ body {
 }
 
 .ai-form-group-container {
+  width: 100%;
+  max-width: 100%;
   background: rgba(13, 18, 34, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
@@ -1506,7 +1508,7 @@ body {
   border: 1px solid rgba(168, 85, 247, 0.25);
   border-radius: 18px;
   width: 100%;
-  max-width: 650px;
+  max-width: 100%;
   margin-bottom: 24px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
@@ -1749,6 +1751,8 @@ body {
 
 .ai-form-group-container {
   grid-column: span 12 / span 12;
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 /* --- Floating Grouping Toolbar --- */

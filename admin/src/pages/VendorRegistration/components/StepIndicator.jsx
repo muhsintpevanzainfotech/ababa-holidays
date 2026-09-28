@@ -2,13 +2,13 @@ import { Check, User, Briefcase, MapPin, CreditCard, ShieldCheck, Star, Info } f
 
 export const StepIndicator = ({ currentStep }) => {
   const steps = [
-    { num: 1, label: 'Identity', icon: <User size={18} /> },
-    { num: 2, label: 'Entity', icon: <Briefcase size={18} /> },
-    { num: 3, label: 'Geospatial', icon: <MapPin size={18} /> },
-    { num: 4, label: 'Compliance', icon: <CreditCard size={18} /> },
+    { num: 1, label: 'Account', icon: <User size={18} /> },
+    { num: 2, label: 'Business', icon: <Briefcase size={18} /> },
+    { num: 3, label: 'Location', icon: <MapPin size={18} /> },
+    { num: 4, label: 'Banking/Tax', icon: <CreditCard size={18} /> },
     { num: 5, label: 'Trust/SEO', icon: <ShieldCheck size={18} /> },
-    { num: 6, label: 'Selection', icon: <Star size={18} /> },
-    { num: 7, label: 'Protocol', icon: <Info size={18} /> }
+    { num: 6, label: 'Services', icon: <Star size={18} /> },
+    { num: 7, label: 'Review', icon: <Info size={18} /> }
   ];
 
   return (

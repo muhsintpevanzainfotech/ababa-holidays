@@ -4,79 +4,80 @@ const defaultColor = {
   // paper & background
   paper: '#ffffff',
 
-  // primary
-  primaryLight: '#eaf3f4',
-  primary200: '#a3cdd2',
-  primaryMain: '#35858e',
-  primaryDark: '#27656d',
-  primary800: '#1a454b',
+  // primary (Electric Blue)
+  primaryLight: '#eff6ff',
+  primary200: '#bfdbfe',
+  primaryMain: '#2563eb',
+  primaryDark: '#1d4ed8',
+  primary800: '#1e40af',
 
-  // secondary
-  secondaryLight: '#f0f6f2',
-  secondary200: '#c2d099',
-  secondaryMain: '#7da78c',
-  secondaryDark: '#5d836b',
-  secondary800: '#3e5c49',
+  // secondary (Violet / Purple)
+  secondaryLight: '#f5f3ff',
+  secondary200: '#ddd6fe',
+  secondaryMain: '#7c3aed',
+  secondaryDark: '#6d28d9',
+  secondary800: '#5b21b6',
 
-  // success
-  successLight: '#b9f6ca',
-  success200: '#69f0ae',
-  successMain: '#00e676',
-  successDark: '#00c853',
+  // success (Emerald Green)
+  successLight: '#ecfdf5',
+  success200: '#a7f3d0',
+  successMain: '#10b981',
+  successDark: '#047857',
 
-  // error
-  errorLight: '#ef9a9a',
-  errorMain: '#f44336',
-  errorDark: '#c62828',
+  // error (Crimson Red)
+  errorLight: '#fef2f2',
+  errorMain: '#ef4444',
+  errorDark: '#b91c1c',
 
   // orange
-  orangeLight: '#fbe9e7',
-  orangeMain: '#ffab91',
-  orangeDark: '#d84315',
+  orangeLight: '#fff7ed',
+  orangeMain: '#f97316',
+  orangeDark: '#c2410c',
 
-  // warning
-  warningLight: '#fff8e1',
-  warningMain: '#ffe57f',
-  warningDark: '#ffc107',
+  // warning (Warm Amber)
+  warningLight: '#fffbeb',
+  warningMain: '#f59e0b',
+  warningDark: '#b45309',
 
-  // grey
-  grey50: '#e6eec9',
-  grey100: '#dae3bc',
-  grey200: '#ced8b0',
-  grey300: '#c2cda3',
-  grey500: '#7e885b',
-  grey600: '#606941',
-  grey700: '#434a28',
-  grey900: '#1b1e0c',
+  // grey (Crisp Slate Neutrals)
+  grey50: '#f8fafc',
+  grey100: '#f1f5f9',
+  grey200: '#e2e8f0',
+  grey300: '#cbd5e1',
+  grey500: '#64748b',
+  grey600: '#475569',
+  grey700: '#334155',
+  grey900: '#0f172a',
 
   // ==============================|| DARK THEME VARIANTS ||============================== //
 
   // paper & background
-  darkPaper: '#1a2218',
-  darkBackground: '#10160f',
+  darkPaper: '#111827',
+  darkBackground: '#0b0f19',
 
-  // dark 800 & 900
-  darkLevel1: '#222d20',
-  darkLevel2: '#1d261c',
+  // dark levels
+  darkLevel1: '#1f2937',
+  darkLevel2: '#17202e',
 
   // text variants
-  darkTextTitle: '#e2ecd7',
-  darkTextPrimary: '#c5d2b4',
-  darkTextSecondary: '#8c9d76',
+  darkTextTitle: '#f9fafb',
+  darkTextPrimary: '#e5e7eb',
+  darkTextSecondary: '#9ca3af',
 
   // primary dark
-  darkPrimaryLight: '#eaf3f4',
-  darkPrimaryMain: '#35858e',
-  darkPrimaryDark: '#27656d',
-  darkPrimary200: '#a3cdd2',
-  darkPrimary800: '#1a454b',
+  darkPrimaryLight: '#eff6ff',
+  darkPrimaryMain: '#3b82f6',
+  darkPrimaryDark: '#2563eb',
+  darkPrimary200: '#bfdbfe',
+  darkPrimary800: '#1d4ed8',
 
   // secondary dark
-  darkSecondaryLight: '#f0f6f2',
-  darkSecondaryMain: '#7da78c',
-  darkSecondaryDark: '#5d836b',
-  darkSecondary200: '#c2d099',
-  darkSecondary800: '#3e5c49'
+  darkSecondaryLight: '#f5f3ff',
+  darkSecondaryMain: '#8b5cf6',
+  darkSecondaryDark: '#7c3aed',
+  darkSecondary200: '#ddd6fe',
+  darkSecondary800: '#6d28d9'
 };
 
 export default defaultColor;
+

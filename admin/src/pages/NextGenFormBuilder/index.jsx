@@ -21,6 +21,7 @@ const COMPONENT_LIBRARY = [
   { id: 'text', label: 'Text Input', category: 'Design Tools' },
   { id: 'number', label: 'Number', category: 'Design Tools' },
   { id: 'textarea', label: 'Textarea', category: 'Design Tools' },
+  { id: 'editor', label: 'HTML Editor', category: 'Design Tools' },
   { id: 'email', label: 'Email', category: 'Design Tools' },
   { id: 'phone', label: 'Phone Number', category: 'Design Tools' },
   { id: 'dropdown', label: 'Dropdown', category: 'Selection' },

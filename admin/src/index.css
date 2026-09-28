@@ -61,6 +61,12 @@ html, body {
 }
 
 /* Custom Sleek Scrollbar for Main App & Containers */
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 0px;
@@ -368,7 +374,17 @@ h6 {
 }
 
 .form-group {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+}
+
+/* Package Forms Exemption: No bottom margin on form groups inside package forms */
+.package-form .form-group,
+.packages-form .form-group,
+.package-create-form .form-group,
+.package-setup-form .form-group,
+.package-builder .form-group,
+.no-margin-form .form-group {
+  margin-bottom: 0;
 }
 
 .form-group label {
@@ -2606,7 +2622,8 @@ select.form-control option {
   border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 12px;
   transition: var(--transition);
 }
 
@@ -2616,7 +2633,7 @@ select.form-control option {
   box-shadow: var(--shadow-premium);
 }
 
-.profile-stat-box span:first-child {
+.profile-stat-box .stat-title {
   font-size: 12px;
   font-weight: 700;
   color: var(--text-muted);
@@ -2624,10 +2641,13 @@ select.form-control option {
   letter-spacing: 0.5px;
 }
 
-.profile-stat-box span:last-child {
-  font-size: 24px;
+.profile-stat-box .stat-count {
+  font-size: 28px;
   font-weight: 900;
   color: var(--text-main);
+  line-height: 1;
+  display: block;
+  margin-top: 4px;
 }
 
 /* Activity Heatmap Highlights */
@@ -3118,6 +3138,28 @@ div[role="listbox"],
 [style*="maxHeight"] {
   scrollbar-width: thin;
   scrollbar-color: var(--primary, #0ea5e9) transparent;
+}
+
+::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button,
+.filter-select-dropdown::-webkit-scrollbar-button,
+.form-select-dropdown::-webkit-scrollbar-button,
+.search-suggestions-dropdown::-webkit-scrollbar-button,
+.search-suggestions::-webkit-scrollbar-button,
+.dropdown-menu::-webkit-scrollbar-button,
+.dropdown-content::-webkit-scrollbar-button,
+.dropdown-list::-webkit-scrollbar-button,
+select::-webkit-scrollbar-button,
+ul[role="listbox"]::-webkit-scrollbar-button,
+div[role="listbox"]::-webkit-scrollbar-button,
+.custom-dropdown-scroll::-webkit-scrollbar-button,
+.drawer-body::-webkit-scrollbar-button,
+.custom-scroll::-webkit-scrollbar-button,
+[style*="overflow-y: auto"]::-webkit-scrollbar-button,
+[style*="max-height"]::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .filter-select-dropdown::-webkit-scrollbar,

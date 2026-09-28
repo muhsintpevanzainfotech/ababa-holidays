@@ -69,6 +69,7 @@ const Step7Review = ({
           {renderReviewItem('Legal Entity', formik.values.companyName)}
           {renderReviewItem('Entity Classification', formik.values.vendorType)}
           {renderReviewItem('License Ref.', formik.values.businessLicense)}
+          {renderReviewItem('About / Overview', formik.values.description)}
           
           <div style={{ marginTop: '14px', padding: '12px 14px', background: 'rgba(var(--primary-rgb), 0.03)', borderRadius: '12px', border: '1px dashed var(--primary)' }}>
             <p style={{ fontSize: '10px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '4px' }}>SPOC Details</p>

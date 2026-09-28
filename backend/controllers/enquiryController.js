@@ -16,9 +16,10 @@ exports.createEnquiry = async (req, res) => {
 exports.getEnquiries = async (req, res) => {
   try {
     const filter = {};
-    if (req.user && req.user.role === 'Vendor') {
-      filter.vendor = req.user.id;
-    } else if (req.query.vendor) {
+    if (req.user && (req.user.role === 'Vendor' || req.user.role === 'Vendor-Staff')) {
+      const vId = req.user.vendor || req.user.vendorId || req.user._id;
+      filter.$or = [{ vendor: vId }, { vendor: req.user._id }];
+    } else if (req.query.vendor && req.query.vendor !== 'undefined' && req.query.vendor !== 'null' && req.query.vendor.match(/^[0-9a-fA-F]{24}$/)) {
       filter.vendor = req.query.vendor;
     }
 
