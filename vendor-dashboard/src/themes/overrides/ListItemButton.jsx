@@ -30,20 +30,20 @@ export default function ListItemButton(theme) {
 
           ...theme.applyStyles('dark', {
             '&.Mui-selected': {
-              color: '#c2d099',
-              backgroundColor: 'rgba(125, 167, 140, 0.15)',
+              color: '#77f07f',
+              backgroundColor: 'rgba(65, 160, 174, 0.22)',
               '&:hover': {
-                backgroundColor: 'rgba(125, 167, 140, 0.25)'
+                backgroundColor: 'rgba(65, 160, 174, 0.3)'
               },
               '& .MuiListItemIcon-root': {
-                color: '#c2d099'
+                color: '#77f07f'
               }
             },
             '&:hover': {
-              backgroundColor: 'rgba(125, 167, 140, 0.15)',
-              color: '#c2d099',
+              backgroundColor: 'rgba(65, 160, 174, 0.16)',
+              color: '#77f07f',
               '& .MuiListItemIcon-root': {
-                color: '#c2d099'
+                color: '#77f07f'
               }
             }
           })

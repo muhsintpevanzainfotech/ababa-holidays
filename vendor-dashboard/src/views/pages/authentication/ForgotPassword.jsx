@@ -30,7 +30,7 @@ export default function ForgotPassword() {
             variant="body2" 
             sx={{ 
               textDecoration: 'none', 
-              color: '#043e38', 
+              color: '#36669c', 
               fontWeight: 700,
               '&:hover': { textDecoration: 'underline' }
             }}

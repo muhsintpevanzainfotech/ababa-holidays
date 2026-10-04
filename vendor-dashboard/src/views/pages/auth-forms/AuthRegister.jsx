@@ -56,6 +56,25 @@ export default function AuthRegister() {
   const [services, setServices] = useState([]);
   const [otp, setOtp] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
+  const [timer, setTimer] = useState(300); // 5 minutes (300s)
+
+  useEffect(() => {
+    let interval = null;
+    if (needsOTP && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [needsOTP, timer]);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
 
   const [formData, setFormData] = useState({
     name: '',
@@ -263,7 +282,7 @@ export default function AuthRegister() {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <PersonIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                      <PersonIcon sx={{ color: '#36669c', fontSize: 22 }} />
                     </InputAdornment>
                   )
                 }}
@@ -281,7 +300,7 @@ export default function AuthRegister() {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <MailOutlineIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                      <MailOutlineIcon sx={{ color: '#36669c', fontSize: 22 }} />
                     </InputAdornment>
                   )
                 }}
@@ -299,7 +318,7 @@ export default function AuthRegister() {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <LockOutlinedIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                      <LockOutlinedIcon sx={{ color: '#36669c', fontSize: 22 }} />
                     </InputAdornment>
                   ),
                   endAdornment: (
@@ -459,12 +478,12 @@ export default function AuthRegister() {
                     sx={{ 
                       borderRadius: '8px', 
                       cursor: 'pointer',
-                      bgcolor: isSelected ? '#043e38 !important' : 'transparent',
-                      color: isSelected ? '#ffffff !important' : '#043e38 !important',
-                      borderColor: '#043e38 !important',
+                      bgcolor: isSelected ? '#36669c !important' : 'transparent',
+                      color: isSelected ? '#ffffff !important' : '#36669c !important',
+                      borderColor: '#36669c !important',
                       fontWeight: 600,
                       '&:hover': {
-                        bgcolor: isSelected ? '#022925 !important' : 'rgba(4, 62, 56, 0.08) !important'
+                        bgcolor: isSelected ? '#2d5582 !important' : 'rgba(54, 102, 156, 0.08) !important'
                       }
                     }}
                     variant={isSelected ? 'filled' : 'outlined'}
@@ -480,21 +499,21 @@ export default function AuthRegister() {
           <Box sx={{ 
             p: 3, 
             border: '1px dashed', 
-            borderColor: 'secondary.light', 
+            borderColor: '#41a0ae', 
             borderRadius: '12px', 
-            bgcolor: 'rgba(103, 58, 183, 0.02)',
+            bgcolor: 'rgba(65, 160, 174, 0.04)',
             textAlign: 'center'
           }}>
               <Box sx={{ 
                 width: 48, 
                 height: 48, 
-                bgcolor: 'secondary.light', 
+                bgcolor: 'rgba(65, 160, 174, 0.15)', 
                 borderRadius: '12px', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center', 
                 margin: '0 auto 16px',
-                color: 'secondary.main'
+                color: '#41a0ae'
               }}>
                 <VerifiedUserIcon sx={{ fontSize: 24 }} />
               </Box>
@@ -518,26 +537,26 @@ export default function AuthRegister() {
              <Box sx={{ 
                 p: 3, 
                 border: '1px dashed', 
-                borderColor: '#043e38', 
+                borderColor: '#36669c', 
                 borderRadius: '12px', 
-                bgcolor: 'rgba(4, 62, 56, 0.03)',
+                bgcolor: 'rgba(54, 102, 156, 0.04)',
                 textAlign: 'center',
                 mb: 2
             }}>
                 <Box sx={{ 
                     width: 48, 
                     height: 48, 
-                    bgcolor: 'rgba(4, 62, 56, 0.1)', 
+                    bgcolor: 'rgba(54, 102, 156, 0.12)', 
                     borderRadius: '12px', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center', 
                     margin: '0 auto 16px',
-                    color: '#043e38'
+                    color: '#36669c'
                 }}>
                     <VerifiedUserIcon sx={{ fontSize: 24 }} />
                 </Box>
-                <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: '#043e38' }}>Identity Verification</Typography>
+                <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: '#36669c' }}>Identity Verification</Typography>
                 <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary', px: 2 }}>
                     Your business partner account awaits. <br/>Enter the 6-digit code sent to <b>{userEmail || formData.email}</b>
                 </Typography>
@@ -566,7 +585,7 @@ export default function AuthRegister() {
                                         }
                                     }}
                                     size="small"
-                                    sx={{ minWidth: 'auto', fontWeight: 'bold', color: '#043e38' }}
+                                    sx={{ minWidth: 'auto', fontWeight: 'bold', color: '#36669c' }}
                                 >
                                     Paste
                                 </Button>
@@ -574,10 +593,28 @@ export default function AuthRegister() {
                         }
                         inputProps={{ 
                           maxLength: 6,
-                          style: { textAlign: 'center', fontSize: '1.5rem', letterSpacing: '8px', fontWeight: 'bold', color: '#043e38' } 
+                          style: { textAlign: 'center', fontSize: '1.5rem', letterSpacing: '8px', fontWeight: 'bold', color: '#36669c' } 
                         }}
                     />
                 </CustomFormControl>
+                <Box sx={{ mt: 1.5, textAlign: 'right' }}>
+                  {timer > 0 ? (
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                      Resend OTP in <Box component="span" sx={{ color: '#36669c', fontWeight: 700 }}>{formatTime(timer)}</Box>
+                    </Typography>
+                  ) : (
+                    <Typography
+                      variant="caption"
+                      onClick={() => {
+                        handleRegister({ preventDefault: () => {} });
+                        setTimer(300);
+                      }}
+                      sx={{ textDecoration: 'none', color: '#41a0ae', cursor: 'pointer', fontWeight: 700, '&:hover': { textDecoration: 'underline' } }}
+                    >
+                      Resend OTP
+                    </Typography>
+                  )}
+                </Box>
             </Box>
             {error && (
               <Alert severity="error" sx={{ mb: 2, borderRadius: '8px' }}>
@@ -593,8 +630,8 @@ export default function AuthRegister() {
                   variant="contained" 
                   disabled={loading}
                   sx={{ 
-                    bgcolor: '#043e38', 
-                    '&:hover': { bgcolor: '#022925' }, 
+                    bgcolor: '#36669c', 
+                    '&:hover': { bgcolor: '#2d5582' }, 
                     py: 1.5, 
                     borderRadius: '10px',
                     fontWeight: 700
@@ -614,8 +651,8 @@ export default function AuthRegister() {
         alternativeLabel 
         sx={{ 
           mb: 3,
-          '& .MuiStepIcon-root.Mui-active': { color: '#043e38' },
-          '& .MuiStepIcon-root.Mui-completed': { color: '#043e38' }
+          '& .MuiStepIcon-root.Mui-active': { color: '#36669c' },
+          '& .MuiStepIcon-root.Mui-completed': { color: '#3ec995' }
         }}
       >
         {steps.map((label) => (
@@ -644,7 +681,7 @@ export default function AuthRegister() {
             <Button 
               variant="outlined"
               onClick={handleBack} 
-              sx={{ flex: 1, borderColor: '#043e38', color: '#043e38', borderRadius: '10px' }}
+              sx={{ flex: 1, borderColor: '#36669c', color: '#36669c', borderRadius: '10px' }}
             >
               Back
             </Button>
@@ -653,7 +690,7 @@ export default function AuthRegister() {
             <Button 
                 variant="contained" 
                 onClick={handleNext} 
-                sx={{ flex: 2, bgcolor: '#043e38', '&:hover': { bgcolor: '#022925' }, py: 1.2, borderRadius: '10px', fontWeight: 700 }}
+                sx={{ flex: 2, bgcolor: '#36669c', '&:hover': { bgcolor: '#2d5582' }, py: 1.2, borderRadius: '10px', fontWeight: 700 }}
                 disabled={activeStep === 0 && (!formData.name || !formData.email || !formData.password)}
             >
               Continue
@@ -667,7 +704,7 @@ export default function AuthRegister() {
                     variant="contained" 
                     disabled={loading || formData.selectedServices.length === 0}
                     startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
-                    sx={{ bgcolor: '#043e38', '&:hover': { bgcolor: '#022925' }, py: 1.2, borderRadius: '10px', fontWeight: 700 }}
+                    sx={{ bgcolor: '#36669c', '&:hover': { bgcolor: '#2d5582' }, py: 1.2, borderRadius: '10px', fontWeight: 700 }}
                 >
                   {loading ? 'Processing...' : 'Register Business'}
                 </Button>

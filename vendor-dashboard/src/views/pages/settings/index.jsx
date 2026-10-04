@@ -361,6 +361,7 @@ const VendorSettings = () => {
   const [accountType, setAccountType] = useState('Current');
   // Document & Image File Upload States
   const [avatarFile, setAvatarFile] = useState(null);
+
   const [coverBannerFile, setCoverBannerFile] = useState(null);
   const [gstFile, setGstFile] = useState(null);
   const [panFile, setPanFile] = useState(null);
@@ -388,7 +389,7 @@ const VendorSettings = () => {
         if (res.success && res.data) {
           const d = res.data;
           const p = d.profile || {};
-          
+
           if (p.selectedServices) {
             const sIds = p.selectedServices.map(s => (s._id ? s._id.toString() : s.toString()));
             setSelectedServices(sIds);
@@ -497,7 +498,7 @@ const VendorSettings = () => {
     setOtpModal({ open: true, otpInput: '', generatedOtp: code, error: '' });
     try {
       setOtpSending(true);
-      await api.post('/users/request-otp').catch(() => {});
+      await api.post('/users/request-otp').catch(() => { });
     } catch (e) {
       // Ignore network errors in local dev
     } finally {
@@ -511,7 +512,7 @@ const VendorSettings = () => {
     setToast({ open: true, message: `New security verification OTP sent to ${user?.email || primaryEmail}`, severity: 'info' });
     try {
       setOtpSending(true);
-      await api.post('/users/request-otp').catch(() => {});
+      await api.post('/users/request-otp').catch(() => { });
     } catch (e) {
     } finally {
       setOtpSending(false);
@@ -655,6 +656,12 @@ const VendorSettings = () => {
             Manage company registration credentials, contact details, social profiles, tax proofs, payouts, and security
           </Typography>
         </Box>
+
+        {user && (user.role === 'Vendor-Staff' || user.role === 'vendor-staff') && (
+          <Alert severity="info" sx={{ mt: 2, borderRadius: '12px', fontWeight: 600 }}>
+            Logged in as Vendor Staff Member. You are viewing your agency&apos;s shared profile details. Primary tax proofs &amp; bank payout details are managed by the Vendor Owner.
+          </Alert>
+        )}
       </Grid>
 
       {/* PROFILE HERO HEADER */}
@@ -721,12 +728,12 @@ const VendorSettings = () => {
                   <Stack direction="row" spacing={1} justifyContent={{ xs: 'center', sm: 'flex-start' }} flexWrap="wrap" gap={0.5}>
                     <Chip label={businessType || 'Travel Agency'} color="secondary" size="small" sx={{ borderRadius: '8px', fontWeight: 700 }} />
                     <Chip label="2-Step Verification Active" color="success" variant="outlined" size="small" sx={{ borderRadius: '8px', fontWeight: 700 }} />
-                    <Chip 
-                      label="Subscription & Plan ⚡" 
-                      color="primary" 
-                      size="small" 
+                    <Chip
+                      label="Subscription & Plan ⚡"
+                      color="primary"
+                      size="small"
                       onClick={() => navigate('/system/settings/subscription')}
-                      sx={{ borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }} 
+                      sx={{ borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}
                     />
                   </Stack>
                 </Box>

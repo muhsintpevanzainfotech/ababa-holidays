@@ -76,7 +76,7 @@ const Error500 = () => {
 
       <Container maxWidth="md">
         <Grid container direction="column" alignItems="center" justifyContent="center">
-          <Grid item xs={12} sx={{ width: '100%' }}>
+          <Grid size={{ xs: 12 }} sx={{ width: '100%' }}>
             <ErrorCard>
               <CardContent sx={{ p: { xs: 3, sm: 5 } }}>
                 <Stack spacing={3} alignItems="center">

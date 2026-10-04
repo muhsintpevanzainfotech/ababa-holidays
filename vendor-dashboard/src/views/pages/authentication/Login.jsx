@@ -3,12 +3,17 @@ import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import { useTheme } from '@mui/material/styles';
 
 // project imports
 import ModernAuthLayout from './ModernAuthLayout';
 import AuthLogin from '../auth-forms/AuthLogin';
 
 export default function Login() {
+  const theme = useTheme();
+  const isLightExplicit = theme.palette.mode === 'light' && document.documentElement.getAttribute('data-color-scheme') === 'light';
+  const isDark = !isLightExplicit;
+
   return (
     <ModernAuthLayout 
       title="Welcome Back!" 
@@ -17,11 +22,11 @@ export default function Login() {
       <Box sx={{ width: 1 }}>
         <AuthLogin />
       </Box>
-      <Divider sx={{ my: 3 }} />
+      <Divider sx={{ my: 3, borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0' }} />
       <Stack sx={{ alignItems: 'center' }}>
         <Typography 
           variant="body2" 
-          sx={{ color: '#64748b' }}
+          sx={{ color: isDark ? '#9ca3af' : '#64748b' }}
         >
           Don&apos;t have an Account?{' '}
           <Typography 
@@ -30,7 +35,7 @@ export default function Login() {
             variant="body2" 
             sx={{ 
               textDecoration: 'none', 
-              color: '#043e38', 
+              color: '#36669c', 
               fontWeight: 700,
               '&:hover': { textDecoration: 'underline' }
             }}

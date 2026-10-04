@@ -52,8 +52,9 @@ exports.getTestimonials = async (req, res, next) => {
   try {
     const filter = {};
 
-    if (req.user && (req.user.role === 'Vendor' || req.user.role === 'Vendor-Staff')) {
-      filter.$or = [{ vendor: req.user.id }, { createdBy: req.user.id }];
+    if (req.user && (req.user.role === 'Vendor' || req.user.role === 'Vendor-Staff' || req.user.role === 'Staff')) {
+      const targetVendorId = req.user.effectiveVendorId || req.user.id;
+      filter.$or = [{ vendor: targetVendorId }, { vendor: req.user.id }, { createdBy: req.user.id }, { createdBy: targetVendorId }];
     } else if (req.query.userRole) {
       filter.userRole = req.query.userRole;
     } else if (req.query.vendor === 'global') {

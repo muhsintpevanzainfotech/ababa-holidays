@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 
 // material-ui
 import {
@@ -6,12 +9,6 @@ import {
     Typography,
     Button,
     Stack,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
     Paper,
     Chip,
     IconButton,
@@ -24,24 +21,28 @@ import {
     MenuItem,
     Card,
     CardContent,
-    CardActions,
     ToggleButton,
     ToggleButtonGroup,
     Divider,
     Avatar,
-    TablePagination,
     Dialog,
     DialogTitle,
     DialogContent,
-    DialogActions
+    DialogActions,
+    Snackbar,
+    Alert,
+    FormHelperText
 } from '@mui/material';
+import { useColorScheme, useTheme } from '@mui/material/styles';
 
 // project imports
-import MainCard from 'ui-component/cards/MainCard';
 import StatCard from 'ui-component/cards/StatCard';
+import SaasHeader from 'ui-component/extended/SaasHeader';
+import StatusBadge from 'ui-component/extended/StatusBadge';
+import DataTable from 'ui-component/extended/DataTable';
+import FileUpload from 'ui-component/extended/FileUpload';
 import { gridSpacing } from 'store/constant';
 import api from 'utils/api';
-import FileUpload from 'ui-component/extended/FileUpload';
 
 // assets
 import AddIcon from '@mui/icons-material/Add';
@@ -55,45 +56,147 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import GridViewIcon from '@mui/icons-material/GridView';
 import ViewListIcon from '@mui/icons-material/ViewList';
-import ClearIcon from '@mui/icons-material/Clear';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+
+const resolveImageUrl = (imgSrc) => {
+    if (!imgSrc) return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=800&q=80';
+    if (typeof imgSrc !== 'string') return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=800&q=80';
+    if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://') || imgSrc.startsWith('data:') || imgSrc.startsWith('blob:')) {
+        return imgSrc;
+    }
+    const envApi = import.meta.env.VITE_APP_API_URL || '';
+    const baseUrl = envApi ? envApi.replace(/\/api\/?$/, '') : 'http://localhost:9000';
+    const path = imgSrc.startsWith('/') ? imgSrc : `/${imgSrc}`;
+    return `${baseUrl}${path}`;
+};
+
+// Yup Validation Schema
+const blogValidationSchema = Yup.object().shape({
+    title: Yup.string()
+        .trim()
+        .required('Article title is required')
+        .min(3, 'Title must be at least 3 characters'),
+    category: Yup.string()
+        .required('Category is required'),
+    status: Yup.string()
+        .oneOf(['Published', 'Draft'], 'Invalid status')
+        .required('Publish status is required'),
+    content: Yup.string()
+        .trim()
+        .required('Article content is required')
+        .min(10, 'Content must be at least 10 characters')
+});
 
 const BlogManagement = () => {
+    const theme = useTheme();
+    const navigate = useNavigate();
+    const { mode, systemMode } = useColorScheme();
+    const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
+
     const [loading, setLoading] = useState(true);
-    const [submitting, setSubmitting] = useState(false);
     const [blogs, setBlogs] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Published' | 'Draft'
-    const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [viewMode, setViewMode] = useState('grid');
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedBlog, setSelectedBlog] = useState(null);
     const [file, setFile] = useState(null);
-    
+
+    // Toast Alert State
+    const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+    // Subscription Plan Modal State
+    const [subPlanModalOpen, setSubPlanModalOpen] = useState(false);
+
     // Pagination
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(6);
 
-    // Delete Modal
+    // Modals
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [blogToDelete, setBlogToDelete] = useState(null);
-
-    // Preview Modal
     const [previewModalOpen, setPreviewModalOpen] = useState(false);
     const [blogToPreview, setBlogToPreview] = useState(null);
 
-    const [formData, setFormData] = useState({
-        title: '',
-        content: '',
-        category: '',
-        status: 'Published'
+    const handleErrorMessage = (errorMsg) => {
+        const message = typeof errorMsg === 'string' ? errorMsg : errorMsg?.message || 'Something went wrong';
+        if (
+            message.toLowerCase().includes('subcription plan') ||
+            message.toLowerCase().includes('subscription plan') ||
+            message.toLowerCase().includes('does not support blogs') ||
+            message.toLowerCase().includes('limit reached')
+        ) {
+            setSubPlanModalOpen(true);
+        } else {
+            setToast({
+                open: true,
+                message: message,
+                severity: 'error'
+            });
+        }
+    };
+
+    // Formik Form Management
+    const formik = useFormik({
+        initialValues: {
+            title: '',
+            content: '',
+            category: 'Travel Guide',
+            status: 'Published'
+        },
+        validationSchema: blogValidationSchema,
+        onSubmit: async (values, { setSubmitting, resetForm }) => {
+            try {
+                const data = new FormData();
+                data.append('title', values.title.trim());
+                data.append('content', values.content.trim());
+                data.append('category', values.category);
+                data.append('status', values.status);
+                if (file) {
+                    data.append('image', file);
+                }
+
+                let response;
+                if (selectedBlog) {
+                    response = await api.put(`/blogs/${selectedBlog._id}`, data, true);
+                } else {
+                    response = await api.post('/blogs', data, true);
+                }
+
+                if (response && (response.success || response._id || response.data)) {
+                    setOpenDialog(false);
+                    setFile(null);
+                    resetForm();
+                    setToast({
+                        open: true,
+                        message: selectedBlog ? 'Article updated successfully!' : 'Article published successfully!',
+                        severity: 'success'
+                    });
+                    fetchBlogs();
+                }
+            } catch (error) {
+                handleErrorMessage(error.message || 'Failed to save article');
+            } finally {
+                setSubmitting(false);
+            }
+        }
     });
 
     const fetchBlogs = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/blogs/my-blogs');
-            if (response.success) {
-                setBlogs(response.data || []);
+            let response;
+            try {
+                response = await api.get('/blogs/my-blogs');
+            } catch (err) {
+                response = await api.get('/blogs');
+            }
+
+            if (response && response.success) {
+                setBlogs(response.data || response.blogs || []);
+            } else if (Array.isArray(response)) {
+                setBlogs(response);
+            } else if (response && Array.isArray(response.data)) {
+                setBlogs(response.data);
             }
         } catch (error) {
             console.error('Failed to fetch blogs:', error);
@@ -106,171 +209,115 @@ const BlogManagement = () => {
         fetchBlogs();
     }, []);
 
-    const handleDeleteClick = (id) => {
-        setBlogToDelete(id);
-        setDeleteModalOpen(true);
+    const handleOpenDialog = (blog = null) => {
+        setFile(null);
+        if (blog) {
+            setSelectedBlog(blog);
+            formik.setValues({
+                title: blog.title || '',
+                content: blog.content || '',
+                category: blog.category || 'Travel Guide',
+                status: blog.status || 'Published'
+            });
+        } else {
+            setSelectedBlog(null);
+            formik.resetForm();
+        }
+        setOpenDialog(true);
     };
 
     const confirmDelete = async () => {
         if (!blogToDelete) return;
         try {
-            await api.delete(`/blogs/${blogToDelete}`);
+            await api.delete(`/blogs/${blogToDelete._id}`);
+            setToast({
+                open: true,
+                message: 'Article deleted successfully',
+                severity: 'info'
+            });
             fetchBlogs();
             setDeleteModalOpen(false);
             setBlogToDelete(null);
         } catch (error) {
-            alert(error.message || 'Failed to delete article');
+            setDeleteModalOpen(false);
+            handleErrorMessage(error.message || 'Failed to delete article');
         }
     };
 
-    const handleOpenDialog = (blog = null) => {
-        if (blog) {
-            setSelectedBlog(blog);
-            setFormData({
-                title: blog.title || '',
-                content: blog.content || '',
-                category: blog.category || '',
-                status: blog.status || 'Published'
-            });
-        } else {
-            setSelectedBlog(null);
-            setFormData({ title: '', content: '', category: '', status: 'Published' });
-        }
-        setFile(null);
-        setOpenDialog(true);
-    };
-
-    const handleSubmit = async () => {
-        if (!formData.title || !formData.content) {
-            alert('Title and content are required');
-            return;
-        }
-
-        setSubmitting(true);
-        try {
-            const data = new FormData();
-            Object.keys(formData).forEach(key => data.append(key, formData[key]));
-            if (file) data.append('image', file);
-
-            let response;
-            if (selectedBlog) {
-                response = await api.put(`/blogs/${selectedBlog._id}`, data, true);
-            } else {
-                response = await api.post('/blogs', data, true);
-            }
-
-            if (response.success) {
-                setOpenDialog(false);
-                fetchBlogs();
-            }
-        } catch (error) {
-            alert(error.message || 'Failed to save article');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    // Filter Logic
-    const filteredBlogs = blogs.filter(b => {
-        const matchesSearch = 
+    const safeBlogs = Array.isArray(blogs) ? blogs : [];
+    const filteredBlogs = safeBlogs.filter((b) => {
+        const matchesSearch =
+            !searchTerm ||
             b.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             b.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             b.content?.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const matchesStatus = 
-            statusFilter === 'All' ? true : b.status === statusFilter;
-        
+
+        const matchesStatus =
+            statusFilter === 'All' ||
+            (statusFilter === 'Published' && b.status === 'Published') ||
+            (statusFilter === 'Draft' && b.status === 'Draft');
+
         return matchesSearch && matchesStatus;
     });
 
-    const publishedCount = blogs.filter(b => b.status === 'Published').length;
-    const draftCount = blogs.filter(b => b.status === 'Draft').length;
+    const publishedCount = safeBlogs.filter((b) => b.status === 'Published').length;
+    const draftCount = safeBlogs.length - publishedCount;
 
-    // Pagination handlers
-    const handleChangePage = (event, newPage) => {
-        setPage(newPage);
-    };
-
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-    };
-
-    const paginatedBlogs = filteredBlogs.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    const textColor = isDarkMode ? '#ffffff' : '#0f172a';
+    const subTextColor = isDarkMode ? '#cbd5e1' : '#64748b';
+    const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
+    const surfaceBgColor = isDarkMode ? '#090d16' : '#f8fafc';
+    const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0';
 
     return (
-        <Grid container spacing={gridSpacing}>
-            {/* Header Title & Create Button */}
-            <Grid size={12}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between', gap: 2, mb: 1 }}>
-                    <Box>
-                        <Typography variant="h2" fontWeight="700">Platform Blogs & News</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            Publish and manage travel stories, news, and guides for your platform
-                        </Typography>
-                    </Box>
-                    <Button
-                        variant="contained"
-                        color="secondary"
-                        startIcon={<AddIcon />}
-                        onClick={() => handleOpenDialog()}
-                        sx={{
-                            borderRadius: '10px',
-                            px: 3,
-                            py: 1.2,
-                            boxShadow: '0 6px 18px rgba(124, 58, 237, 0.35)',
-                            textTransform: 'none',
-                            fontWeight: 600
-                        }}
-                    >
-                        Write New Article
-                    </Button>
-                </Stack>
-            </Grid>
+        <Box>
+            <SaasHeader
+                title="Platform Blogs & News"
+                subtitle="Publish and manage travel stories, news, and guides for your platform."
+                actionLabel="Write New Article"
+                actionIcon={<AddIcon />}
+                onActionClick={() => handleOpenDialog()}
+                loading={loading}
+            />
 
-            {/* Quick Stats Summary Widgets */}
-            <Grid size={12}>
-                <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                        <StatCard 
-                            count={blogs.length} 
-                            label="Total Articles" 
-                            icon={<ArticleIcon />} 
-                            variant="dark" 
-                            colorScheme="primary" 
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                        <StatCard 
-                            count={publishedCount} 
-                            label="Published Articles" 
-                            icon={<CheckCircleIcon />} 
-                            variant="light" 
-                            colorScheme="success" 
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                        <StatCard 
-                            count={draftCount} 
-                            label="Draft Articles" 
-                            icon={<EditNoteIcon />} 
-                            variant="light" 
-                            colorScheme="warning" 
-                        />
-                    </Grid>
+            {/* Quick Stats Summary */}
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                    <StatCard
+                        count={blogs.length}
+                        label="Total Articles"
+                        icon={<ArticleIcon />}
+                        colorScheme="primary"
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                    <StatCard
+                        count={publishedCount}
+                        label="Published Articles"
+                        icon={<CheckCircleIcon />}
+                        colorScheme="success"
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                    <StatCard
+                        count={draftCount}
+                        label="Draft Articles"
+                        icon={<EditNoteIcon />}
+                        colorScheme="warning"
+                    />
                 </Grid>
             </Grid>
 
-            {/* Filter, Search & View Switcher Bar */}
-            <Grid size={12}>
+            {/* Search & Layout Control Bar */}
+            <Box sx={{ mb: 3 }}>
                 <Paper
                     elevation={0}
                     sx={{
                         p: 2,
                         borderRadius: '14px',
                         border: '1px solid',
-                        borderColor: 'divider',
-                        bgcolor: 'background.paper',
+                        borderColor: borderLineColor,
+                        bgcolor: surfaceBgColor,
                         display: 'flex',
                         flexDirection: { xs: 'column', md: 'row' },
                         alignItems: { md: 'center' },
@@ -278,456 +325,497 @@ const BlogManagement = () => {
                         gap: 2
                     }}
                 >
-                    {/* Search Field */}
                     <TextField
                         placeholder="Search articles by title, category, or content..."
                         size="small"
                         value={searchTerm}
                         onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
-                        sx={{ width: { xs: '100%', md: 360 } }}
+                        sx={{
+                            width: { xs: '100%', md: 380 },
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: '10px',
+                                backgroundColor: cardBgColor,
+                                color: textColor,
+                                '& fieldset': { borderColor: borderLineColor }
+                            }
+                        }}
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
-                                    <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                                    <SearchIcon fontSize="small" sx={{ color: subTextColor }} />
                                 </InputAdornment>
-                            ),
-                            endAdornment: searchTerm ? (
-                                <InputAdornment position="end">
-                                    <IconButton size="small" onClick={() => setSearchTerm('')}>
-                                        <ClearIcon fontSize="small" />
-                                    </IconButton>
-                                </InputAdornment>
-                            ) : null
+                            )
                         }}
                     />
 
-                    {/* Filter Status Pills & View Mode Switcher */}
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" sx={{ width: { xs: '100%', md: 'auto' }, justifyContent: 'space-between' }}>
-                        <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', py: 0.5 }}>
-                            {['All', 'Published', 'Draft'].map((status) => (
-                                <Chip
-                                    key={status}
-                                    label={status === 'All' ? `All (${blogs.length})` : status === 'Published' ? `Published (${publishedCount})` : `Drafts (${draftCount})`}
-                                    onClick={() => { setStatusFilter(status); setPage(0); }}
-                                    color={statusFilter === status ? 'secondary' : 'default'}
-                                    variant={statusFilter === status ? 'filled' : 'outlined'}
-                                    sx={{ fontWeight: 600, borderRadius: '8px', cursor: 'pointer' }}
-                                />
-                            ))}
-                        </Stack>
+                    <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                        <ToggleButtonGroup
+                            value={statusFilter}
+                            exclusive
+                            onChange={(e, val) => val && setStatusFilter(val)}
+                            size="small"
+                        >
+                            <ToggleButton value="All">All ({safeBlogs.length})</ToggleButton>
+                            <ToggleButton value="Published">Published ({publishedCount})</ToggleButton>
+                            <ToggleButton value="Draft">Drafts ({draftCount})</ToggleButton>
+                        </ToggleButtonGroup>
 
                         <ToggleButtonGroup
                             value={viewMode}
                             exclusive
                             onChange={(e, val) => val && setViewMode(val)}
                             size="small"
-                            color="secondary"
+                            color="primary"
                         >
-                            <ToggleButton value="grid" aria-label="grid view">
-                                <Tooltip title="Grid View">
-                                    <Stack direction="row" spacing={0.5} alignItems="center">
-                                        <GridViewIcon fontSize="small" />
-                                        <Typography variant="caption" sx={{ display: { xs: 'none', sm: 'inline' } }}>Grid</Typography>
-                                    </Stack>
-                                </Tooltip>
+                            <ToggleButton value="grid">
+                                <GridViewIcon fontSize="small" />
                             </ToggleButton>
-                            <ToggleButton value="table" aria-label="table view">
-                                <Tooltip title="Table View">
-                                    <Stack direction="row" spacing={0.5} alignItems="center">
-                                        <ViewListIcon fontSize="small" />
-                                        <Typography variant="caption" sx={{ display: { xs: 'none', sm: 'inline' } }}>List</Typography>
-                                    </Stack>
-                                </Tooltip>
+                            <ToggleButton value="table">
+                                <ViewListIcon fontSize="small" />
                             </ToggleButton>
                         </ToggleButtonGroup>
-                    </Stack>
+                    </Box>
                 </Paper>
-            </Grid>
+            </Box>
 
             {loading && (
-                <Grid size={12}>
+                <Box sx={{ mb: 2 }}>
                     <LinearProgress sx={{ borderRadius: 1 }} />
-                </Grid>
+                </Box>
             )}
 
             {/* Grid View */}
             {!loading && viewMode === 'grid' && (
-                <Grid size={12}>
+                <Box sx={{ mb: 3 }}>
                     <Grid container spacing={gridSpacing}>
-                        {paginatedBlogs.map((row) => (
-                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={row._id}>
-                                <Card
-                                    elevation={0}
-                                    sx={{
-                                        borderRadius: '16px',
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        overflow: 'hidden',
-                                        height: '100%',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        '&:hover': {
-                                            transform: 'translateY(-4px)',
-                                            boxShadow: '0 12px 28px rgba(0, 0, 0, 0.08)',
-                                            borderColor: 'secondary.light'
-                                        }
-                                    }}
-                                >
-                                    {/* Cover Image */}
-                                    <Box sx={{ position: 'relative', width: '100%', pt: '56.25%', bgcolor: 'grey.100', overflow: 'hidden' }}>
-                                        <Box
-                                            component="img"
-                                            src={`${import.meta.env.VITE_APP_API_URL}/${row.image}`}
-                                            alt={row.title}
-                                            sx={{
-                                                position: 'absolute',
-                                                top: 0,
-                                                left: 0,
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover',
-                                                transition: 'transform 0.4s ease',
-                                                '&:hover': { transform: 'scale(1.04)' }
-                                            }}
-                                        />
-                                        <Box sx={{ position: 'absolute', top: 12, right: 12, zIndex: 2 }}>
-                                            <Chip
-                                                label={row.status || 'Published'}
-                                                color={row.status === 'Published' ? 'success' : 'default'}
-                                                size="small"
-                                                sx={{ fontWeight: 700, fontSize: '0.75rem', backdropFilter: 'blur(8px)' }}
+                        {filteredBlogs
+                            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                            .map((row) => (
+                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={row._id}>
+                                    <Card
+                                        elevation={0}
+                                        sx={{
+                                            borderRadius: '16px',
+                                            border: '1px solid',
+                                            borderColor: borderLineColor,
+                                            bgcolor: cardBgColor,
+                                            overflow: 'hidden',
+                                            height: '100%',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            transition: 'all 0.3s ease',
+                                            '&:hover': {
+                                                transform: 'translateY(-4px)',
+                                                boxShadow: '0 12px 28px rgba(0, 0, 0, 0.2)'
+                                            }
+                                        }}
+                                    >
+                                        <Box sx={{ position: 'relative', width: '100%', pt: '56.25%', bgcolor: surfaceBgColor }}>
+                                            <Box
+                                                component="img"
+                                                src={resolveImageUrl(row.image)}
+                                                alt={row.title || 'Blog'}
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=800&q=80';
+                                                }}
+                                                sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                                             />
-                                        </Box>
-                                        {row.category && (
-                                            <Box sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 2 }}>
+                                            <Box sx={{ position: 'absolute', top: 12, right: 12, zIndex: 2 }}>
                                                 <Chip
-                                                    label={row.category}
+                                                    label={row.status}
+                                                    color={row.status === 'Published' ? 'success' : 'warning'}
                                                     size="small"
-                                                    sx={{ bgcolor: 'rgba(15, 23, 42, 0.8)', color: '#fff', fontWeight: 600, fontSize: '0.7rem' }}
+                                                    sx={{ fontWeight: 800, borderRadius: '6px' }}
                                                 />
                                             </Box>
-                                        )}
-                                    </Box>
+                                        </Box>
 
-                                    {/* Card Body */}
-                                    <CardContent sx={{ p: 2.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <Typography variant="h4" fontWeight="bold" gutterBottom noWrap title={row.title}>
-                                            {row.title}
-                                        </Typography>
-
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                            sx={{
-                                                mb: 2,
-                                                display: '-webkit-box',
-                                                WebkitLineClamp: 3,
-                                                WebkitBoxOrient: 'vertical',
-                                                overflow: 'hidden',
-                                                lineHeight: 1.5,
-                                                minHeight: '60px'
-                                            }}
-                                        >
-                                            {row.content?.replace(/<[^>]*>?/gm, '') || 'No summary available.'}
-                                        </Typography>
-
-                                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 'auto', pt: 1, color: 'text.secondary' }}>
-                                            <CalendarTodayIcon sx={{ fontSize: 14 }} />
-                                            <Typography variant="caption">
-                                                {new Date(row.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                        <CardContent sx={{ p: 2.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                                            <Typography variant="caption" color="primary" sx={{ fontWeight: 800, textTransform: 'uppercase', mb: 0.5 }}>
+                                                {row.category || 'Travel Article'}
                                             </Typography>
-                                        </Stack>
-                                    </CardContent>
+                                            <Typography variant="h4" fontWeight="bold" gutterBottom noWrap title={row.title} sx={{ color: textColor }}>
+                                                {row.title}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ color: subTextColor, mb: 2, flexGrow: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                {row.content || 'No summary text.'}
+                                            </Typography>
 
-                                    <Divider />
+                                            <Divider sx={{ mb: 2, borderColor: borderLineColor }} />
 
-                                    {/* Footer Actions */}
-                                    <CardActions sx={{ px: 2, py: 1.5, justifyContent: 'space-between', bgcolor: 'grey.50' }}>
-                                        <Typography variant="caption" color="text.secondary" fontWeight="600">
-                                            {row.createdBy?.name || (row.userRole === 'Vendor' ? 'Vendor Author' : 'Official Admin')}
-                                        </Typography>
-
-                                        <Stack direction="row" spacing={0.5}>
-                                            <Tooltip title="Preview Article">
-                                                <IconButton size="small" color="info" onClick={() => { setBlogToPreview(row); setPreviewModalOpen(true); }}>
-                                                    <VisibilityIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Edit Article">
-                                                <IconButton size="small" color="primary" onClick={() => handleOpenDialog(row)}>
-                                                    <EditIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Delete Article">
-                                                <IconButton size="small" color="error" onClick={() => handleDeleteClick(row._id)}>
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </Stack>
-                                    </CardActions>
-                                </Card>
-                            </Grid>
-                        ))}
+                                            <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                                <Typography variant="caption" sx={{ color: subTextColor, fontWeight: 500 }}>
+                                                    {row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                                                </Typography>
+                                                <Stack direction="row" spacing={0.5}>
+                                                    <IconButton size="small" color="info" onClick={() => { setBlogToPreview(row); setPreviewModalOpen(true); }}>
+                                                        <VisibilityIcon fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton size="small" color="primary" onClick={() => handleOpenDialog(row)}>
+                                                        <EditIcon fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton size="small" color="error" onClick={() => { setBlogToDelete(row); setDeleteModalOpen(true); }}>
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Stack>
+                                            </Stack>
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                            ))}
                     </Grid>
-                </Grid>
+                </Box>
             )}
 
             {/* Table View */}
             {!loading && viewMode === 'table' && (
-                <Grid size={12}>
-                    <MainCard content={false}>
-                        <TableContainer component={Paper} elevation={0}>
-                            <Table sx={{ minWidth: 650 }}>
-                                <TableHead sx={{ bgcolor: 'grey.50' }}>
-                                    <TableRow>
-                                        <TableCell sx={{ pl: 3 }}>Preview</TableCell>
-                                        <TableCell>Title / Article</TableCell>
-                                        <TableCell>Category</TableCell>
-                                        <TableCell>Author</TableCell>
-                                        <TableCell>Status</TableCell>
-                                        <TableCell align="center" sx={{ pr: 3 }}>Actions</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {paginatedBlogs.map((row) => (
-                                        <TableRow key={row._id} hover>
-                                            <TableCell sx={{ pl: 3 }}>
-                                                <Box
-                                                    component="img"
-                                                    src={`${import.meta.env.VITE_APP_API_URL}/${row.image}`}
-                                                    alt={row.title}
-                                                    sx={{ width: 70, height: 48, objectFit: 'cover', borderRadius: '8px', border: '1px solid', borderColor: 'divider' }}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="subtitle1" fontWeight="bold" noWrap sx={{ maxWidth: 280 }}>{row.title}</Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Published: {new Date(row.createdAt).toLocaleDateString()}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip label={row.category || 'General'} size="small" variant="outlined" color="secondary" />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" fontWeight="600">
-                                                    {row.createdBy?.name || (row.userRole === 'Vendor' ? 'Vendor Author' : 'Platform Admin')}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={row.status || 'Published'}
-                                                    size="small"
-                                                    color={row.status === 'Published' ? 'success' : 'default'}
-                                                />
-                                            </TableCell>
-                                            <TableCell align="center" sx={{ pr: 3 }}>
-                                                <Stack direction="row" spacing={1} sx={{ justifyContent: 'center' }}>
-                                                    <Tooltip title="Preview">
-                                                        <IconButton size="small" color="info" onClick={() => { setBlogToPreview(row); setPreviewModalOpen(true); }}>
-                                                            <VisibilityIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Edit">
-                                                        <IconButton size="small" color="primary" onClick={() => handleOpenDialog(row)}>
-                                                            <EditIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Delete">
-                                                        <IconButton size="small" color="error" onClick={() => handleDeleteClick(row._id)}>
-                                                            <DeleteIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </Stack>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    </MainCard>
-                </Grid>
+                <Box sx={{ mb: 3 }}>
+                    <DataTable
+                        columns={[
+                            {
+                                headerName: 'Article',
+                                field: 'title',
+                                render: (row) => (
+                                    <Stack direction="row" spacing={2} alignItems="center">
+                                        <Avatar
+                                            variant="rounded"
+                                            src={resolveImageUrl(row.image)}
+                                            sx={{ width: 52, height: 40, borderRadius: '8px' }}
+                                        />
+                                        <Typography variant="subtitle1" fontWeight="700" sx={{ color: textColor }}>{row.title}</Typography>
+                                    </Stack>
+                                )
+                            },
+                            {
+                                headerName: 'Category',
+                                field: 'category',
+                                render: (row) => <Chip label={row.category || 'General'} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
+                            },
+                            {
+                                headerName: 'Status',
+                                field: 'status',
+                                render: (row) => <StatusBadge status={row.status} />
+                            },
+                            {
+                                headerName: 'Date',
+                                field: 'createdAt',
+                                render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
+                            },
+                            {
+                                headerName: 'Actions',
+                                align: 'center',
+                                render: (row) => (
+                                    <Stack direction="row" spacing={0.5} justifyContent="center">
+                                        <IconButton size="small" color="info" onClick={() => { setBlogToPreview(row); setPreviewModalOpen(true); }}>
+                                            <VisibilityIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton size="small" color="primary" onClick={() => handleOpenDialog(row)}>
+                                            <EditIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton size="small" color="error" onClick={() => { setBlogToDelete(row); setDeleteModalOpen(true); }}>
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    </Stack>
+                                )
+                            }
+                        ]}
+                        rows={filteredBlogs}
+                        loading={loading}
+                        page={page}
+                        rowsPerPage={rowsPerPage}
+                        totalCount={filteredBlogs ? filteredBlogs.length : 0}
+                        onPageChange={(e, newPage) => setPage(newPage)}
+                        onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+                    />
+                </Box>
             )}
 
-            {/* Pagination Controls */}
-            {!loading && filteredBlogs.length > 0 && (
-                <Grid size={12}>
-                    <Paper elevation={0} sx={{ borderRadius: '12px', border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-                        <TablePagination
-                            rowsPerPageOptions={[6, 12, 24]}
-                            component="div"
-                            count={filteredBlogs.length}
-                            rowsPerPage={rowsPerPage}
-                            page={page}
-                            onPageChange={handleChangePage}
-                            onRowsPerPageChange={handleChangeRowsPerPage}
-                        />
-                    </Paper>
-                </Grid>
-            )}
-
-            {/* Empty State */}
-            {!loading && filteredBlogs.length === 0 && (
-                <Grid size={12}>
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            p: 6,
-                            textAlign: 'center',
-                            borderRadius: '16px',
-                            border: '1px dashed',
-                            borderColor: 'divider',
-                            bgcolor: 'background.paper'
-                        }}
-                    >
-                        <ArticleIcon sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
-                        <Typography variant="h3" fontWeight="bold" gutterBottom>No Articles Found</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 450, mx: 'auto', mb: 3 }}>
-                            {searchTerm ? `No article matches "${searchTerm}". Try resetting your filter criteria.` : 'You have not written any news articles or blog stories yet. Create your first article to engage visitors!'}
-                        </Typography>
-                        <Button
-                            variant="contained"
-                            color="secondary"
-                            startIcon={<AddIcon />}
-                            onClick={() => handleOpenDialog()}
-                            sx={{ borderRadius: '8px', px: 3 }}
-                        >
-                            Write Article Now
-                        </Button>
-                    </Paper>
-                </Grid>
-            )}
-
-            {/* Drawer Form for Write / Edit Blog */}
+            {/* Write / Edit Article Drawer with Formik & Yup */}
             <Drawer
                 anchor="right"
                 open={openDialog}
-                onClose={() => !submitting && setOpenDialog(false)}
-                sx={{ zIndex: 1400 }}
+                onClose={() => setOpenDialog(false)}
                 PaperProps={{
-                    sx: { width: { xs: '100%', sm: 560, md: 660 }, p: 0, display: 'flex', flexDirection: 'column', boxShadow: '-12px 0 36px rgba(0,0,0,0.25)' }
+                    sx: {
+                        width: { xs: '100%', sm: 520 },
+                        p: 3,
+                        backgroundColor: cardBgColor,
+                        color: textColor
+                    }
                 }}
             >
-                <Box sx={{ p: 2.5, bgcolor: 'secondary.main', color: 'common.white', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                        <Typography variant="h4" color="inherit" fontWeight="bold">
-                            {selectedBlog ? 'Edit Article' : 'Write New Article'}
-                        </Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.85, display: 'block', mt: 0.5 }}>
-                            {selectedBlog ? 'Update existing blog post details and headline' : 'Publish a new travel story or news update for your audience'}
-                        </Typography>
-                    </Box>
-                    <IconButton onClick={() => setOpenDialog(false)} sx={{ color: 'common.white' }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                    <Typography variant="h3" sx={{ color: textColor, fontWeight: 800 }}>
+                        {selectedBlog ? 'Edit Article' : 'Write New Article'}
+                    </Typography>
+                    <IconButton onClick={() => setOpenDialog(false)}>
                         <CloseIcon />
                     </IconButton>
-                </Box>
+                </Stack>
 
-                <Box
-                    sx={{
-                        p: 3,
-                        flexGrow: 1,
-                        overflowY: 'auto',
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none',
-                        '&::-webkit-scrollbar': { display: 'none' }
-                    }}
-                >
-                    <Stack spacing={3}>
+                <Divider sx={{ mb: 3, borderColor: borderLineColor }} />
+
+                <Box component="form" onSubmit={formik.handleSubmit} noValidate>
+                    <Stack spacing={2.5}>
                         <TextField
                             fullWidth
-                            label="Article Title *"
-                            value={formData.title}
-                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                            id="title"
+                            name="title"
+                            label="Article Title"
+                            placeholder="e.g. Top 10 Hidden Gems in Kerala"
+                            value={formik.values.title}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.title && Boolean(formik.errors.title)}
+                            helperText={formik.touched.title && formik.errors.title}
+                            required
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', backgroundColor: surfaceBgColor } }}
                         />
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                            <TextField
-                                fullWidth
-                                label="Category"
-                                placeholder="e.g. Travel Guide, Kerala Tour"
-                                value={formData.category}
-                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            />
-                            <TextField
-                                fullWidth
-                                select
-                                label="Status"
-                                value={formData.status}
-                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                            >
-                                <MenuItem value="Published">Published</MenuItem>
-                                <MenuItem value="Draft">Draft</MenuItem>
-                            </TextField>
-                        </Stack>
+
+                        <TextField
+                            fullWidth
+                            select
+                            id="category"
+                            name="category"
+                            label="Category"
+                            value={formik.values.category}
+                            onChange={(e) => formik.setFieldValue('category', e.target.value)}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.category && Boolean(formik.errors.category)}
+                            helperText={formik.touched.category && formik.errors.category}
+                            SelectProps={{
+                                MenuProps: {
+                                    disablePortal: true,
+                                    PaperProps: {
+                                        sx: {
+                                            maxHeight: 260,
+                                            borderRadius: '10px',
+                                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)'
+                                        }
+                                    }
+                                }
+                            }}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', backgroundColor: surfaceBgColor } }}
+                        >
+                            <MenuItem value="Travel Guide">Travel Guide</MenuItem>
+                            <MenuItem value="Destination Highlights">Destination Highlights</MenuItem>
+                            <MenuItem value="Tips & Tricks">Tips & Tricks</MenuItem>
+                            <MenuItem value="Company News">Company News</MenuItem>
+                        </TextField>
+
+                        <TextField
+                            fullWidth
+                            select
+                            id="status"
+                            name="status"
+                            label="Publish Status"
+                            value={formik.values.status}
+                            onChange={(e) => formik.setFieldValue('status', e.target.value)}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.status && Boolean(formik.errors.status)}
+                            helperText={formik.touched.status && formik.errors.status}
+                            SelectProps={{
+                                MenuProps: {
+                                    disablePortal: true,
+                                    PaperProps: {
+                                        sx: {
+                                            maxHeight: 260,
+                                            borderRadius: '10px',
+                                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)'
+                                        }
+                                    }
+                                }
+                            }}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', backgroundColor: surfaceBgColor } }}
+                        >
+                            <MenuItem value="Published">Published</MenuItem>
+                            <MenuItem value="Draft">Draft</MenuItem>
+                        </TextField>
+
+                        <TextField
+                            fullWidth
+                            multiline
+                            rows={6}
+                            id="content"
+                            name="content"
+                            label="Article Content / Body"
+                            placeholder="Write complete travel article story, highlights, and travel details..."
+                            value={formik.values.content}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.content && Boolean(formik.errors.content)}
+                            helperText={formik.touched.content && formik.errors.content}
+                            required
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', backgroundColor: surfaceBgColor } }}
+                        />
+
                         <Box>
-                            <Typography variant="subtitle2" gutterBottom fontWeight="bold">Featured Cover Image</Typography>
+                            <Typography variant="subtitle2" sx={{ color: textColor, fontWeight: 700, mb: 1 }}>
+                                Featured Cover Image (Drag & Drop)
+                            </Typography>
                             <FileUpload
-                                onFileSelect={(selectedFile) => setFile(selectedFile)}
-                                accept={{ 'image/*': ['.jpeg', '.jpg', '.png', '.webp'] }}
-                                title="Drop cover image here"
-                                caption="Recommended aspect ratio 16:9 (Max size 2MB)"
+                                onFileSelect={(f) => setFile(f)}
+                                previewUrl={selectedBlog ? resolveImageUrl(selectedBlog.image) : null}
+                                accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }}
+                                title="Drag & drop article cover image here or click to browse"
+                                caption="Recommended 16:9 banner image up to 10MB"
                             />
                         </Box>
-                        <TextField
-                            fullWidth
-                            label="Article Content *"
-                            multiline
-                            rows={12}
-                            value={formData.content}
-                            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                        />
-                    </Stack>
-                </Box>
 
-                <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
-                    <Button onClick={() => setOpenDialog(false)} color="inherit" disabled={submitting}>
-                        Cancel
-                    </Button>
-                    <Button variant="contained" color="secondary" onClick={handleSubmit} disabled={submitting} sx={{ borderRadius: '8px', px: 3, fontWeight: 700 }}>
-                        {submitting ? 'Saving...' : (selectedBlog ? 'Update Article' : 'Publish Article')}
-                    </Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            color="primary"
+                            disabled={formik.isSubmitting}
+                            sx={{ borderRadius: '10px', py: 1.2, fontWeight: 700 }}
+                        >
+                            {formik.isSubmitting ? 'Publishing...' : selectedBlog ? 'Update Article' : 'Publish Article'}
+                        </Button>
+                    </Stack>
                 </Box>
             </Drawer>
 
-            {/* Confirm Delete Dialog */}
+            {/* Full Article Preview Modal */}
+            <Dialog
+                open={previewModalOpen}
+                onClose={() => setPreviewModalOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: '16px',
+                        backgroundColor: cardBgColor,
+                        color: textColor
+                    }
+                }}
+            >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+                    <Typography variant="h3" sx={{ fontWeight: 800 }}>Article Preview</Typography>
+                    <IconButton onClick={() => setPreviewModalOpen(false)}>
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers sx={{ borderColor: borderLineColor }}>
+                    {blogToPreview && (
+                        <Stack spacing={2.5}>
+                            <Box
+                                component="img"
+                                src={resolveImageUrl(blogToPreview.image)}
+                                alt={blogToPreview.title}
+                                sx={{ width: '100%', maxHeight: 360, objectFit: 'cover', borderRadius: '12px' }}
+                            />
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Chip label={blogToPreview.category || 'General'} color="primary" size="small" sx={{ fontWeight: 700 }} />
+                                <Chip label={blogToPreview.status} color={blogToPreview.status === 'Published' ? 'success' : 'warning'} size="small" sx={{ fontWeight: 700 }} />
+                                <Typography variant="caption" sx={{ color: subTextColor, ml: 'auto' }}>
+                                    Published on: {blogToPreview.createdAt ? new Date(blogToPreview.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                                </Typography>
+                            </Stack>
+                            <Typography variant="h2" sx={{ fontWeight: 800, color: textColor }}>
+                                {blogToPreview.title}
+                            </Typography>
+                            <Divider sx={{ borderColor: borderLineColor }} />
+                            <Typography variant="body1" sx={{ color: textColor, lineHeight: 1.8, whitespace: 'pre-line' }}>
+                                {blogToPreview.content}
+                            </Typography>
+                        </Stack>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button variant="outlined" onClick={() => setPreviewModalOpen(false)} sx={{ borderRadius: '8px', fontWeight: 700 }}>Close Preview</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Confirmation Modal */}
             <Dialog open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
-                <DialogTitle variant="h4" fontWeight="bold">Delete Article</DialogTitle>
+                <DialogTitle sx={{ fontWeight: 800, color: textColor }}>Remove Article?</DialogTitle>
                 <DialogContent>
-                    <Typography variant="body1">Are you sure you want to delete this article? This action cannot be undone.</Typography>
+                    <Typography variant="body1" sx={{ color: subTextColor }}>
+                        Are you sure you want to delete article <strong>"{blogToDelete?.title}"</strong>?
+                    </Typography>
                 </DialogContent>
                 <DialogActions sx={{ p: 2 }}>
                     <Button onClick={() => setDeleteModalOpen(false)} color="inherit">Cancel</Button>
-                    <Button onClick={confirmDelete} color="error" variant="contained" sx={{ borderRadius: '8px', px: 3 }}>
-                        Delete Article
+                    <Button variant="contained" color="error" onClick={confirmDelete} sx={{ borderRadius: '8px', fontWeight: 700 }}>Confirm Delete</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Subscription Plan Required Modal */}
+            <Dialog
+                open={subPlanModalOpen}
+                onClose={() => setSubPlanModalOpen(false)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: '16px',
+                        p: 1.5,
+                        maxWidth: 480,
+                        backgroundColor: cardBgColor,
+                        color: textColor,
+                        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.35)'
+                    }
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 800, color: textColor, display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+                    <WorkspacePremiumIcon sx={{ color: '#ffb74d', fontSize: 32 }} />
+                    Subscription Upgrade Required
+                </DialogTitle>
+                <DialogContent sx={{ pt: 1 }}>
+                    <Alert severity="warning" variant="filled" sx={{ borderRadius: '12px', mb: 2, fontWeight: 700 }}>
+                        This vendor subscription plan does not support Blogs & News publishing.
+                    </Alert>
+                    <Typography variant="body2" sx={{ color: subTextColor, lineHeight: 1.6, fontWeight: 500 }}>
+                        Your current subscription plan limits access to Platform Blogs & News publishing. Upgrade your vendor plan to write articles, post travel highlights, and publish news updates.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ p: 2.5, pt: 1 }}>
+                    <Button onClick={() => setSubPlanModalOpen(false)} color="inherit" sx={{ fontWeight: 700, borderRadius: '8px' }}>
+                        Dismiss
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="warning"
+                        onClick={() => {
+                            setSubPlanModalOpen(false);
+                            navigate('/system/settings/subscription');
+                        }}
+                        startIcon={<WorkspacePremiumIcon />}
+                        sx={{
+                            borderRadius: '10px',
+                            fontWeight: 800,
+                            px: 2.5,
+                            bgcolor: '#ff9800',
+                            color: '#ffffff',
+                            '&:hover': { bgcolor: '#f57c00' }
+                        }}
+                    >
+                        Upgrade Plan Now
                     </Button>
                 </DialogActions>
             </Dialog>
 
-            {/* Preview Modal */}
-            <Dialog open={previewModalOpen} onClose={() => setPreviewModalOpen(false)} maxWidth="md" fullWidth>
-                {blogToPreview && (
-                    <>
-                        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Box>
-                                <Typography variant="h3" fontWeight="bold">{blogToPreview.title}</Typography>
-                                <Chip label={blogToPreview.category || 'General'} size="small" color="secondary" sx={{ mt: 0.5 }} />
-                            </Box>
-                            <IconButton onClick={() => setPreviewModalOpen(false)}><CloseIcon /></IconButton>
-                        </DialogTitle>
-                        <DialogContent dividers>
-                            {blogToPreview.image && (
-                                <Box component="img" src={`${import.meta.env.VITE_APP_API_URL}/${blogToPreview.image}`} sx={{ width: '100%', maxHeight: 350, objectFit: 'cover', borderRadius: 2, mb: 3 }} />
-                            )}
-                            <Typography variant="body1" sx={{ whiteSpace: 'pre-line', lineHeight: 1.8 }}>
-                                {blogToPreview.content}
-                            </Typography>
-                        </DialogContent>
-                        <DialogActions sx={{ p: 2 }}>
-                            <Button onClick={() => setPreviewModalOpen(false)}>Close</Button>
-                        </DialogActions>
-                    </>
-                )}
-            </Dialog>
-        </Grid>
+            {/* Toast Notification Snackbar */}
+            <Snackbar
+                open={toast.open}
+                autoHideDuration={5000}
+                onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert
+                    onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+                    severity={toast.severity}
+                    variant="filled"
+                    sx={{
+                        width: '100%',
+                        fontWeight: 700,
+                        borderRadius: '12px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.25)'
+                    }}
+                >
+                    {toast.message}
+                </Alert>
+            </Snackbar>
+        </Box>
     );
 };
 

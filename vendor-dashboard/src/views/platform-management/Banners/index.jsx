@@ -24,19 +24,37 @@ import {
     Switch,
     Card,
     CardContent,
-    CardActions,
     ToggleButton,
     ToggleButtonGroup,
     Divider,
     Avatar
 } from '@mui/material';
+import { useColorScheme, useTheme } from '@mui/material/styles';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import StatCard from 'ui-component/cards/StatCard';
+import SaasHeader from 'ui-component/extended/SaasHeader';
+import SearchInput from 'ui-component/extended/SearchInput';
+import StatusBadge from 'ui-component/extended/StatusBadge';
+import SaasTablePagination from 'ui-component/extended/SaasTablePagination';
+import FilterChip from 'ui-component/extended/FilterChip';
+import DataTable from 'ui-component/extended/DataTable';
 import { gridSpacing } from 'store/constant';
 import api from 'utils/api';
 import FileUpload from 'ui-component/extended/FileUpload';
+
+const resolveImageUrl = (imgSrc) => {
+    if (!imgSrc) return 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80';
+    if (typeof imgSrc !== 'string') return 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80';
+    if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://') || imgSrc.startsWith('data:') || imgSrc.startsWith('blob:')) {
+        return imgSrc;
+    }
+    const envApi = import.meta.env.VITE_APP_API_URL || '';
+    const baseUrl = envApi ? envApi.replace(/\/api\/?$/, '') : '';
+    const path = imgSrc.startsWith('/') ? imgSrc : `/${imgSrc}`;
+    return baseUrl ? `${baseUrl}${path}` : imgSrc;
+};
 
 // assets
 import AddIcon from '@mui/icons-material/Add';
@@ -46,17 +64,20 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import GridViewIcon from '@mui/icons-material/GridView';
 import ViewListIcon from '@mui/icons-material/ViewList';
-import LaunchIcon from '@mui/icons-material/Launch';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
 
 const BannerManagement = () => {
+    const theme = useTheme();
+    const { mode, systemMode } = useColorScheme();
+    const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
+
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [banners, setBanners] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
+    const [viewMode, setViewMode] = useState('grid');
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedBanner, setSelectedBanner] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
@@ -71,8 +92,18 @@ const BannerManagement = () => {
     const fetchBanners = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/banners/my-banners');
-            if (response.success) {
+            let response;
+            try {
+                response = await api.get('/banners/my-banners');
+            } catch (err) {
+                response = await api.get('/banners');
+            }
+
+            if (response && response.success) {
+                setBanners(response.data || response.banners || []);
+            } else if (Array.isArray(response)) {
+                setBanners(response);
+            } else if (response && Array.isArray(response.data)) {
                 setBanners(response.data);
             }
         } catch (error) {
@@ -96,17 +127,26 @@ const BannerManagement = () => {
                 await api.delete(`/banners/${id}`);
                 fetchBanners();
             } catch (error) {
-                alert(error.message);
+                alert(error.message || 'Failed to delete banner');
             }
         }
     };
 
     const handleToggleStatus = async (id) => {
         try {
-            await api.put(`/banners/${id}/toggle`);
+            let res;
+            try {
+                res = await api.put(`/banners/${id}/toggle`);
+            } catch (err) {
+                try {
+                    res = await api.patch(`/banners/${id}/toggle-status`);
+                } catch (err2) {
+                    res = await api.patch(`/banners/${id}`, { isActive: !banners.find(b => b._id === id)?.isActive });
+                }
+            }
             fetchBanners();
         } catch (error) {
-            alert(error.message);
+            alert(error.message || 'Failed to update status');
         }
     };
 
@@ -118,7 +158,7 @@ const BannerManagement = () => {
                 description: banner.description || '',
                 link: banner.link || ''
             });
-            setPreviewImage(`${import.meta.env.VITE_APP_API_URL}/${banner.image}`);
+            setPreviewImage(banner.image ? resolveImageUrl(banner.image) : null);
         } else {
             setSelectedBanner(null);
             setFormData({ title: '', description: '', link: '' });
@@ -129,8 +169,13 @@ const BannerManagement = () => {
     };
 
     const handleSubmit = async () => {
-        if (!formData.title || (!file && !selectedBanner)) {
-            alert('Title and image are required');
+        if (!formData.title) {
+            alert('Banner title is required');
+            return;
+        }
+
+        if (!selectedBanner && !file) {
+            alert('Please select a banner image to upload');
             return;
         }
 
@@ -138,8 +183,8 @@ const BannerManagement = () => {
         try {
             const data = new FormData();
             data.append('title', formData.title);
-            data.append('description', formData.description);
-            data.append('link', formData.link);
+            data.append('description', formData.description || '');
+            data.append('link', formData.link || '');
             if (file) {
                 data.append('image', file);
             }
@@ -151,12 +196,12 @@ const BannerManagement = () => {
                 response = await api.post('/banners', data, true);
             }
 
-            if (response.success) {
+            if (response && (response.success || response._id || response.data)) {
                 setOpenDialog(false);
                 fetchBanners();
             }
         } catch (error) {
-            alert(error.message);
+            alert(error.message || 'Failed to save banner');
         } finally {
             setSubmitting(false);
         }
@@ -171,71 +216,49 @@ const BannerManagement = () => {
     const inactiveCount = banners.length - activeCount;
 
     return (
-        <Grid container spacing={gridSpacing}>
-            {/* Header & Action Bar */}
-            <Grid size={12}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between', gap: 2, mb: 1 }}>
-                    <Box>
-                        <Typography variant="h2" fontWeight="700">Marketing Banners</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            Manage homepage slides, promotional banners, and marketing campaigns
-                        </Typography>
-                    </Box>
-                    <Button
-                        variant="contained"
-                        color="secondary"
-                        startIcon={<AddIcon />}
-                        onClick={() => handleOpenDialog()}
-                        sx={{
-                            borderRadius: '10px',
-                            px: 3,
-                            py: 1.2,
-                            boxShadow: '0 4px 14px rgba(103, 58, 183, 0.35)',
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            fontSize: '0.95rem'
-                        }}
-                    >
-                        Add New Banner
-                    </Button>
-                </Stack>
-            </Grid>
+        <Box>
+            <SaasHeader
+                title="Marketing Banners"
+                subtitle="Manage homepage slides, promotional banners, and marketing campaigns."
+                actionLabel="Add New Banner"
+                actionIcon={<AddIcon />}
+                onActionClick={() => handleOpenDialog()}
+                loading={loading}
+            />
 
             {/* Quick Stats Summary */}
-            <Grid size={12}>
-                <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                        <StatCard 
-                            count={banners.length} 
-                            label="Total Banners" 
-                            icon={<PhotoLibraryIcon />} 
-                            variant="dark" 
-                            colorScheme="primary" 
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                        <StatCard 
-                            count={activeCount} 
-                            label="Active Campaigns" 
-                            icon={<CheckCircleIcon />} 
-                            variant="light" 
-                            colorScheme="success" 
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                        <StatCard 
-                            count={inactiveCount} 
-                            label="Inactive Banners" 
-                            icon={<PauseCircleOutlineIcon />} 
-                            variant="light" 
-                            colorScheme="warning" 
-                        />
-                    </Grid>
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                    <StatCard 
+                        count={banners.length} 
+                        label="Total Banners" 
+                        icon={<PhotoLibraryIcon />} 
+                        variant={isDarkMode ? 'dark' : 'light'}
+                        colorScheme="primary" 
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                    <StatCard 
+                        count={activeCount} 
+                        label="Active Campaigns" 
+                        icon={<CheckCircleIcon />} 
+                        variant="light" 
+                        colorScheme="success" 
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                    <StatCard 
+                        count={inactiveCount} 
+                        label="Inactive Banners" 
+                        icon={<PauseCircleOutlineIcon />} 
+                        variant="light" 
+                        colorScheme="warning" 
+                    />
                 </Grid>
             </Grid>
 
             {/* Filter and View Toggle Header */}
-            <Grid size={12}>
+            <Box sx={{ mb: 3 }}>
                 <Paper
                     elevation={0}
                     sx={{
@@ -247,7 +270,7 @@ const BannerManagement = () => {
                         display: 'flex',
                         flexDirection: { xs: 'column', sm: 'row' },
                         alignItems: { sm: 'center' },
-                        justify: 'space-between',
+                        justifyContent: 'space-between',
                         gap: 2
                     }}
                 >
@@ -296,18 +319,18 @@ const BannerManagement = () => {
                         </ToggleButtonGroup>
                     </Box>
                 </Paper>
-            </Grid>
+            </Box>
 
             {loading && (
-                <Grid size={12}>
+                <Box sx={{ mb: 2 }}>
                     <LinearProgress sx={{ borderRadius: 1 }} />
-                </Grid>
+                </Box>
             )}
 
             {/* List Body: Grid View or Table View */}
             {!loading && viewMode === 'grid' && (
-                <Grid size={12}>
-                    <Grid container spacing={ gridSpacing }>
+                <Box>
+                    <Grid container spacing={gridSpacing}>
                         {filteredBanners.map((row) => (
                             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={row._id}>
                                 <Card
@@ -316,6 +339,7 @@ const BannerManagement = () => {
                                         borderRadius: '16px',
                                         border: '1px solid',
                                         borderColor: 'divider',
+                                        bgcolor: 'background.paper',
                                         overflow: 'hidden',
                                         height: '100%',
                                         display: 'flex',
@@ -328,366 +352,202 @@ const BannerManagement = () => {
                                         }
                                     }}
                                 >
-                                    {/* 16:9 Banner Image Showcase */}
                                     <Box
                                         sx={{
                                             position: 'relative',
                                             width: '100%',
-                                            pt: '56.25%', // 16:9 aspect ratio
+                                            pt: '56.25%',
                                             bgcolor: 'grey.100',
                                             overflow: 'hidden'
                                         }}
                                     >
                                         <Box
                                             component="img"
-                                            src={`${import.meta.env.VITE_APP_API_URL}/${row.image}`}
-                                            alt={row.title}
+                                            src={resolveImageUrl(row.image)}
+                                            alt={row.title || 'Banner'}
+                                            onError={(e) => {
+                                                e.target.onerror = null;
+                                                e.target.src = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80';
+                                            }}
                                             sx={{
                                                 position: 'absolute',
                                                 top: 0,
                                                 left: 0,
                                                 width: '100%',
                                                 height: '100%',
-                                                objectFit: 'cover',
-                                                transition: 'transform 0.5s ease',
-                                                '&:hover': {
-                                                    transform: 'scale(1.05)'
-                                                }
+                                                objectFit: 'cover'
                                             }}
                                         />
-                                        {/* Status Chip Overlay */}
                                         <Box sx={{ position: 'absolute', top: 12, right: 12, zIndex: 2 }}>
                                             <Chip
                                                 label={row.isActive ? 'Active' : 'Inactive'}
                                                 color={row.isActive ? 'success' : 'default'}
                                                 size="small"
-                                                sx={{
-                                                    fontWeight: 700,
-                                                    fontSize: '0.75rem',
-                                                    backdropFilter: 'blur(8px)',
-                                                    bgcolor: row.isActive ? 'rgba(46, 125, 50, 0.9)' : 'rgba(97, 97, 97, 0.9)',
-                                                    color: '#fff'
-                                                }}
-                                            />
-                                        </Box>
-                                        {/* Creator Overlay */}
-                                        <Box sx={{ position: 'absolute', top: 12, left: 12, zIndex: 2 }}>
-                                            <Chip
-                                                label={row.createdBy?.role === 'Vendor' || row.userRole === 'Vendor' ? (row.createdBy?.name || 'Partner') : 'Official Admin'}
-                                                size="small"
-                                                sx={{
-                                                    fontWeight: 600,
-                                                    fontSize: '0.7rem',
-                                                    backdropFilter: 'blur(8px)',
-                                                    bgcolor: 'rgba(18, 18, 18, 0.75)',
-                                                    color: '#fff'
-                                                }}
+                                                sx={{ fontWeight: 700, fontSize: '0.75rem' }}
                                             />
                                         </Box>
                                     </Box>
 
-                                    {/* Card Content */}
                                     <CardContent sx={{ p: 2.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                                         <Typography variant="h4" fontWeight="bold" gutterBottom noWrap title={row.title}>
                                             {row.title}
                                         </Typography>
-                                        
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                            sx={{
-                                                mb: 2,
-                                                display: '-webkit-box',
-                                                WebkitLineClamp: 2,
-                                                WebkitBoxOrient: 'vertical',
-                                                overflow: 'hidden',
-                                                minHeight: '40px',
-                                                lineHeight: 1.4
-                                            }}
-                                        >
+
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, flexGrow: 1, lineClamp: 2 }}>
                                             {row.description || 'No description provided.'}
                                         </Typography>
 
-                                        {row.link && (
-                                            <Box sx={{ mt: 'auto', pt: 1 }}>
-                                                <Chip
-                                                    icon={<LaunchIcon style={{ fontSize: 14 }} />}
-                                                    label={row.link.replace(/^https?:\/\//, '')}
-                                                    component="a"
-                                                    href={row.link}
-                                                    target="_blank"
-                                                    clickable
-                                                    size="small"
-                                                    variant="outlined"
-                                                    color="primary"
-                                                    sx={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                                                />
-                                            </Box>
-                                        )}
-                                    </CardContent>
+                                        <Divider sx={{ mb: 2 }} />
 
-                                    <Divider />
-
-                                    {/* Card Footer Actions */}
-                                    <CardActions sx={{ px: 2, py: 1.5, justifyContent: 'space-between', bgcolor: 'grey.50' }}>
-                                        <Stack direction="row" alignItems="center" spacing={1}>
+                                        <Stack direction="row" alignItems="center" justifyContent="space-between">
                                             <Switch
                                                 checked={row.isActive}
                                                 onChange={() => handleToggleStatus(row._id)}
-                                                color="success"
                                                 size="small"
+                                                color="secondary"
                                             />
-                                            <Typography variant="caption" color={row.isActive ? 'success.main' : 'text.secondary'} fontWeight="600">
-                                                {row.isActive ? 'Active' : 'Disabled'}
-                                            </Typography>
-                                        </Stack>
 
-                                        <Stack direction="row" spacing={0.5}>
-                                            <Tooltip title="Edit Banner">
-                                                <IconButton
-                                                    size="small"
-                                                    color="primary"
-                                                    onClick={() => handleOpenDialog(row)}
-                                                    sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}
-                                                >
-                                                    <EditIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Delete Banner">
-                                                <IconButton
-                                                    size="small"
-                                                    color="error"
-                                                    onClick={() => handleDelete(row._id)}
-                                                    sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
+                                            <Stack direction="row" spacing={1}>
+                                                <Tooltip title="Edit Banner">
+                                                    <IconButton size="small" color="secondary" onClick={() => handleOpenDialog(row)}>
+                                                        <EditIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+
+                                                <Tooltip title="Delete Banner">
+                                                    <IconButton size="small" color="error" onClick={() => handleDelete(row._id)}>
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </Stack>
                                         </Stack>
-                                    </CardActions>
+                                    </CardContent>
                                 </Card>
                             </Grid>
                         ))}
                     </Grid>
-                </Grid>
+                </Box>
             )}
 
             {!loading && viewMode === 'table' && (
-                <Grid size={12}>
-                    <MainCard content={false}>
-                        <TableContainer component={Paper} elevation={0}>
-                            <Table sx={{ minWidth: 650 }}>
-                                <TableHead sx={{ bgcolor: 'grey.50' }}>
-                                    <TableRow>
-                                        <TableCell sx={{ pl: 3 }}>Preview</TableCell>
-                                        <TableCell>Title / Campaign</TableCell>
-                                        <TableCell>Owner</TableCell>
-                                        <TableCell>Redirect Link</TableCell>
-                                        <TableCell>Status</TableCell>
-                                        <TableCell align="center" sx={{ pr: 3 }}>Actions</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {filteredBanners.map((row) => (
-                                        <TableRow key={row._id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                                            <TableCell sx={{ pl: 3 }}>
-                                                <Box
-                                                    component="img"
-                                                    src={`${import.meta.env.VITE_APP_API_URL}/${row.image}`}
-                                                    sx={{ width: 110, height: 62, objectFit: 'cover', borderRadius: '10px', border: '1px solid', borderColor: 'divider' }}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="subtitle1" fontWeight="bold">{row.title}</Typography>
-                                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 300 }} noWrap>
-                                                    {row.description || 'No description'}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={row.createdBy?.role === 'Vendor' || row.userRole === 'Vendor' ? `Vendor: ${row.createdBy?.name || 'Partner'}` : 'Official Admin'}
-                                                    size="small"
-                                                    variant="outlined"
-                                                    color={row.createdBy?.role === 'Vendor' || row.userRole === 'Vendor' ? 'secondary' : 'primary'}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                {row.link ? (
-                                                    <Button
-                                                        component="a"
-                                                        href={row.link}
-                                                        target="_blank"
-                                                        size="small"
-                                                        endIcon={<LaunchIcon style={{ fontSize: 12 }} />}
-                                                        sx={{ textTransform: 'none' }}
-                                                    >
-                                                        Visit Link
-                                                    </Button>
-                                                ) : (
-                                                    <Typography variant="caption" color="text.disabled">None</Typography>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Stack direction="row" alignItems="center" spacing={1}>
-                                                    <Switch
-                                                        checked={row.isActive}
-                                                        onChange={() => handleToggleStatus(row._id)}
-                                                        color="success"
-                                                        size="small"
-                                                    />
-                                                    <Chip
-                                                        label={row.isActive ? 'Active' : 'Inactive'}
-                                                        size="small"
-                                                        color={row.isActive ? 'success' : 'default'}
-                                                        variant="light"
-                                                    />
-                                                </Stack>
-                                            </TableCell>
-                                            <TableCell align="center" sx={{ pr: 3 }}>
-                                                <Stack direction="row" spacing={1} sx={{ justifyContent: 'center' }}>
-                                                    <Tooltip title="Edit Banner">
-                                                        <IconButton size="small" color="primary" onClick={() => handleOpenDialog(row)}>
-                                                            <EditIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Delete Banner">
-                                                        <IconButton size="small" color="error" onClick={() => handleDelete(row._id)}>
-                                                            <DeleteIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </Stack>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    </MainCard>
-                </Grid>
+                <Box sx={{ mb: 3 }}>
+                    <DataTable
+                        columns={[
+                            {
+                                headerName: 'Preview',
+                                field: 'image',
+                                render: (row) => (
+                                    <Avatar
+                                        variant="rounded"
+                                        src={resolveImageUrl(row.image)}
+                                        sx={{ width: 64, height: 40 }}
+                                    />
+                                )
+                            },
+                            {
+                                headerName: 'Banner Title',
+                                field: 'title',
+                                render: (row) => (
+                                    <Box>
+                                        <Typography variant="subtitle1" fontWeight="600">{row.title}</Typography>
+                                        <Typography variant="caption" color="text.secondary">{row.description}</Typography>
+                                    </Box>
+                                )
+                            },
+                            {
+                                headerName: 'Status',
+                                field: 'isActive',
+                                render: (row) => (
+                                    <StatusBadge status={row.isActive ? 'Active' : 'Inactive'} />
+                                )
+                            },
+                            {
+                                headerName: 'Actions',
+                                align: 'center',
+                                render: (row) => (
+                                    <Stack direction="row" spacing={1} justifyContent="center">
+                                        <IconButton size="small" color="secondary" onClick={() => handleOpenDialog(row)}>
+                                            <EditIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton size="small" color="error" onClick={() => handleDelete(row._id)}>
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    </Stack>
+                                )
+                            }
+                        ]}
+                        rows={filteredBanners}
+                        loading={loading}
+                    />
+                </Box>
             )}
 
-            {/* Empty State */}
-            {!loading && filteredBanners.length === 0 && (
-                <Grid size={12}>
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            p: 6,
-                            textAlign: 'center',
-                            borderRadius: '16px',
-                            border: '1px dashed',
-                            borderColor: 'divider',
-                            bgcolor: 'background.paper'
-                        }}
-                    >
-                        <PhotoLibraryIcon sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
-                        <Typography variant="h3" fontWeight="bold" gutterBottom>No Banners Found</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 450, mx: 'auto', mb: 3 }}>
-                            {searchTerm ? `No banner matches your search term "${searchTerm}". Try resetting your filter.` : 'You have not uploaded any marketing banners yet. Create your first banner to showcase on the platform!'}
-                        </Typography>
-                        <Button
-                            variant="contained"
-                            color="secondary"
-                            startIcon={<AddIcon />}
-                            onClick={() => handleOpenDialog()}
-                            sx={{ borderRadius: '8px', px: 3 }}
-                        >
-                            Create Banner Now
-                        </Button>
-                    </Paper>
-                </Grid>
-            )}
-
-            {/* Right-Side Drawer Banner Form */}
+            {/* Create/Edit Drawer */}
             <Drawer
                 anchor="right"
                 open={openDialog}
-                onClose={() => !submitting && setOpenDialog(false)}
-                sx={{ zIndex: 1400 }}
+                onClose={() => setOpenDialog(false)}
                 PaperProps={{
-                    sx: { width: { xs: '100%', sm: 540, md: 620 }, p: 0, display: 'flex', flexDirection: 'column', boxShadow: '-12px 0 36px rgba(0,0,0,0.25)' }
+                    sx: {
+                        width: { xs: '100%', sm: 460 },
+                        p: 3
+                    }
                 }}
             >
-                <Box sx={{ p: 2.5, bgcolor: 'secondary.main', color: 'common.white', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                        <Typography variant="h4" color="inherit" fontWeight="bold">
-                            {selectedBanner ? 'Edit Banner' : 'Create New Banner'}
-                        </Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.85, display: 'block', mt: 0.5 }}>
-                            {selectedBanner ? 'Update existing promotional banner details' : 'Publish a new promotional banner to your agency showcase'}
-                        </Typography>
-                    </Box>
-                    <IconButton onClick={() => setOpenDialog(false)} sx={{ color: 'common.white' }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                    <Typography variant="h3">{selectedBanner ? 'Edit Banner' : 'Add New Banner'}</Typography>
+                    <IconButton onClick={() => setOpenDialog(false)}>
                         <CloseIcon />
                     </IconButton>
-                </Box>
+                </Stack>
 
-                <Box
-                    sx={{
-                        p: 3,
-                        flexGrow: 1,
-                        overflowY: 'auto',
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none',
-                        '&::-webkit-scrollbar': { display: 'none' }
-                    }}
-                >
-                    <Stack spacing={3}>
-                        <TextField
-                            fullWidth
-                            label="Banner Title *"
-                            value={formData.title}
-                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        />
-                        <TextField
-                            fullWidth
-                            label="Description"
-                            multiline
-                            rows={3}
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        />
-                        <TextField
-                            fullWidth
-                            label="Redirect Link (Optional)"
-                            placeholder="https://..."
-                            value={formData.link}
-                            onChange={(e) => setFormData({ ...formData, link: e.target.value })}
-                        />
+                <Divider sx={{ mb: 3 }} />
 
-                        <Box>
-                            <Typography variant="subtitle2" gutterBottom fontWeight="bold">Banner Image *</Typography>
-                            <FileUpload
-                                onFileSelect={(selectedFile) => setFile(selectedFile)}
-                                accept={{ 'image/*': ['.jpeg', '.jpg', '.png', '.webp'] }}
-                                title="Drag and drop banner image"
-                                caption="Maximum size 2MB. Recommended resolution 1920x1080"
-                            />
-                            {previewImage && !file && (
-                                <Box sx={{ mt: 2, position: 'relative', width: '100%', pt: '56.25%', borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
-                                    <Box
-                                        component="img"
-                                        src={previewImage}
-                                        sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                                    />
-                                </Box>
-                            )}
-                        </Box>
-                    </Stack>
-                </Box>
+                <Stack spacing={2.5}>
+                    <TextField
+                        fullWidth
+                        label="Banner Title"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        required
+                    />
 
-                <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
-                    <Button onClick={() => setOpenDialog(false)} color="inherit" disabled={submitting}>
-                        Cancel
+                    <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        label="Description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    />
+
+                    <TextField
+                        fullWidth
+                        label="Redirect Link (Optional)"
+                        value={formData.link}
+                        onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                    />
+
+                    <Typography variant="subtitle2">Banner Image (16:9 ratio recommended)</Typography>
+
+                    <FileUpload
+                        onFileSelect={(f) => setFile(f)}
+                        previewUrl={previewImage}
+                    />
+
+                    <Button
+                        variant="contained"
+                        color="secondary"
+                        onClick={handleSubmit}
+                        disabled={submitting}
+                        sx={{ borderRadius: '10px', py: 1.2, fontWeight: 600 }}
+                    >
+                        {submitting ? 'Saving...' : selectedBanner ? 'Update Banner' : 'Create Banner'}
                     </Button>
-                    <Button variant="contained" color="secondary" onClick={handleSubmit} disabled={submitting} sx={{ borderRadius: '8px', px: 3, fontWeight: 700 }}>
-                        {submitting ? 'Processing...' : (selectedBanner ? 'Update Banner' : 'Publish Banner')}
-                    </Button>
-                </Box>
+                </Stack>
             </Drawer>
-        </Grid>
+        </Box>
     );
 };
 
 export default BannerManagement;
-

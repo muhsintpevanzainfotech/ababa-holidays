@@ -26,6 +26,14 @@ const protect = async (req, res, next) => {
         return res.status(403).json({ message: 'Your account has been suspended. Please contact support.' });
       }
 
+      // Resolve effective vendor ID (if Vendor-Staff or Staff, resolve parent Vendor ID from managedBy)
+      const userRole = (req.user.role || '').toLowerCase();
+      if ((userRole === 'vendor-staff' || userRole === 'staff') && req.user.managedBy) {
+        req.user.effectiveVendorId = req.user.managedBy.toString();
+      } else {
+        req.user.effectiveVendorId = (req.user._id || req.user.id).toString();
+      }
+
       // Update activity and online status
       const lastActive = req.user.lastActive;
       const now = new Date();
@@ -91,4 +99,31 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { protect, authorize };
+// Optional authentication middleware: populates req.user if Bearer token present, but does not block if absent
+const optionalProtect = async (req, res, next) => {
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    try {
+      const token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id).select('-password');
+
+      if (req.user) {
+        const userRole = (req.user.role || '').toLowerCase();
+        if ((userRole === 'vendor-staff' || userRole === 'staff') && req.user.managedBy) {
+          req.user.effectiveVendorId = req.user.managedBy.toString();
+        } else {
+          req.user.effectiveVendorId = (req.user._id || req.user.id).toString();
+        }
+      }
+    } catch (error) {
+      // Token invalid or expired, proceed without req.user
+    }
+  }
+  next();
+};
+
+module.exports = { protect, authorize, optionalProtect };
+

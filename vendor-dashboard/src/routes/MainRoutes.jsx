@@ -18,10 +18,13 @@ const PlatformPolicies = Loadable(lazy(() => import('views/platform-management/P
 const ServicesManagement = Loadable(lazy(() => import('views/services-management')));
 const PackagesManagement = Loadable(lazy(() => import('views/services-management/PackagesManagement')));
 const PlatformVendors = Loadable(lazy(() => import('views/platform-management/Vendors')));
+const PlatformBookings = Loadable(lazy(() => import('views/platform-management/Bookings')));
+const PlatformWallet = Loadable(lazy(() => import('views/platform-management/Wallet')));
 
 // communication routing
 const WebEnquiries = Loadable(lazy(() => import('views/communications/Enquiries')));
 const WebContactUs = Loadable(lazy(() => import('views/communications/ContactUs')));
+const CalendarPage = Loadable(lazy(() => import('views/calendar')));
 
 const VendorSettings = Loadable(lazy(() => import('views/pages/settings')));
 const SecuritySettings = Loadable(lazy(() => import('views/pages/settings/Security')));
@@ -47,6 +50,7 @@ const MainRoutes = {
       <MainLayout />
     </AuthGuard>
   ),
+  errorElement: <Error500 />,
   children: [
     {
       path: '/',
@@ -57,12 +61,16 @@ const MainRoutes = {
       element: <DashboardDefault />
     },
     {
+      path: 'calendar',
+      element: <CalendarPage />
+    },
+    {
       path: 'analytics',
-      element: <DashboardAnalytics />
+      element: <DashboardDefault />
     },
     {
       path: 'reports',
-      element: <DashboardReports />
+      element: <DashboardDefault />
     },
     {
       path: 'privacy-policy',
@@ -81,8 +89,28 @@ const MainRoutes = {
       element: <PackagesManagement />
     },
     {
+      path: 'packages/:customId/:serviceName',
+      element: <PackagesManagement />
+    },
+    {
+      path: 'bookings',
+      element: <PlatformBookings />
+    },
+    {
+      path: 'wallet',
+      element: <PlatformWallet />
+    },
+    {
       path: 'platform',
       children: [
+        {
+          path: 'bookings',
+          element: <PlatformBookings />
+        },
+        {
+          path: 'wallet',
+          element: <PlatformWallet />
+        },
         {
           path: 'banners',
           element: <PlatformBanners />
@@ -113,6 +141,10 @@ const MainRoutes = {
         },
         {
           path: 'packages',
+          element: <PackagesManagement />
+        },
+        {
+          path: 'packages/:customId/:serviceName',
           element: <PackagesManagement />
         },
         {

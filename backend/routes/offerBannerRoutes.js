@@ -21,7 +21,7 @@ const router = express.Router();
 
 router.route('/')
   .get(getBanners)
-  .post(protect, authorize('Admin', 'Sub-Admin', 'Vendor'), bannerUpload.single('image'), createBanner);
+  .post(protect, authorize('Admin', 'Sub-Admin', 'Vendor', 'Vendor-Staff'), bannerUpload.single('image'), createBanner);
 
 router.get('/my-banners', protect, getMyBanners);
 router.get('/admin', getAdminBanners);

@@ -434,6 +434,8 @@ const verifyOTP = asyncHandler(async (req, res, next) => {
     name: user.name,
     email: user.email,
     role: user.role,
+    permissions: user.permissions || [],
+    managedBy: user.managedBy || null,
     isVerified: user.isVerified,
     lastActive: user.lastActive,
     isOnline: user.isOnline,
@@ -478,13 +480,13 @@ const login = asyncHandler(async (req, res, next) => {
       return next(new ErrorResponse('Access denied. Admin portal is for Admins, Sub-Admins, and Staff only.', 401));
     }
   } else if (appType === 'vendor') {
-    if (user.role !== 'Vendor') {
+    if (user.role !== 'Vendor' && user.role !== 'Vendor-Staff') {
       console.log(`Vendor portal access denied for ${email} (Role: ${user.role})`);
-      return next(new ErrorResponse('Access denied. Vendor portal is for Vendors only.', 401));
+      return next(new ErrorResponse('Access denied. Vendor portal is for Vendors and Vendor Staff only.', 401));
     }
   } else {
     // Default fallback or shared login (if any)
-    if (user.role !== 'Admin' && user.role !== 'Sub-Admin' && user.role !== 'Staff' && user.role !== 'Vendor') {
+    if (user.role !== 'Admin' && user.role !== 'Sub-Admin' && user.role !== 'Staff' && user.role !== 'Vendor' && user.role !== 'Vendor-Staff') {
       console.log(`Unauthorized role access attempt for ${email} (Role: ${user.role})`);
       return next(new ErrorResponse('Access denied. Unauthorized role.', 401));
     }
@@ -508,14 +510,27 @@ const login = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // If Vendor, check approval
+  // If Vendor or Vendor-Staff, check approval
   if (user.role === 'Vendor') {
     const profile = await VendorProfile.findOne({ user: user._id });
     if (!profile || !profile.isApproved) {
       return next(new ErrorResponse('Your vendor account is awaiting approval from the ABABA Holidays Admin team. You will be notified once activated.', 401));
     }
+  } else if (user.role === 'Vendor-Staff') {
+    if (user.managedBy) {
+      const parentVendor = await User.findById(user.managedBy);
+      if (!parentVendor || parentVendor.isSuspended) {
+        return next(new ErrorResponse('Parent vendor account is inactive or suspended. Access denied.', 403));
+      }
+      const parentProfile = await VendorProfile.findOne({ user: user.managedBy });
+      if (!parentProfile || !parentProfile.isApproved) {
+        return next(new ErrorResponse('Parent vendor account is awaiting approval from the ABABA Holidays Admin team.', 401));
+      }
+    }
+  }
 
-    // MANDATORY OTP FOR VENDOR LOGIN
+  if (user.role === 'Vendor' || user.role === 'Vendor-Staff') {
+    // MANDATORY OTP FOR VENDOR & VENDOR-STAFF LOGIN
     const otp = generateOTP();
     console.log(`Login OTP generated for ${user.email}: ${otp}`);
     user.otp = hashOTP(otp);
@@ -525,7 +540,7 @@ const login = asyncHandler(async (req, res, next) => {
     await sendEmail({
       email: user.email,
       subject: 'Login Verification Code',
-      html: getOtpTemplate(otp, 'Login Verification', 'A login attempt was made for your ABABA Holidays vendor account. Please use the code below to complete your sign-in.', user.name)
+      html: getOtpTemplate(otp, 'Login Verification', 'A login attempt was made for your ABABA Holidays vendor staff account. Please use the code below to complete your sign-in.', user.name)
     });
 
     return res.status(200).json({

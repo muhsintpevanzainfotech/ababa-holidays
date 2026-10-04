@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { Box, Grid, Typography, Stack, Container, Avatar, Divider } from '@mui/material';
+import { Box, Grid, Typography, Stack, Container, Avatar, Divider, useTheme } from '@mui/material';
 import Logo from 'ui-component/Logo';
 import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
@@ -9,13 +9,17 @@ import LuggageIcon from '@mui/icons-material/Luggage';
 import MapIcon from '@mui/icons-material/Map';
 
 export default function ModernAuthLayout({ children, title, subtitle }) {
+  const theme = useTheme();
+  const isLightExplicit = theme.palette.mode === 'light' && document.documentElement.getAttribute('data-color-scheme') === 'light';
+  const isDark = !isLightExplicit;
+
   return (
     <Box sx={{ 
       height: '100vh', 
       width: '100vw',
       maxHeight: '100vh', 
       display: 'flex', 
-      bgcolor: '#ffffff', 
+      bgcolor: isDark ? '#0b0f19' : '#ffffff', 
       overflow: 'hidden' 
     }}>
       <Grid container sx={{ height: '100vh', width: '100%', m: 0 }}>
@@ -28,7 +32,7 @@ export default function ModernAuthLayout({ children, title, subtitle }) {
           height: '100vh',
           p: { md: 4, lg: 6 },
           position: 'relative',
-          background: 'linear-gradient(150deg, #043933 0%, #08524a 50%, #022420 100%)',
+          background: 'linear-gradient(150deg, #16152b 0%, #3a2f6b 55%, #28204d 100%)',
           color: '#ffffff',
           overflow: 'hidden'
         }}>
@@ -40,7 +44,7 @@ export default function ModernAuthLayout({ children, title, subtitle }) {
             width: '400px', 
             height: '400px', 
             borderRadius: '50%', 
-            background: 'radial-gradient(circle, rgba(20, 184, 166, 0.22) 0%, rgba(0,0,0,0) 70%)',
+            background: 'radial-gradient(circle, rgba(65, 160, 174, 0.3) 0%, rgba(0,0,0,0) 70%)',
             pointerEvents: 'none'
           }} />
 
@@ -66,8 +70,8 @@ export default function ModernAuthLayout({ children, title, subtitle }) {
             </Typography>
 
             {/* Quote Block */}
-            <Box sx={{ position: 'relative', mt: 3, mb: 3, pl: 2.5, borderLeft: '3px solid #14b8a6' }}>
-              <FormatQuoteIcon sx={{ fontSize: 32, color: '#14b8a6', transform: 'rotate(180deg)', mb: 0.5, opacity: 0.8 }} />
+            <Box sx={{ position: 'relative', mt: 3, mb: 3, pl: 2.5, borderLeft: '3px solid #3ec995' }}>
+              <FormatQuoteIcon sx={{ fontSize: 32, color: '#77f07f', transform: 'rotate(180deg)', mb: 0.5, opacity: 0.9 }} />
               <Typography variant="body1" sx={{ 
                 color: 'rgba(255, 255, 255, 0.9)', 
                 fontSize: { md: '0.95rem', lg: '1.05rem' }, 
@@ -108,23 +112,23 @@ export default function ModernAuthLayout({ children, title, subtitle }) {
 
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ color: 'rgba(255, 255, 255, 0.75)', pt: 0.5 }}>
               <Stack direction="row" alignItems="center" spacing={0.6} sx={{ opacity: 0.9 }}>
-                <FlightTakeoffIcon sx={{ fontSize: 18, color: '#14b8a6' }} />
+                <FlightTakeoffIcon sx={{ fontSize: 18, color: '#77f07f' }} />
                 <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 600, fontSize: '0.8rem' }}>Flights</Typography>
               </Stack>
               <Stack direction="row" alignItems="center" spacing={0.6} sx={{ opacity: 0.9 }}>
-                <HotelIcon sx={{ fontSize: 18, color: '#14b8a6' }} />
+                <HotelIcon sx={{ fontSize: 18, color: '#77f07f' }} />
                 <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 600, fontSize: '0.8rem' }}>Stays & Hotels</Typography>
               </Stack>
               <Stack direction="row" alignItems="center" spacing={0.6} sx={{ opacity: 0.9 }}>
-                <DirectionsBusIcon sx={{ fontSize: 18, color: '#14b8a6' }} />
+                <DirectionsBusIcon sx={{ fontSize: 18, color: '#77f07f' }} />
                 <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 600, fontSize: '0.8rem' }}>Transports</Typography>
               </Stack>
               <Stack direction="row" alignItems="center" spacing={0.6} sx={{ opacity: 0.9 }}>
-                <LuggageIcon sx={{ fontSize: 18, color: '#14b8a6' }} />
+                <LuggageIcon sx={{ fontSize: 18, color: '#77f07f' }} />
                 <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 600, fontSize: '0.8rem' }}>Packages</Typography>
               </Stack>
               <Stack direction="row" alignItems="center" spacing={0.6} sx={{ opacity: 0.9 }}>
-                <MapIcon sx={{ fontSize: 18, color: '#14b8a6' }} />
+                <MapIcon sx={{ fontSize: 18, color: '#77f07f' }} />
                 <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 600, fontSize: '0.8rem' }}>Tours</Typography>
               </Stack>
             </Stack>
@@ -142,7 +146,7 @@ export default function ModernAuthLayout({ children, title, subtitle }) {
           overflowY: 'auto',
           px: { xs: 2.5, sm: 4, md: 5 },
           py: { xs: 2, sm: 3 },
-          bgcolor: '#ffffff',
+          bgcolor: isDark ? '#111827' : '#ffffff',
           position: 'relative'
         }}>
           {/* Header Logo */}
@@ -163,7 +167,7 @@ export default function ModernAuthLayout({ children, title, subtitle }) {
             <Box sx={{ mb: 3 }}>
               <Typography variant="h2" sx={{ 
                 fontWeight: 700, 
-                color: '#043e38', 
+                color: isDark ? '#f9fafb' : '#3a2f6b', 
                 mb: 1, 
                 fontSize: { xs: '1.75rem', sm: '2.1rem' },
                 fontFamily: "'Inter', sans-serif"
@@ -171,7 +175,7 @@ export default function ModernAuthLayout({ children, title, subtitle }) {
                 {title || 'Welcome Back!'}
               </Typography>
               {subtitle && (
-                <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                <Typography variant="body2" sx={{ color: isDark ? '#9ca3af' : '#64748b', fontSize: '0.9rem', lineHeight: 1.5 }}>
                   {subtitle}
                 </Typography>
               )}

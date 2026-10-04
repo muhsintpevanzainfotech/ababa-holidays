@@ -8,7 +8,13 @@ const {
   updateVendorProfile,
   getVendorProfile,
   getVendor,
-  updateVendor
+  updateVendor,
+  getVendorStaff,
+  createVendorStaff,
+  updateVendorStaff,
+  deleteVendorStaff,
+  getVendorWallet,
+  requestVendorPayout
 } = require('../controllers/vendorController');
 const { register, login } = require('../controllers/authController');
 
@@ -44,9 +50,22 @@ const vendorUploadFields = [
 router.post('/register', upload.fields(vendorUploadFields), register);
 router.post('/login', upload.none(), login);
 
-// Profile routes (Vendor only)
-router.get('/profile', protect, authorize('Vendor'), getVendorProfile);
-router.put('/profile', protect, authorize('Vendor'), upload.fields(vendorUploadFields), updateVendorProfile);
+// Profile routes (Vendor or Vendor-Staff)
+router.get('/profile', protect, authorize('Vendor', 'Vendor-Staff', 'Staff'), getVendorProfile);
+router.put('/profile', protect, authorize('Vendor', 'Vendor-Staff', 'Staff'), upload.fields(vendorUploadFields), updateVendorProfile);
+
+// Wallet & Financial Payout routes
+router.get('/wallet', protect, authorize('Vendor', 'Vendor-Staff', 'Staff', 'Admin'), getVendorWallet);
+router.post('/wallet/payout', protect, authorize('Vendor', 'Admin'), requestVendorPayout);
+
+// Vendor Staff Management routes (Vendor or Admin)
+router.route('/staff')
+  .get(protect, authorize('Vendor', 'Admin'), getVendorStaff)
+  .post(protect, authorize('Vendor', 'Admin'), createVendorStaff);
+
+router.route('/staff/:id')
+  .put(protect, authorize('Vendor', 'Admin'), updateVendorStaff)
+  .delete(protect, authorize('Vendor', 'Admin'), deleteVendorStaff);
 
 // Admin routes
 router.put('/:id/approve', protect, authorize('Admin', 'Sub-Admin'), approveVendor);
@@ -61,6 +80,5 @@ router.route('/')
 
 // Vendor & Admin route
 router.put('/:id/subscription', protect, authorize('Admin', 'Vendor'), updateSubscription);
-
 
 module.exports = router;

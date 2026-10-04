@@ -19,7 +19,7 @@ import { withAlpha } from 'utils/colorUtils';
 
 // assets
 import { IconBrandTelegram, IconBuildingStore, IconMailbox, IconPhoto } from '@tabler/icons-react';
-import User1 from 'assets/images/users/user-round.svg';
+import User1 from 'assets/images/users/avatar-user.jpg';
 
 function ListItemWrapper({ children }) {
   const theme = useTheme();
@@ -59,7 +59,7 @@ export default function NotificationList() {
           }
         >
           <ListItemAvatar>
-            <Avatar alt="John Doe" src={User1} />
+            <Avatar alt="John Doe" src={User1} sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', p: 0, border: '1px solid rgba(0,0,0,0.1)', '& img': { objectFit: 'cover' } }} />
           </ListItemAvatar>
           <ListItemText primary="John Doe" />
         </ListItem>
@@ -138,7 +138,7 @@ export default function NotificationList() {
           }
         >
           <ListItemAvatar>
-            <Avatar alt="John Doe" src={User1} />
+            <Avatar alt="John Doe" src={User1} sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', p: 0, border: '1px solid rgba(0,0,0,0.1)', '& img': { objectFit: 'cover' } }} />
           </ListItemAvatar>
           <ListItemText primary={<Typography variant="subtitle1">John Doe</Typography>} />
         </ListItem>
@@ -168,7 +168,7 @@ export default function NotificationList() {
           }
         >
           <ListItemAvatar>
-            <Avatar alt="John Doe" src={User1} />
+            <Avatar alt="John Doe" src={User1} sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', p: 0, border: '1px solid rgba(0,0,0,0.1)', '& img': { objectFit: 'cover' } }} />
           </ListItemAvatar>
           <ListItemText primary={<Typography variant="subtitle1">John Doe</Typography>} />
         </ListItem>

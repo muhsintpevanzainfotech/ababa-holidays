@@ -26,14 +26,17 @@ export default function NavItem({ item, level, isParents = false, setSelectedID 
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
   const ref = useRef(null);
 
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const {
     state: { borderRadius }
   } = useConfig();
 
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
-  const isSelected = !!matchPath({ path: item?.link ? item.link : item.url, end: false }, pathname);
+  const currentFullUrl = pathname + search;
+  const isSelected = item?.url?.includes('?')
+    ? item.url === currentFullUrl
+    : !!matchPath({ path: item?.link ? item.link : item?.url, end: true }, pathname) && !search.includes('service=');
 
   const [hoverStatus, setHover] = useState(false);
 
@@ -129,7 +132,8 @@ export default function NavItem({ item, level, isParents = false, setSelectedID 
                   sx={{
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    width: 102,
+                    whiteSpace: 'nowrap',
+                    width: '100%',
                     color: 'inherit'
                   }}
                 >

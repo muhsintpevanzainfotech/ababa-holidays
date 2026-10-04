@@ -16,7 +16,7 @@ export default function Button(theme) {
           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           '&:hover': {
             transform: 'translateY(-1.5px)',
-            boxShadow: '0 6px 16px rgba(37, 99, 235, 0.2)'
+            boxShadow: '0 6px 16px rgba(54, 102, 156, 0.25)'
           },
           '&:active': {
             transform: 'translateY(0)'
@@ -27,7 +27,7 @@ export default function Button(theme) {
           color: '#ffffff',
           '&:hover': {
             background: `linear-gradient(135deg, ${theme.vars.palette.primary.dark} 0%, ${theme.vars.palette.primary.main} 100%)`,
-            boxShadow: '0 8px 22px rgba(37, 99, 235, 0.35)'
+            boxShadow: '0 8px 22px rgba(54, 102, 156, 0.35)'
           }
         },
         containedSecondary: {
@@ -35,14 +35,14 @@ export default function Button(theme) {
           color: '#ffffff',
           '&:hover': {
             background: `linear-gradient(135deg, ${theme.vars.palette.secondary.dark} 0%, ${theme.vars.palette.secondary.main} 100%)`,
-            boxShadow: '0 8px 22px rgba(124, 58, 237, 0.35)'
+            boxShadow: '0 8px 22px rgba(65, 160, 174, 0.35)'
           }
         },
         containedSuccess: {
           background: `linear-gradient(135deg, ${theme.vars.palette.success.main} 0%, ${theme.vars.palette.success.dark} 100%)`,
           color: '#ffffff',
           '&:hover': {
-            boxShadow: '0 8px 22px rgba(16, 185, 129, 0.35)'
+            boxShadow: '0 8px 22px rgba(62, 201, 149, 0.35)'
           }
         },
         outlined: {
@@ -51,7 +51,7 @@ export default function Button(theme) {
           '&:hover': {
             borderWidth: '1.5px',
             borderColor: theme.vars.palette.primary.main,
-            backgroundColor: 'rgba(37, 99, 235, 0.04)'
+            backgroundColor: 'rgba(54, 102, 156, 0.08)'
           }
         },
         sizeSmall: {

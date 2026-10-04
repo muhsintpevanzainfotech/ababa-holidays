@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 
 // material-ui
 import {
@@ -6,12 +9,6 @@ import {
     Typography,
     Button,
     Stack,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
     Paper,
     Chip,
     IconButton,
@@ -24,19 +21,25 @@ import {
     Drawer,
     MenuItem,
     Avatar,
-    TablePagination,
     Dialog,
     DialogTitle,
     DialogContent,
     DialogActions,
-    Card,
-    CardContent,
-    CardActions
+    Divider,
+    Switch,
+    FormControlLabel,
+    FormHelperText,
+    Snackbar,
+    Alert
 } from '@mui/material';
+import { useColorScheme, useTheme } from '@mui/material/styles';
 
 // project imports
-import MainCard from 'ui-component/cards/MainCard';
 import StatCard from 'ui-component/cards/StatCard';
+import SaasHeader from 'ui-component/extended/SaasHeader';
+import StatusBadge from 'ui-component/extended/StatusBadge';
+import DataTable from 'ui-component/extended/DataTable';
+import FileUpload from 'ui-component/extended/FileUpload';
 import { gridSpacing } from 'store/constant';
 import api from 'utils/api';
 
@@ -49,20 +52,72 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import StarIcon from '@mui/icons-material/Star';
 import RateReviewIcon from '@mui/icons-material/RateReview';
-import PendingActionsIcon from '@mui/icons-material/PendingActions';
-import ClearIcon from '@mui/icons-material/Clear';
-import PersonIcon from '@mui/icons-material/Person';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+
+// helper for full image url
+const getFullImageUrl = (path) => {
+    if (!path || typeof path !== 'string') return '';
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
+    const baseUrl = import.meta.env.VITE_APP_API_URL ? import.meta.env.VITE_APP_API_URL.replace(/\/api\/?$/, '') : 'http://localhost:9000';
+    const cleanPath = path.replace(/\\/g, '/').replace(/^\/+/, '');
+    return `${baseUrl}/${cleanPath}`;
+};
+
+// Yup validation schema
+const testimonialValidationSchema = Yup.object().shape({
+    customerName: Yup.string()
+        .trim()
+        .required('Customer Name is required')
+        .min(2, 'Customer Name must be at least 2 characters'),
+    customerDesignation: Yup.string()
+        .required('Traveler Role / Designation is required'),
+    location: Yup.string().nullable(),
+    rating: Yup.number()
+        .required('Rating is required')
+        .min(1, 'Rating must be at least 1 star')
+        .max(5, 'Rating cannot exceed 5 stars'),
+    content: Yup.string()
+        .trim()
+        .required('Review Comment is required')
+        .min(5, 'Review Comment must be at least 5 characters'),
+    image: Yup.mixed().nullable(),
+    video: Yup.string()
+        .nullable()
+        .test('is-url-or-empty', 'Must be a valid video URL (e.g. https://youtube.com/...)', (value) => {
+            if (!value || !value.trim()) return true;
+            return value.startsWith('http://') || value.startsWith('https://') || value.startsWith('/');
+        }),
+    status: Yup.string()
+        .oneOf(['Approved', 'Pending', 'Rejected'], 'Invalid status')
+        .required('Publication Status is required'),
+    isTopPick: Yup.boolean()
+});
 
 const TestimonialManagement = () => {
+    const theme = useTheme();
+    const navigate = useNavigate();
+    const { mode, systemMode } = useColorScheme();
+    const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
+
     const [loading, setLoading] = useState(true);
-    const [submitting, setSubmitting] = useState(false);
     const [testimonials, setTestimonials] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Approved' | 'Pending'
-    const [ratingFilter, setRatingFilter] = useState('All'); // 'All' | '5' | '4' | '3'
+    const [ratingFilter, setRatingFilter] = useState('All');
+    const [roleFilter, setRoleFilter] = useState('All');
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [sortBy, setSortBy] = useState('newest');
+
     const [openDrawer, setOpenDrawer] = useState(false);
     const [selectedTestimonial, setSelectedTestimonial] = useState(null);
+    const [imageFile, setImageFile] = useState(null);
+
+    // Toast Alert State
+    const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+    // Subscription Plan Modal State
+    const [subPlanModalOpen, setSubPlanModalOpen] = useState(false);
 
     // Pagination
     const [page, setPage] = useState(0);
@@ -72,13 +127,100 @@ const TestimonialManagement = () => {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
 
-    const [formData, setFormData] = useState({
-        name: '',
-        location: '',
-        rating: 5,
-        comment: '',
-        role: 'Verified Traveler',
-        approved: true
+    const handleErrorMessage = (errorMsg) => {
+        const message = typeof errorMsg === 'string' ? errorMsg : errorMsg?.message || 'Something went wrong';
+        if (
+            message.toLowerCase().includes('subcription plan') ||
+            message.toLowerCase().includes('subscription plan') ||
+            message.toLowerCase().includes('does not support testimonials')
+        ) {
+            setSubPlanModalOpen(true);
+        } else {
+            setToast({
+                open: true,
+                message: message,
+                severity: 'error'
+            });
+        }
+    };
+
+    // Formik setup
+    const formik = useFormik({
+        initialValues: {
+            customerName: '',
+            customerDesignation: 'Verified Traveler',
+            location: '',
+            rating: 5,
+            content: '',
+            image: '',
+            video: '',
+            status: 'Approved',
+            isTopPick: false
+        },
+        validationSchema: testimonialValidationSchema,
+        onSubmit: async (values, { setSubmitting, resetForm }) => {
+            try {
+                let response;
+                if (imageFile) {
+                    const formData = new FormData();
+                    formData.append('customerName', values.customerName.trim());
+                    formData.append('name', values.customerName.trim());
+                    formData.append('customerDesignation', values.customerDesignation ? values.customerDesignation.trim() : 'Verified Traveler');
+                    formData.append('role', values.customerDesignation ? values.customerDesignation.trim() : 'Verified Traveler');
+                    formData.append('location', values.location ? values.location.trim() : '');
+                    formData.append('rating', Number(values.rating || 5));
+                    formData.append('content', values.content.trim());
+                    formData.append('comment', values.content.trim());
+                    formData.append('status', values.status || 'Approved');
+                    formData.append('isTopPick', Boolean(values.isTopPick));
+                    if (values.video) formData.append('video', values.video);
+                    formData.append('image', imageFile);
+
+                    if (selectedTestimonial) {
+                        response = await api.put(`/testimonials/${selectedTestimonial._id}`, formData, true);
+                    } else {
+                        response = await api.post('/testimonials', formData, true);
+                    }
+                } else {
+                    const payload = {
+                        customerName: values.customerName.trim(),
+                        name: values.customerName.trim(),
+                        customerDesignation: values.customerDesignation ? values.customerDesignation.trim() : 'Verified Traveler',
+                        role: values.customerDesignation ? values.customerDesignation.trim() : 'Verified Traveler',
+                        location: values.location ? values.location.trim() : '',
+                        rating: Number(values.rating || 5),
+                        content: values.content.trim(),
+                        comment: values.content.trim(),
+                        image: values.image || '',
+                        video: values.video || '',
+                        status: values.status || 'Approved',
+                        isTopPick: Boolean(values.isTopPick)
+                    };
+
+                    if (selectedTestimonial) {
+                        response = await api.put(`/testimonials/${selectedTestimonial._id}`, payload);
+                    } else {
+                        response = await api.post('/testimonials', payload);
+                    }
+                }
+
+                if (response.success) {
+                    setOpenDrawer(false);
+                    setImageFile(null);
+                    resetForm();
+                    setToast({
+                        open: true,
+                        message: selectedTestimonial ? 'Testimonial updated successfully!' : 'New testimonial created successfully!',
+                        severity: 'success'
+                    });
+                    fetchTestimonials();
+                }
+            } catch (error) {
+                handleErrorMessage(error.message || 'Failed to save testimonial');
+            } finally {
+                setSubmitting(false);
+            }
+        }
     });
 
     const fetchTestimonials = async () => {
@@ -99,468 +241,813 @@ const TestimonialManagement = () => {
         fetchTestimonials();
     }, []);
 
-    const handleDeleteClick = (id) => {
-        setItemToDelete(id);
-        setDeleteModalOpen(true);
+    const handleOpenDrawer = (item = null) => {
+        setImageFile(null);
+        if (item) {
+            setSelectedTestimonial(item);
+            formik.setValues({
+                customerName: item.customerName || item.name || '',
+                customerDesignation: item.customerDesignation || item.role || 'Verified Traveler',
+                location: item.location || '',
+                rating: item.rating || 5,
+                content: item.content || item.comment || '',
+                image: item.image || item.avatar || '',
+                video: item.video || '',
+                status: item.status || 'Approved',
+                isTopPick: Boolean(item.isTopPick)
+            });
+        } else {
+            setSelectedTestimonial(null);
+            formik.resetForm();
+        }
+        setOpenDrawer(true);
+    };
+
+    const handleToggleTopPick = async (item) => {
+        try {
+            const response = await api.put(`/testimonials/${item._id}`, { isTopPick: !item.isTopPick });
+            if (response.success) {
+                setToast({
+                    open: true,
+                    message: item.isTopPick ? 'Unmarked from Top Pick' : 'Marked as Top Pick',
+                    severity: 'info'
+                });
+                fetchTestimonials();
+            }
+        } catch (error) {
+            handleErrorMessage(error.message || 'Failed to toggle top pick');
+        }
     };
 
     const confirmDelete = async () => {
         if (!itemToDelete) return;
         try {
-            await api.delete(`/testimonials/${itemToDelete}`);
+            await api.delete(`/testimonials/${itemToDelete._id}`);
+            setToast({
+                open: true,
+                message: 'Testimonial deleted successfully',
+                severity: 'info'
+            });
             fetchTestimonials();
             setDeleteModalOpen(false);
             setItemToDelete(null);
         } catch (error) {
-            alert(error.message || 'Failed to delete review');
+            setDeleteModalOpen(false);
+            handleErrorMessage(error.message || 'Failed to delete testimonial');
         }
     };
 
-    const handleOpenDrawer = (item = null) => {
-        if (item) {
-            setSelectedTestimonial(item);
-            setFormData({
-                name: item.name || '',
-                location: typeof item.location === 'object' && item.location !== null ? (item.location.city || item.location.fullAddress || '') : (item.location || ''),
-                rating: item.rating || 5,
-                comment: item.comment || '',
-                role: item.role || 'Verified Traveler',
-                approved: item.approved !== undefined ? item.approved : true
-            });
-        } else {
-            setSelectedTestimonial(null);
-            setFormData({
-                name: '',
-                location: '',
-                rating: 5,
-                comment: '',
-                role: 'Verified Traveler',
-                approved: true
-            });
-        }
-        setOpenDrawer(true);
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setRatingFilter('All');
+        setRoleFilter('All');
+        setStatusFilter('All');
+        setSortBy('newest');
+        setPage(0);
     };
 
-    const handleSubmit = async () => {
-        if (!formData.name || !formData.comment) {
-            alert('Customer name and feedback comment are required');
-            return;
-        }
+    const hasActiveFilters = searchTerm !== '' || ratingFilter !== 'All' || roleFilter !== 'All' || statusFilter !== 'All' || sortBy !== 'newest';
 
-        setSubmitting(true);
-        try {
-            let response;
-            if (selectedTestimonial) {
-                response = await api.put(`/testimonials/${selectedTestimonial._id}`, formData);
-            } else {
-                response = await api.post('/testimonials', formData);
-            }
+    const filteredTestimonials = testimonials
+        .filter((t) => {
+            const name = t.customerName || t.name || '';
+            const content = t.content || t.comment || '';
+            const location = t.location || '';
+            const role = t.customerDesignation || t.role || '';
+            const status = t.status || 'Approved';
 
-            if (response.success) {
-                setOpenDrawer(false);
-                fetchTestimonials();
-            }
-        } catch (error) {
-            alert(error.message || 'Failed to save review');
-        } finally {
-            setSubmitting(false);
-        }
-    };
+            const matchesSearch =
+                !searchTerm ||
+                name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                role.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const handleToggleApprove = async (testimonial) => {
-        try {
-            await api.put(`/testimonials/${testimonial._id}`, {
-                ...testimonial,
-                approved: !testimonial.approved
-            });
-            fetchTestimonials();
-        } catch (error) {
-            alert(error.message || 'Failed to update approval status');
-        }
-    };
+            const ratingVal = Number(t.rating || 5);
+            const matchesRating =
+                ratingFilter === 'All'
+                    ? true
+                    : ratingFilter === '5'
+                    ? ratingVal === 5
+                    : ratingFilter === '4'
+                    ? ratingVal === 4
+                    : ratingFilter === '3'
+                    ? ratingVal === 3
+                    : ratingFilter === '2'
+                    ? ratingVal === 2
+                    : ratingFilter === '1'
+                    ? ratingVal === 1
+                    : ratingFilter === '3_below'
+                    ? ratingVal <= 3
+                    : true;
 
-    // Filters
-    const filteredTestimonials = testimonials.filter(t => {
-        const matchesSearch = 
-            t.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            t.comment?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (typeof t.location === 'string' && t.location.toLowerCase().includes(searchTerm.toLowerCase()));
-        
-        const matchesStatus = 
-            statusFilter === 'All' ? true :
-            statusFilter === 'Approved' ? t.approved : !t.approved;
-        
-        const matchesRating = 
-            ratingFilter === 'All' ? true : Math.floor(t.rating) === parseInt(ratingFilter, 10);
+            const matchesRole =
+                roleFilter === 'All'
+                    ? true
+                    : role.toLowerCase() === roleFilter.toLowerCase();
 
-        return matchesSearch && matchesStatus && matchesRating;
-    });
+            const matchesStatus =
+                statusFilter === 'All'
+                    ? true
+                    : status.toLowerCase() === statusFilter.toLowerCase();
 
-    const approvedCount = testimonials.filter(t => t.approved).length;
-    const pendingCount = testimonials.length - approvedCount;
-    const avgRating = testimonials.length > 0 
-        ? (testimonials.reduce((acc, curr) => acc + (curr.rating || 0), 0) / testimonials.length).toFixed(1)
-        : '5.0';
+            return matchesSearch && matchesRating && matchesRole && matchesStatus;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'newest') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+            if (sortBy === 'oldest') return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+            if (sortBy === 'highest_rating') return (b.rating || 5) - (a.rating || 5);
+            if (sortBy === 'lowest_rating') return (a.rating || 5) - (b.rating || 5);
+            if (sortBy === 'name_asc') return (a.customerName || a.name || '').localeCompare(b.customerName || b.name || '');
+            return 0;
+        });
 
-    const paginatedTestimonials = filteredTestimonials.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    const fiveStarCount = testimonials.filter((t) => t.rating === 5).length;
+    const avgRating =
+        testimonials.length > 0
+            ? (testimonials.reduce((acc, curr) => acc + (curr.rating || 5), 0) / testimonials.length).toFixed(1)
+            : '5.0';
+
+    const textColor = isDarkMode ? '#ffffff' : '#0f172a';
+    const subTextColor = isDarkMode ? '#cbd5e1' : '#64748b';
+    const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
+    const surfaceBgColor = isDarkMode ? '#090d16' : '#f8fafc';
+    const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0';
 
     return (
-        <Grid container spacing={gridSpacing}>
-            {/* Header */}
-            <Grid size={12}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between', gap: 2, mb: 1 }}>
-                    <Box>
-                        <Typography variant="h2" fontWeight="700">Customer Testimonials</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            Review and manage verified traveler reviews displayed on your vendor showcase
-                        </Typography>
-                    </Box>
-                    <Button
-                        variant="contained"
-                        color="secondary"
-                        startIcon={<AddIcon />}
-                        onClick={() => handleOpenDrawer()}
-                        sx={{
-                            borderRadius: '10px',
-                            px: 3,
-                            py: 1.2,
-                            boxShadow: '0 6px 18px rgba(124, 58, 237, 0.35)',
-                            textTransform: 'none',
-                            fontWeight: 600
-                        }}
-                    >
-                        Add New Review
-                    </Button>
-                </Stack>
-            </Grid>
-
-            {/* Quick Stats Summary */}
-            <Grid size={12}>
-                <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                        <StatCard 
-                            count={testimonials.length} 
-                            label="Total Reviews" 
-                            icon={<RateReviewIcon />} 
-                            variant="dark" 
-                            colorScheme="primary" 
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                        <StatCard 
-                            count={approvedCount} 
-                            label="Approved Reviews" 
-                            icon={<CheckCircleIcon />} 
-                            variant="light" 
-                            colorScheme="success" 
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                        <StatCard 
-                            count={`${avgRating} / 5.0`} 
-                            label="Average Rating" 
-                            icon={<StarIcon />} 
-                            variant="light" 
-                            colorScheme="warning" 
-                        />
-                    </Grid>
-                </Grid>
-            </Grid>
-
-            {/* Filter and Search Header */}
-            <Grid size={12}>
-                <Paper
-                    elevation={0}
-                    sx={{
-                        p: 2,
-                        borderRadius: '14px',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        bgcolor: 'background.paper',
-                        display: 'flex',
-                        flexDirection: { xs: 'column', md: 'row' },
-                        alignItems: { md: 'center' },
-                        justify: 'space-between',
-                        gap: 2
-                    }}
-                >
-                    <TextField
-                        placeholder="Search feedback by reviewer name or comment..."
-                        size="small"
-                        value={searchTerm}
-                        onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
-                        sx={{ width: { xs: '100%', md: 360 } }}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-                                </InputAdornment>
-                            ),
-                            endAdornment: searchTerm ? (
-                                <InputAdornment position="end">
-                                    <IconButton size="small" onClick={() => setSearchTerm('')}>
-                                        <ClearIcon fontSize="small" />
-                                    </IconButton>
-                                </InputAdornment>
-                            ) : null
-                        }}
+        <Box>
+            <SaasHeader
+                title="Customer Testimonials & Reviews"
+                subtitle="Manage client reviews, travel testimonials, and traveler feedback."
+                actionLabel="Add Testimonial"
+                actionIcon={<AddIcon />}
+                onActionClick={() => handleOpenDrawer()}
+                loading={loading}
+            />
+            {/* Stat Cards */}
+            <Grid container spacing={gridSpacing} sx={{ mb: 3 }}>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                    <StatCard
+                        count={testimonials.length}
+                        label="Total Testimonials"
+                        icon={<RateReviewIcon />}
+                        colorScheme="primary"
                     />
-
-                    <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', py: 0.5 }}>
-                        {['All', 'Approved', 'Pending'].map((status) => (
-                            <Chip
-                                key={status}
-                                label={status === 'All' ? `All (${testimonials.length})` : status === 'Approved' ? `Approved (${approvedCount})` : `Pending (${pendingCount})`}
-                                onClick={() => { setStatusFilter(status); setPage(0); }}
-                                color={statusFilter === status ? 'secondary' : 'default'}
-                                variant={statusFilter === status ? 'filled' : 'outlined'}
-                                sx={{ fontWeight: 600, borderRadius: '8px', cursor: 'pointer' }}
-                            />
-                        ))}
-                    </Stack>
-                </Paper>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                    <StatCard
+                        count={fiveStarCount}
+                        label="5-Star Rating Reviews"
+                        icon={<StarIcon />}
+                        colorScheme="warning"
+                    />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                    <StatCard
+                        count={avgRating}
+                        label="Average Customer Rating"
+                        icon={<CheckCircleIcon />}
+                        colorScheme="success"
+                    />
+                </Grid>
             </Grid>
 
-            {loading && (
-                <Grid size={12}>
-                    <LinearProgress sx={{ borderRadius: 1 }} />
-                </Grid>
-            )}
+            {loading && <LinearProgress sx={{ mb: 2, borderRadius: 1, height: 3 }} />}
 
-            {/* List Table */}
-            {!loading && (
-                <Grid size={12}>
-                    <MainCard content={false}>
-                        <TableContainer component={Paper} elevation={0}>
-                            <Table sx={{ minWidth: 650 }}>
-                                <TableHead sx={{ bgcolor: 'grey.50' }}>
-                                    <TableRow>
-                                        <TableCell sx={{ pl: 3 }}>Customer</TableCell>
-                                        <TableCell>Rating</TableCell>
-                                        <TableCell>Comment / Feedback</TableCell>
-                                        <TableCell>Role Tag</TableCell>
-                                        <TableCell>Status</TableCell>
-                                        <TableCell align="center" sx={{ pr: 3 }}>Actions</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {paginatedTestimonials.map((row) => (
-                                        <TableRow key={row._id} hover>
-                                            <TableCell sx={{ pl: 3 }}>
-                                                <Stack direction="row" spacing={1.5} alignItems="center">
-                                                    <Avatar sx={{ bgcolor: 'secondary.light', color: 'secondary.main', width: 38, height: 38, fontWeight: 'bold' }}>
-                                                        {row.name ? row.name.charAt(0).toUpperCase() : 'U'}
-                                                    </Avatar>
-                                                    <Box>
-                                                        <Typography variant="subtitle1" fontWeight="bold">{row.name}</Typography>
-                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-                                                            <LocationOnIcon sx={{ fontSize: 12 }} />
-                                                            {typeof row.location === 'object' && row.location !== null ? (row.location.city || row.location.fullAddress || 'Location N/A') : (row.location || 'Location N/A')}
-                                                        </Typography>
-                                                    </Box>
-                                                </Stack>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Stack direction="row" alignItems="center" spacing={0.5}>
-                                                    <Rating value={row.rating || 5} precision={0.5} size="small" readOnly />
-                                                    <Typography variant="caption" fontWeight="bold">({row.rating || 5})</Typography>
-                                                </Stack>
-                                            </TableCell>
-                                            <TableCell sx={{ maxWidth: 300 }}>
-                                                <Typography variant="body2" sx={{ lineHeight: 1.4, color: 'text.primary' }} noWrap title={row.comment}>
-                                                    "{row.comment}"
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={row.role || 'Verified Traveler'}
-                                                    size="small"
-                                                    variant="outlined"
-                                                    color="secondary"
-                                                    sx={{ borderRadius: '6px' }}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    icon={row.approved ? <CheckCircleIcon fontSize="small" /> : <PendingActionsIcon fontSize="small" />}
-                                                    label={row.approved ? 'Approved' : 'Pending'}
-                                                    size="small"
-                                                    color={row.approved ? 'success' : 'warning'}
-                                                    onClick={() => handleToggleApprove(row)}
-                                                    clickable
-                                                    sx={{ borderRadius: '6px', fontWeight: 600 }}
-                                                />
-                                            </TableCell>
-                                            <TableCell align="center" sx={{ pr: 3 }}>
-                                                <Stack direction="row" spacing={1} sx={{ justifyContent: 'center' }}>
-                                                    <Tooltip title="Edit Review">
-                                                        <IconButton size="small" color="primary" onClick={() => handleOpenDrawer(row)}>
-                                                            <EditIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Delete Review">
-                                                        <IconButton size="small" color="error" onClick={() => handleDeleteClick(row._id)}>
-                                                            <DeleteIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </Stack>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    </MainCard>
-                </Grid>
-            )}
-
-            {/* Pagination Controls */}
-            {!loading && filteredTestimonials.length > 0 && (
-                <Grid size={12}>
-                    <Paper elevation={0} sx={{ borderRadius: '12px', border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 20]}
-                            component="div"
-                            count={filteredTestimonials.length}
-                            rowsPerPage={rowsPerPage}
-                            page={page}
-                            onPageChange={(e, newPage) => setPage(newPage)}
-                            onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+            {/* Filter Bar */}
+            <Paper
+                elevation={0}
+                sx={{
+                    p: 2,
+                    mb: 3,
+                    borderRadius: '16px',
+                    border: '1px solid',
+                    borderColor: borderLineColor,
+                    backgroundColor: surfaceBgColor
+                }}
+            >
+                {/* Search on Left Side, Filters on Right Side */}
+                <Grid container spacing={2} alignItems="center" justifyContent="space-between">
+                    {/* Search Field on the Left Side */}
+                    <Grid size={{ xs: 12, md: 4 }}>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            placeholder="Search testimonials by customer name, location, comment..."
+                            value={searchTerm}
+                            onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: '10px',
+                                    backgroundColor: cardBgColor,
+                                    color: textColor,
+                                    '& fieldset': { borderColor: borderLineColor }
+                                }
+                            }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon fontSize="small" sx={{ color: subTextColor }} />
+                                    </InputAdornment>
+                                )
+                            }}
                         />
-                    </Paper>
-                </Grid>
-            )}
+                    </Grid>
 
-            {/* Empty State */}
-            {!loading && filteredTestimonials.length === 0 && (
-                <Grid size={12}>
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            p: 6,
-                            textAlign: 'center',
-                            borderRadius: '16px',
-                            border: '1px dashed',
-                            borderColor: 'divider',
-                            bgcolor: 'background.paper'
-                        }}
-                    >
-                        <RateReviewIcon sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
-                        <Typography variant="h3" fontWeight="bold" gutterBottom>No Testimonials Found</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 450, mx: 'auto', mb: 3 }}>
-                            {searchTerm ? `No customer review matches "${searchTerm}". Try adjusting your search query.` : 'No reviews have been recorded yet. Add customer testimonials to build trust with travelers!'}
-                        </Typography>
-                        <Button
-                            variant="contained"
-                            color="secondary"
-                            startIcon={<AddIcon />}
-                            onClick={() => handleOpenDrawer()}
-                            sx={{ borderRadius: '8px', px: 3 }}
-                        >
-                            Add Review Now
-                        </Button>
-                    </Paper>
-                </Grid>
-            )}
+                    {/* Filters on the Right Side */}
+                    <Grid size={{ xs: 12, md: 8 }}>
+                        <Stack direction="row" spacing={1.5} alignItems="center" justifyContent={{ xs: 'flex-start', md: 'flex-end' }} flexWrap="wrap" useFlexGap>
+                            <TextField
+                                select
+                                size="small"
+                                label="Rating"
+                                value={ratingFilter}
+                                onChange={(e) => { setRatingFilter(e.target.value); setPage(0); }}
+                                SelectProps={{ MenuProps: { disablePortal: true } }}
+                                sx={{
+                                    minWidth: 120,
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: '10px',
+                                        backgroundColor: cardBgColor,
+                                        color: textColor,
+                                        '& fieldset': { borderColor: borderLineColor }
+                                    }
+                                }}
+                            >
+                                <MenuItem value="All">All Ratings</MenuItem>
+                                <MenuItem value="5">5 Stars ⭐⭐⭐⭐⭐</MenuItem>
+                                <MenuItem value="4">4 Stars ⭐⭐⭐⭐</MenuItem>
+                                <MenuItem value="3">3 Stars ⭐⭐⭐</MenuItem>
+                                <MenuItem value="2">2 Stars ⭐⭐</MenuItem>
+                                <MenuItem value="1">1 Star ⭐</MenuItem>
+                                <MenuItem value="3_below">3 Stars & Below</MenuItem>
+                            </TextField>
 
-            {/* Right-Side Drawer Form */}
+                            <TextField
+                                select
+                                size="small"
+                                label="Traveler Role"
+                                value={roleFilter}
+                                onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }}
+                                SelectProps={{ MenuProps: { disablePortal: true } }}
+                                sx={{
+                                    minWidth: 130,
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: '10px',
+                                        backgroundColor: cardBgColor,
+                                        color: textColor,
+                                        '& fieldset': { borderColor: borderLineColor }
+                                    }
+                                }}
+                            >
+                                <MenuItem value="All">All Roles</MenuItem>
+                                <MenuItem value="Verified Traveler">Verified Traveler</MenuItem>
+                                <MenuItem value="Family Traveler">Family Traveler</MenuItem>
+                                <MenuItem value="Solo Traveler">Solo Traveler</MenuItem>
+                                <MenuItem value="Honeymoon Couple">Honeymoon Couple</MenuItem>
+                                <MenuItem value="Corporate Client">Corporate Client</MenuItem>
+                                <MenuItem value="VIP Member">VIP Member</MenuItem>
+                            </TextField>
+
+                            <TextField
+                                select
+                                size="small"
+                                label="Status"
+                                value={statusFilter}
+                                onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+                                SelectProps={{ MenuProps: { disablePortal: true } }}
+                                sx={{
+                                    minWidth: 120,
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: '10px',
+                                        backgroundColor: cardBgColor,
+                                        color: textColor,
+                                        '& fieldset': { borderColor: borderLineColor }
+                                    }
+                                }}
+                            >
+                                <MenuItem value="All">All Statuses</MenuItem>
+                                <MenuItem value="Approved">Approved</MenuItem>
+                                <MenuItem value="Pending">Pending</MenuItem>
+                                <MenuItem value="Rejected">Rejected</MenuItem>
+                            </TextField>
+
+                            <TextField
+                                select
+                                size="small"
+                                label="Sort By"
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                SelectProps={{ MenuProps: { disablePortal: true } }}
+                                sx={{
+                                    minWidth: 120,
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: '10px',
+                                        backgroundColor: cardBgColor,
+                                        color: textColor,
+                                        '& fieldset': { borderColor: borderLineColor }
+                                    }
+                                }}
+                            >
+                                <MenuItem value="newest">Newest</MenuItem>
+                                <MenuItem value="highest_rating">Highest Rated</MenuItem>
+                                <MenuItem value="lowest_rating">Lowest Rated</MenuItem>
+                                <MenuItem value="name_asc">Name A-Z</MenuItem>
+                                <MenuItem value="oldest">Oldest</MenuItem>
+                            </TextField>
+
+                            {hasActiveFilters && (
+                                <Tooltip title="Reset All Filters">
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
+                                        size="small"
+                                        onClick={handleResetFilters}
+                                        startIcon={<RestartAltIcon />}
+                                        sx={{
+                                            borderRadius: '10px',
+                                            height: 40,
+                                            fontWeight: 700,
+                                            px: 1.5
+                                        }}
+                                    >
+                                        Reset
+                                    </Button>
+                                </Tooltip>
+                            )}
+                        </Stack>
+                    </Grid>
+                </Grid>
+            </Paper>
+
+            {/* Data Table */}
+            <DataTable
+                columns={[
+                    {
+                        headerName: 'Customer',
+                        field: 'customerName',
+                        render: (row) => {
+                            const name = row.customerName || row.name || 'Anonymous Traveler';
+                            const role = row.customerDesignation || row.role || 'Verified Traveler';
+                            const imageUrl = getFullImageUrl(row.image || row.avatar);
+                            const initial = name.charAt(0).toUpperCase();
+
+                            return (
+                                <Stack direction="row" spacing={1.5} alignItems="center">
+                                    <Avatar
+                                        src={imageUrl}
+                                        alt={name}
+                                        sx={{
+                                            bgcolor: theme.palette.primary.main,
+                                            fontWeight: 700,
+                                            width: 42,
+                                            height: 42,
+                                            border: '2px solid',
+                                            borderColor: theme.palette.primary.light
+                                        }}
+                                    >
+                                        {initial}
+                                    </Avatar>
+                                    <Box>
+                                        <Stack direction="row" spacing={0.5} alignItems="center">
+                                            <Typography variant="subtitle1" sx={{ color: textColor, fontWeight: 700 }}>
+                                                {name}
+                                            </Typography>
+                                            {row.isTopPick && (
+                                                <Tooltip title="Featured Top Pick Testimonial">
+                                                    <Chip
+                                                        label="Featured"
+                                                        size="small"
+                                                        color="secondary"
+                                                        sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800 }}
+                                                    />
+                                                </Tooltip>
+                                            )}
+                                        </Stack>
+                                        <Typography variant="caption" sx={{ color: subTextColor, fontWeight: 500 }}>
+                                            {role} {row.location ? `• ${row.location}` : ''}
+                                        </Typography>
+                                    </Box>
+                                </Stack>
+                            );
+                        }
+                    },
+                    {
+                        headerName: 'Rating',
+                        field: 'rating',
+                        render: (row) => (
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Rating value={row.rating || 5} readOnly size="small" precision={0.5} />
+                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#faaf00' }}>
+                                    {(row.rating || 5).toFixed(1)}
+                                </Typography>
+                            </Stack>
+                        )
+                    },
+                    {
+                        headerName: 'Review Comment',
+                        field: 'content',
+                        render: (row) => {
+                            const text = row.content || row.comment || '';
+                            return (
+                                <Box sx={{ maxWidth: 340 }}>
+                                    <Typography
+                                        variant="body2"
+                                        sx={{
+                                            color: textColor,
+                                            fontWeight: 500,
+                                            lineHeight: 1.4,
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: 'vertical',
+                                            overflow: 'hidden'
+                                        }}
+                                    >
+                                        "{text}"
+                                    </Typography>
+                                    {row.video && (
+                                        <Chip
+                                            icon={<PlayCircleOutlineIcon style={{ fontSize: 14 }} />}
+                                            label="Video Review"
+                                            size="small"
+                                            color="info"
+                                            variant="outlined"
+                                            component="a"
+                                            href={row.video}
+                                            target="_blank"
+                                            clickable
+                                            sx={{ mt: 0.5, height: 20, fontSize: '0.68rem', fontWeight: 700 }}
+                                        />
+                                    )}
+                                </Box>
+                            );
+                        }
+                    },
+                    {
+                        headerName: 'Status',
+                        field: 'status',
+                        align: 'center',
+                        render: (row) => {
+                            const currentStatus = row.status || 'Approved';
+
+                            return (
+                                <Stack direction="column" spacing={0.5} alignItems="center">
+                                    <StatusBadge status={currentStatus} />
+                                    <Typography variant="caption" sx={{ color: subTextColor, fontSize: '0.7rem' }}>
+                                        {row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                                    </Typography>
+                                </Stack>
+                            );
+                        }
+                    },
+                    {
+                        headerName: 'Actions',
+                        align: 'center',
+                        render: (row) => (
+                            <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                                <Tooltip title={row.isTopPick ? 'Unmark Top Pick' : 'Mark as Top Pick'}>
+                                    <IconButton
+                                        size="small"
+                                        color={row.isTopPick ? 'warning' : 'default'}
+                                        onClick={() => handleToggleTopPick(row)}
+                                    >
+                                        <StarIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit Testimonial">
+                                    <IconButton size="small" color="primary" onClick={() => handleOpenDrawer(row)}>
+                                        <EditIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Delete Testimonial">
+                                    <IconButton size="small" color="error" onClick={() => { setItemToDelete(row); setDeleteModalOpen(true); }}>
+                                        <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            </Stack>
+                        )
+                    }
+                ]}
+                rows={filteredTestimonials}
+                loading={loading}
+                page={page}
+                rowsPerPage={rowsPerPage}
+                totalCount={filteredTestimonials.length}
+                onPageChange={(e, newPage) => setPage(newPage)}
+                onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+                emptyTitle="No Testimonials Found"
+                emptySubtitle="No customer review matches your search criteria."
+            />
+
+            {/* Create/Edit Drawer with Formik & Yup */}
             <Drawer
                 anchor="right"
                 open={openDrawer}
-                onClose={() => !submitting && setOpenDrawer(false)}
-                sx={{ zIndex: 1400 }}
+                onClose={() => setOpenDrawer(false)}
                 PaperProps={{
-                    sx: { width: { xs: '100%', sm: 540, md: 620 }, p: 0, display: 'flex', flexDirection: 'column', boxShadow: '-12px 0 36px rgba(0,0,0,0.25)' }
+                    sx: {
+                        width: { xs: '100%', sm: 480 },
+                        p: 3,
+                        backgroundColor: cardBgColor,
+                        color: textColor
+                    }
                 }}
             >
-                <Box sx={{ p: 2.5, bgcolor: 'secondary.main', color: 'common.white', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                        <Typography variant="h4" color="inherit" fontWeight="bold">
-                            {selectedTestimonial ? 'Edit Customer Review' : 'Add Customer Review'}
-                        </Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.85, display: 'block', mt: 0.5 }}>
-                            {selectedTestimonial ? 'Update traveler rating and feedback notes' : 'Record a verified customer review to highlight on your website'}
-                        </Typography>
-                    </Box>
-                    <IconButton onClick={() => setOpenDrawer(false)} sx={{ color: 'common.white' }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                    <Typography variant="h3" sx={{ color: textColor, fontWeight: 800 }}>
+                        {selectedTestimonial ? 'Edit Testimonial' : 'Add New Testimonial'}
+                    </Typography>
+                    <IconButton onClick={() => setOpenDrawer(false)}>
                         <CloseIcon />
                     </IconButton>
-                </Box>
+                </Stack>
 
-                <Box
-                    sx={{
-                        p: 3,
-                        flexGrow: 1,
-                        overflowY: 'auto',
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none',
-                        '&::-webkit-scrollbar': { display: 'none' }
-                    }}
-                >
-                    <Stack spacing={3}>
+                <Divider sx={{ mb: 3, borderColor: borderLineColor }} />
+
+                <Box component="form" onSubmit={formik.handleSubmit} noValidate>
+                    <Stack spacing={2.5}>
                         <TextField
                             fullWidth
-                            label="Customer Full Name *"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            id="customerName"
+                            name="customerName"
+                            label="Customer Name"
+                            placeholder="e.g. Rahul Sharma"
+                            value={formik.values.customerName}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.customerName && Boolean(formik.errors.customerName)}
+                            helperText={formik.touched.customerName && formik.errors.customerName}
+                            required
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', backgroundColor: surfaceBgColor } }}
                         />
+
                         <TextField
                             fullWidth
-                            label="Location / City"
-                            placeholder="e.g. Kochi, Kerala"
-                            value={formData.location}
-                            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                            id="customerDesignation"
+                            name="customerDesignation"
+                            label="Traveler Role / Designation"
+                            placeholder="e.g. Verified Traveler, Software Engineer, Solo Traveler"
+                            value={formik.values.customerDesignation}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.customerDesignation && Boolean(formik.errors.customerDesignation)}
+                            helperText={formik.touched.customerDesignation && formik.errors.customerDesignation}
+                            required
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', backgroundColor: surfaceBgColor } }}
                         />
+
                         <TextField
                             fullWidth
-                            label="Customer Role / Title"
-                            placeholder="e.g. Verified Traveler, Family Vacationer"
-                            value={formData.role}
-                            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                            id="location"
+                            name="location"
+                            label="Location (City, Country)"
+                            placeholder="e.g. Mumbai, India or Kerala"
+                            value={formik.values.location}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.location && Boolean(formik.errors.location)}
+                            helperText={formik.touched.location && formik.errors.location}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <LocationOnIcon fontSize="small" sx={{ color: subTextColor }} />
+                                    </InputAdornment>
+                                )
+                            }}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', backgroundColor: surfaceBgColor } }}
                         />
+
                         <Box>
-                            <Typography variant="subtitle2" gutterBottom fontWeight="bold">Star Rating *</Typography>
+                            <Typography variant="subtitle2" sx={{ color: textColor, fontWeight: 700, mb: 1 }}>
+                                Rating Score ({formik.values.rating} Stars)
+                            </Typography>
                             <Rating
-                                value={Number(formData.rating)}
-                                onChange={(e, newValue) => setFormData({ ...formData, rating: newValue || 5 })}
+                                name="rating"
+                                value={formik.values.rating}
+                                onChange={(e, newValue) => formik.setFieldValue('rating', newValue || 5)}
                                 size="large"
                             />
+                            {formik.touched.rating && formik.errors.rating && (
+                                <FormHelperText error>{formik.errors.rating}</FormHelperText>
+                            )}
                         </Box>
+
                         <TextField
                             fullWidth
-                            label="Feedback / Review Comment *"
                             multiline
-                            rows={5}
-                            value={formData.comment}
-                            onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
+                            rows={4}
+                            id="content"
+                            name="content"
+                            label="Testimonial / Review Comment"
+                            placeholder="Write traveler experience feedback..."
+                            value={formik.values.content}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.content && Boolean(formik.errors.content)}
+                            helperText={formik.touched.content && formik.errors.content}
+                            required
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', backgroundColor: surfaceBgColor } }}
                         />
-                    </Stack>
-                </Box>
 
-                <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
-                    <Button onClick={() => setOpenDrawer(false)} color="inherit" disabled={submitting}>
-                        Cancel
-                    </Button>
-                    <Button variant="contained" color="secondary" onClick={handleSubmit} disabled={submitting} sx={{ borderRadius: '8px', px: 3, fontWeight: 700 }}>
-                        {submitting ? 'Saving...' : (selectedTestimonial ? 'Update Review' : 'Add Review')}
-                    </Button>
+                        <Box>
+                            <Typography variant="subtitle2" sx={{ color: textColor, fontWeight: 700, mb: 1 }}>
+                                Customer Photo (Drag & Drop)
+                            </Typography>
+                            <FileUpload
+                                onFileSelect={(selectedFile) => {
+                                    if (selectedFile instanceof File) {
+                                        setImageFile(selectedFile);
+                                        formik.setFieldValue('image', selectedFile.name);
+                                    } else if (selectedFile && typeof selectedFile === 'object' && selectedFile.preview) {
+                                        setImageFile(selectedFile);
+                                        formik.setFieldValue('image', selectedFile.name || 'uploaded_image');
+                                    } else if (typeof selectedFile === 'string') {
+                                        setImageFile(null);
+                                        formik.setFieldValue('image', selectedFile);
+                                    } else {
+                                        setImageFile(null);
+                                        formik.setFieldValue('image', '');
+                                    }
+                                }}
+                                previewUrl={
+                                    imageFile
+                                        ? (imageFile.preview || (imageFile instanceof File ? URL.createObjectURL(imageFile) : null))
+                                        : formik.values.image
+                                        ? getFullImageUrl(formik.values.image)
+                                        : null
+                                }
+                                accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }}
+                                title="Drag & drop customer photo here or click to browse"
+                                caption="Supports PNG, JPG, WEBP formats up to 10MB"
+                            />
+                            {formik.touched.image && formik.errors.image && (
+                                <FormHelperText error>{formik.errors.image}</FormHelperText>
+                            )}
+                        </Box>
+
+                        <TextField
+                            fullWidth
+                            id="video"
+                            name="video"
+                            label="Video Review Link (Optional)"
+                            placeholder="https://youtube.com/watch?v=..."
+                            value={formik.values.video}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.video && Boolean(formik.errors.video)}
+                            helperText={formik.touched.video && formik.errors.video}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', backgroundColor: surfaceBgColor } }}
+                        />
+
+                        <TextField
+                            select
+                            fullWidth
+                            id="status"
+                            name="status"
+                            label="Publication Status"
+                            value={formik.values.status || 'Approved'}
+                            onChange={(e) => formik.setFieldValue('status', e.target.value)}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.status && Boolean(formik.errors.status)}
+                            helperText={formik.touched.status && formik.errors.status}
+                            SelectProps={{
+                                MenuProps: {
+                                    disablePortal: true,
+                                    PaperProps: {
+                                        sx: {
+                                            maxHeight: 260,
+                                            borderRadius: '10px',
+                                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)'
+                                        }
+                                    }
+                                }
+                            }}
+                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px', backgroundColor: surfaceBgColor } }}
+                        >
+                            <MenuItem value="Approved">Approved (Published)</MenuItem>
+                            <MenuItem value="Pending">Pending Review</MenuItem>
+                            <MenuItem value="Rejected">Rejected</MenuItem>
+                        </TextField>
+
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    id="isTopPick"
+                                    name="isTopPick"
+                                    checked={formik.values.isTopPick}
+                                    onChange={(e) => formik.setFieldValue('isTopPick', e.target.checked)}
+                                    color="secondary"
+                                />
+                            }
+                            label={
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: textColor }}>
+                                    Mark as Top Pick / Featured Review
+                                </Typography>
+                            }
+                        />
+
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            color="primary"
+                            disabled={formik.isSubmitting}
+                            sx={{ borderRadius: '10px', py: 1.2, fontWeight: 700 }}
+                        >
+                            {formik.isSubmitting ? 'Saving...' : selectedTestimonial ? 'Update Testimonial' : 'Save Testimonial'}
+                        </Button>
+                    </Stack>
                 </Box>
             </Drawer>
 
-            {/* Confirm Delete Modal */}
+            {/* Delete Confirmation Modal */}
             <Dialog open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
-                <DialogTitle variant="h4" fontWeight="bold">Delete Review</DialogTitle>
+                <DialogTitle sx={{ fontWeight: 800, color: textColor }}>Remove Testimonial?</DialogTitle>
                 <DialogContent>
-                    <Typography variant="body1">Are you sure you want to delete this customer review? This action cannot be undone.</Typography>
+                    <Typography variant="body1" sx={{ color: subTextColor }}>
+                        Are you sure you want to delete testimonial by <strong>{itemToDelete?.customerName || itemToDelete?.name}</strong>?
+                    </Typography>
                 </DialogContent>
                 <DialogActions sx={{ p: 2 }}>
                     <Button onClick={() => setDeleteModalOpen(false)} color="inherit">Cancel</Button>
-                    <Button onClick={confirmDelete} color="error" variant="contained" sx={{ borderRadius: '8px', px: 3 }}>
-                        Delete Review
+                    <Button variant="contained" color="error" onClick={confirmDelete} sx={{ borderRadius: '8px', fontWeight: 700 }}>Confirm Delete</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Subscription Plan Required Modal */}
+            <Dialog
+                open={subPlanModalOpen}
+                onClose={() => setSubPlanModalOpen(false)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: '16px',
+                        p: 1.5,
+                        maxWidth: 480,
+                        backgroundColor: cardBgColor,
+                        color: textColor,
+                        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.35)'
+                    }
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 800, color: textColor, display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+                    <WorkspacePremiumIcon sx={{ color: '#ffb74d', fontSize: 32 }} />
+                    Subscription Upgrade Required
+                </DialogTitle>
+                <DialogContent sx={{ pt: 1 }}>
+                    <Alert severity="warning" variant="filled" sx={{ borderRadius: '12px', mb: 2, fontWeight: 700 }}>
+                        This vendor subscription plan does not support Testimonials.
+                    </Alert>
+                    <Typography variant="body2" sx={{ color: subTextColor, lineHeight: 1.6, fontWeight: 500 }}>
+                        Your current subscription plan limits access to Customer Testimonials & Reviews management. Upgrade your vendor plan to enable client review showcases, top pick features, and web testimonials.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ p: 2.5, pt: 1 }}>
+                    <Button onClick={() => setSubPlanModalOpen(false)} color="inherit" sx={{ fontWeight: 700, borderRadius: '8px' }}>
+                        Dismiss
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="warning"
+                        onClick={() => {
+                            setSubPlanModalOpen(false);
+                            navigate('/system/settings/subscription');
+                        }}
+                        startIcon={<WorkspacePremiumIcon />}
+                        sx={{
+                            borderRadius: '10px',
+                            fontWeight: 800,
+                            px: 2.5,
+                            bgcolor: '#ff9800',
+                            color: '#ffffff',
+                            '&:hover': { bgcolor: '#f57c00' }
+                        }}
+                    >
+                        Upgrade Plan Now
                     </Button>
                 </DialogActions>
             </Dialog>
-        </Grid>
+
+            {/* Toast Notification Snackbar */}
+            <Snackbar
+                open={toast.open}
+                autoHideDuration={5000}
+                onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert
+                    onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+                    severity={toast.severity}
+                    variant="filled"
+                    sx={{
+                        width: '100%',
+                        fontWeight: 700,
+                        borderRadius: '12px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.25)'
+                    }}
+                >
+                    {toast.message}
+                </Alert>
+            </Snackbar>
+        </Box>
     );
 };
 

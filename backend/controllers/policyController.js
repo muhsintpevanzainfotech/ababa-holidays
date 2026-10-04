@@ -51,10 +51,12 @@ exports.upsertPolicy = asyncHandler(async (req, res, next) => {
   }
 
   // Vendors can only manage their own policies targeting 'User'
-  const vendorId = req.user.role === 'Vendor' ? req.user.id : (req.body.vendor || null);
+  const isVendorRole = ['Vendor', 'Vendor-Staff', 'Staff'].includes(req.user.role);
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  const vendorId = isVendorRole ? targetVendorId : (req.body.vendor || null);
   const isGlobal = vendorId === null;
 
-  if (req.user.role === 'Vendor') {
+  if (isVendorRole) {
     if (target !== 'User') {
       return next(new ErrorResponse('Vendors can only create policies for users', 403));
     }

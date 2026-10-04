@@ -36,6 +36,25 @@ export default function AuthForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [timer, setTimer] = useState(300); // 5 minutes (300s)
+
+  useEffect(() => {
+    let interval = null;
+    if (step === 2 && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [step, timer]);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
@@ -122,15 +141,15 @@ export default function AuthForgotPassword() {
           p: 2, 
           mb: 2, 
           border: '1px solid', 
-          borderColor: '#043e38', 
+          borderColor: '#3ec995', 
           borderRadius: '8px', 
-          bgcolor: 'rgba(4, 62, 56, 0.08)',
+          bgcolor: 'rgba(62, 201, 149, 0.08)',
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
-          color: '#043e38'
+          color: '#3ec995'
         }}>
-          <CheckCircleOutline sx={{ color: '#043e38' }} />
+          <CheckCircleOutline sx={{ color: '#3ec995' }} />
           <Typography variant="body2" sx={{ fontWeight: 600 }}>
             {success}
           </Typography>
@@ -158,17 +177,17 @@ export default function AuthForgotPassword() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <MailOutlineIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                  <MailOutlineIcon sx={{ color: '#36669c', fontSize: 22 }} />
                 </InputAdornment>
               ),
               sx: { borderRadius: '10px' }
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                '&:hover fieldset': { borderColor: '#043e38' },
-                '&.Mui-focused fieldset': { borderColor: '#043e38' }
+                '&:hover fieldset': { borderColor: '#36669c' },
+                '&.Mui-focused fieldset': { borderColor: '#36669c' }
               },
-              '& .MuiInputLabel-root.Mui-focused': { color: '#043e38', fontWeight: 600 }
+              '& .MuiInputLabel-root.Mui-focused': { color: '#36669c', fontWeight: 600 }
             }}
           />
 
@@ -188,14 +207,14 @@ export default function AuthForgotPassword() {
                 disabled={loading}
                 startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
                 sx={{ 
-                  bgcolor: '#043e38', 
-                  '&:hover': { bgcolor: '#022925' }, 
+                  bgcolor: '#36669c', 
+                  '&:hover': { bgcolor: '#2d5582' }, 
                   py: 1.5, 
                   borderRadius: '10px',
                   fontSize: '1rem',
                   fontWeight: 700,
                   textTransform: 'none',
-                  boxShadow: '0 4px 14px rgba(4, 62, 56, 0.25)'
+                  boxShadow: '0 4px 14px rgba(54, 102, 156, 0.25)'
                 }}
               >
                 {loading ? 'Sending Code...' : 'Send Reset Code'}
@@ -209,25 +228,25 @@ export default function AuthForgotPassword() {
             p: 3, 
             mb: 3, 
             border: '1px dashed', 
-            borderColor: '#043e38', 
+            borderColor: '#36669c', 
             borderRadius: '12px', 
-            bgcolor: 'rgba(4, 62, 56, 0.03)',
+            bgcolor: 'rgba(54, 102, 156, 0.03)',
             textAlign: 'center'
           }}>
             <Box sx={{ 
               width: 48, 
               height: 48, 
-              bgcolor: 'rgba(4, 62, 56, 0.1)', 
+              bgcolor: 'rgba(54, 102, 156, 0.1)', 
               borderRadius: '12px', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
               margin: '0 auto 16px',
-              color: '#043e38'
+              color: '#36669c'
             }}>
               <KeyIcon sx={{ fontSize: 24 }} />
             </Box>
-            <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: '#043e38' }}>Reset Password</Typography>
+            <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: '#36669c' }}>Reset Password</Typography>
             <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
               We've sent a 6-digit verification code to <br/><b>{email}</b>
             </Typography>
@@ -247,7 +266,7 @@ export default function AuthForgotPassword() {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <KeyIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                      <KeyIcon sx={{ color: '#36669c', fontSize: 22 }} />
                     </InputAdornment>
                   ),
                   sx: { 
@@ -257,16 +276,16 @@ export default function AuthForgotPassword() {
                       fontSize: '1.4rem',
                       letterSpacing: '6px',
                       fontWeight: '800',
-                      color: '#043e38'
+                      color: '#36669c'
                     }
                   }
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderColor: '#043e38' },
-                    '&.Mui-focused fieldset': { borderColor: '#043e38' }
+                    '& fieldset': { borderColor: '#36669c' },
+                    '&.Mui-focused fieldset': { borderColor: '#36669c' }
                   },
-                  '& .MuiInputLabel-root': { color: '#043e38', fontWeight: 600 }
+                  '& .MuiInputLabel-root': { color: '#36669c', fontWeight: 600 }
                 }}
                 inputProps={{ maxLength: 6 }}
             />
@@ -286,7 +305,7 @@ export default function AuthForgotPassword() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <LockOutlinedIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                  <LockOutlinedIcon sx={{ color: '#36669c', fontSize: 22 }} />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -305,10 +324,10 @@ export default function AuthForgotPassword() {
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                '&:hover fieldset': { borderColor: '#043e38' },
-                '&.Mui-focused fieldset': { borderColor: '#043e38' }
+                '&:hover fieldset': { borderColor: '#36669c' },
+                '&.Mui-focused fieldset': { borderColor: '#36669c' }
               },
-              '& .MuiInputLabel-root.Mui-focused': { color: '#043e38', fontWeight: 600 }
+              '& .MuiInputLabel-root.Mui-focused': { color: '#36669c', fontWeight: 600 }
             }}
           />
 
@@ -326,7 +345,7 @@ export default function AuthForgotPassword() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <LockOutlinedIcon sx={{ color: '#043e38', fontSize: 22 }} />
+                  <LockOutlinedIcon sx={{ color: '#36669c', fontSize: 22 }} />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -345,10 +364,10 @@ export default function AuthForgotPassword() {
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                '&:hover fieldset': { borderColor: '#043e38' },
-                '&.Mui-focused fieldset': { borderColor: '#043e38' }
+                '&:hover fieldset': { borderColor: '#36669c' },
+                '&.Mui-focused fieldset': { borderColor: '#36669c' }
               },
-              '& .MuiInputLabel-root.Mui-focused': { color: '#043e38', fontWeight: 600 }
+              '& .MuiInputLabel-root.Mui-focused': { color: '#36669c', fontWeight: 600 }
             }}
           />
 
@@ -368,14 +387,14 @@ export default function AuthForgotPassword() {
                 disabled={loading}
                 startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
                 sx={{ 
-                  bgcolor: '#043e38', 
-                  '&:hover': { bgcolor: '#022925' }, 
+                  bgcolor: '#36669c', 
+                  '&:hover': { bgcolor: '#2d5582' }, 
                   py: 1.5, 
                   borderRadius: '10px',
                   fontSize: '1rem',
                   fontWeight: 700,
                   textTransform: 'none',
-                  boxShadow: '0 4px 14px rgba(4, 62, 56, 0.25)'
+                  boxShadow: '0 4px 14px rgba(54, 102, 156, 0.25)'
                 }}
               >
                 {loading ? 'Resetting Password...' : 'Reset Password'}
@@ -384,13 +403,32 @@ export default function AuthForgotPassword() {
           </Box>
           
           <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Button
-              variant="text"
-              onClick={() => setStep(1)}
-              sx={{ textTransform: 'none', fontWeight: 700, color: '#043e38' }}
-            >
-              Change Email / Resend Code
-            </Button>
+            {timer > 0 ? (
+              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                Resend OTP in <Box component="span" sx={{ color: '#36669c', fontWeight: 700 }}>{formatTime(timer)}</Box>
+              </Typography>
+            ) : (
+              <Button
+                variant="text"
+                onClick={(e) => {
+                  handleSendOTP(e);
+                  setTimer(300);
+                }}
+                sx={{ textTransform: 'none', fontWeight: 700, color: '#41a0ae', '&:hover': { textDecoration: 'underline' } }}
+              >
+                Resend OTP
+              </Button>
+            )}
+            <Box sx={{ mt: 0.5 }}>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => setStep(1)}
+                sx={{ textTransform: 'none', color: '#64748b', fontSize: '0.8rem' }}
+              >
+                Change Email Address
+              </Button>
+            </Box>
           </Box>
         </form>
       )}

@@ -29,22 +29,26 @@ export default function Header() {
   return (
     <>
       {/* logo & toggler button */}
-      <Box sx={{ width: downMD ? 'auto' : 228, display: 'flex' }}>
+      <Box sx={{ width: downMD ? 'auto' : 228, display: 'flex', alignItems: 'center' }}>
         <Box component="span" sx={{ display: { xs: 'none', md: 'block' }, flexGrow: 1 }}>
           <LogoSection />
         </Box>
         <Avatar
           variant="rounded"
           sx={{
-            ...theme.typography.commonAvatar,
-            ...theme.typography.mediumAvatar,
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
             overflow: 'hidden',
+            cursor: 'pointer',
             transition: 'all .2s ease-in-out',
-            color: theme.vars.palette.secondary.dark,
-            background: theme.vars.palette.secondary.light,
+            color: mode === 'dark' ? '#41a0ae' : '#36669c',
+            background: mode === 'dark' ? 'rgba(65, 160, 174, 0.18)' : 'rgba(54, 102, 156, 0.1)',
+            border: '1px solid',
+            borderColor: mode === 'dark' ? 'rgba(65, 160, 174, 0.3)' : 'rgba(54, 102, 156, 0.2)',
             '&:hover': {
-              color: theme.vars.palette.secondary.light,
-              background: theme.vars.palette.secondary.dark
+              color: '#ffffff',
+              background: '#36669c'
             }
           }}
           onClick={() => handlerDrawerOpen(!drawerOpen)}
@@ -65,17 +69,19 @@ export default function Header() {
         <Avatar
           variant="rounded"
           sx={{
-            ...theme.typography.commonAvatar,
-            width: '44px',
-            height: '44px',
-            borderRadius: '14px',
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
             overflow: 'hidden',
+            cursor: 'pointer',
             transition: 'all .2s ease-in-out',
-            color: theme.vars.palette.secondary.dark,
-            background: theme.vars.palette.secondary.light,
+            color: mode === 'dark' ? '#77f07f' : '#36669c',
+            background: mode === 'dark' ? 'rgba(58, 47, 107, 0.4)' : 'rgba(54, 102, 156, 0.1)',
+            border: '1px solid',
+            borderColor: mode === 'dark' ? 'rgba(119, 240, 127, 0.3)' : 'rgba(54, 102, 156, 0.2)',
             '&:hover': {
-              color: theme.vars.palette.secondary.light,
-              background: theme.vars.palette.secondary.dark
+              color: '#ffffff',
+              background: '#41a0ae'
             }
           }}
           onClick={() => setMode(mode === 'light' ? 'dark' : 'light')}

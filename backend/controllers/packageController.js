@@ -43,11 +43,21 @@ const getPackages = asyncHandler(async (req, res, next) => {
   queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
   // Finding resource
-  query = Package.find(JSON.parse(queryStr))
+  let parsedQuery = JSON.parse(queryStr);
+  if (req.user && req.user.role !== 'Admin' && req.user.role !== 'Sub-Admin') {
+    const targetVendorId = (req.user.effectiveVendorId || req.user.id).toString();
+    parsedQuery.$or = [
+      { createdBy: req.user.id },
+      { vendor: targetVendorId }
+    ];
+  }
+
+  query = Package.find(parsedQuery)
     .populate('serviceCategory service', 'title name customId description')
     .populate('subService', 'title name customId description')
     .populate('category', 'title name customId description')
-    .populate('vendor', 'name companyName email');
+    .populate('vendor', 'name companyName email logo phone')
+    .populate('createdBy', 'name email role managedBy');
 
   // Select Fields
   if (req.query.select) {
@@ -68,7 +78,7 @@ const getPackages = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit, 10) || 10;
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
-  const total = await Package.countDocuments();
+  const total = await Package.countDocuments(parsedQuery);
 
   query = query.skip(startIndex).limit(limit);
 
@@ -108,7 +118,8 @@ const getPackage = asyncHandler(async (req, res, next) => {
     .populate('serviceCategory service', 'title name customId description')
     .populate('subService', 'title name customId description')
     .populate('category', 'title name customId description')
-    .populate('vendor', 'name companyName email');
+    .populate('vendor', 'name companyName email logo phone')
+    .populate('createdBy', 'name email role managedBy');
 
   if (!pkg) {
     return next(new ErrorResponse('Package not found', 404));
@@ -124,11 +135,15 @@ const createPackage = asyncHandler(async (req, res, next) => {
   if (!req.body) {
     return next(new ErrorResponse('Request body is missing', 400));
   }
-  // Add vendor to req.body
-  req.body.vendor = req.user.id;
+
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+
+  // Add vendor and createdBy to req.body
+  req.body.vendor = targetVendorId;
+  req.body.createdBy = req.body.createdBy || req.user.id;
 
   // Fetch vendor profile to check approval status and entitlements
-  const vendorProfile = await VendorProfile.findOne({ user: req.user.id });
+  const vendorProfile = await VendorProfile.findOne({ user: targetVendorId });
 
   if (!vendorProfile) {
     return next(new ErrorResponse('Vendor profile not found for this user', 404));
@@ -216,14 +231,24 @@ const updatePackage = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Package not found', 404));
   }
 
-  // Make sure user is package owner or Admin
-  if (pkg.vendor.toString() !== req.user.id && req.user.role !== 'Admin') {
-    return next(new ErrorResponse('User not authorized to update this package', 403));
+  const targetVendorId = (req.user.effectiveVendorId || req.user.id).toString();
+  const isSystemAdmin = req.user.role === 'Admin' || req.user.role === 'Sub-Admin';
+  
+  const creatorId = pkg.createdBy ? (pkg.createdBy._id || pkg.createdBy).toString() : null;
+  const pkgVendorId = pkg.vendor ? (pkg.vendor._id || pkg.vendor).toString() : null;
+  const userId = req.user.id.toString();
+
+  const isCreator = (creatorId && (creatorId === userId || creatorId === targetVendorId)) || 
+                    (pkgVendorId && (pkgVendorId === userId || pkgVendorId === targetVendorId));
+
+  // Only System Admin or package creator can update
+  if (!isSystemAdmin && !isCreator) {
+    return next(new ErrorResponse('Only the creator of this package is authorized to edit it.', 403));
   }
 
   // If service category is changing, check entitlements
   if (req.body.serviceCategory && req.body.serviceCategory !== pkg.serviceCategory.toString()) {
-     const vendorProfile = await VendorProfile.findOne({ user: req.user.id });
+     const vendorProfile = await VendorProfile.findOne({ user: targetVendorId });
      if (vendorProfile && vendorProfile.selectedServices && vendorProfile.selectedServices.length > 0) {
         const allowedServiceIds = vendorProfile.selectedServices.map(s => (s._id ? s._id.toString() : s.toString()));
         if (!allowedServiceIds.includes(req.body.serviceCategory.toString())) {
@@ -253,8 +278,6 @@ const updatePackage = asyncHandler(async (req, res, next) => {
           if (file.fieldname.startsWith('customFile_')) {
             const fieldName = file.fieldname.replace('customFile_', '');
             
-            // Note: In update, we might want to keep existing files
-            // Frontend should pass existing file paths in the array
             if (!customData[fieldName]) customData[fieldName] = [];
             else if (!Array.isArray(customData[fieldName])) customData[fieldName] = [customData[fieldName]];
             
@@ -301,9 +324,19 @@ const deletePackage = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Package not found', 404));
   }
 
-  // Make sure user is package owner or Admin
-  if (pkg.vendor.toString() !== req.user.id && req.user.role !== 'Admin') {
-    return next(new ErrorResponse('User not authorized to delete this package', 403));
+  const targetVendorId = (req.user.effectiveVendorId || req.user.id).toString();
+  const isSystemAdmin = req.user.role === 'Admin' || req.user.role === 'Sub-Admin';
+
+  const creatorId = pkg.createdBy ? (pkg.createdBy._id || pkg.createdBy).toString() : null;
+  const pkgVendorId = pkg.vendor ? (pkg.vendor._id || pkg.vendor).toString() : null;
+  const userId = req.user.id.toString();
+
+  const isCreator = (creatorId && (creatorId === userId || creatorId === targetVendorId)) || 
+                    (pkgVendorId && (pkgVendorId === userId || pkgVendorId === targetVendorId));
+
+  // Only System Admin or package creator can delete
+  if (!isSystemAdmin && !isCreator) {
+    return next(new ErrorResponse('Only the creator of this package is authorized to delete it.', 403));
   }
 
   // Delete all associated image files

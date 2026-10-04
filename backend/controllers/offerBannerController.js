@@ -51,8 +51,9 @@ exports.getAdminBanners = asyncHandler(async (req, res, next) => {
 // @access  Public
 exports.getVendorBanners = asyncHandler(async (req, res, next) => {
   const query = { userRole: 'Vendor' };
-  if (req.user && (req.user.role === 'Vendor' || req.user.role === 'Vendor-Staff')) {
-    query.createdBy = req.user.id;
+  if (req.user && (req.user.role === 'Vendor' || req.user.role === 'Vendor-Staff' || req.user.role === 'Staff')) {
+    const targetVendorId = req.user.effectiveVendorId || req.user.id;
+    query.$or = [{ createdBy: targetVendorId }, { createdBy: req.user.id }];
   }
   const banners = await OfferBanner.find(query).sort('-createdAt').populate('createdBy', 'name email role');
   res.status(200).json({ success: true, count: banners.length, data: banners });

@@ -1,8 +1,21 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+const getStoredUser = () => {
+  try {
+    const item = localStorage.getItem('user');
+    return item && item !== 'undefined' ? JSON.parse(item) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const getStoredToken = () => {
+  return localStorage.getItem('token') || localStorage.getItem('accessToken') || null;
+};
+
 const initialState = {
-  user: null,
-  token: localStorage.getItem('token') || null,
+  user: getStoredUser(),
+  token: getStoredToken(),
   loading: false,
   error: null,
   needsOTP: false,
@@ -43,9 +56,14 @@ const authSlice = createSlice({
         state.needsOTP = true;
         state.email = action.payload.email;
       } else {
+        const token = action.payload.accessToken || action.payload.token;
         state.user = action.payload;
-        state.token = action.payload.accessToken;
-        localStorage.setItem('token', action.payload.accessToken);
+        state.token = token || null;
+        if (token) {
+          localStorage.setItem('token', token);
+          localStorage.setItem('accessToken', token);
+        }
+        localStorage.setItem('user', JSON.stringify(action.payload));
       }
     },
     loginFailure: (state, action) => {
@@ -80,15 +98,21 @@ const authSlice = createSlice({
         state.infoMessage = action.payload.message;
         state.token = null;
         state.user = null;
+        localStorage.removeItem('token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
       } else {
+        const token = action.payload.accessToken || action.payload.token;
         state.user = action.payload;
-        state.token = action.payload.accessToken || null;
+        state.token = token || null;
         state.needsOTP = false;
         state.approvalPending = false;
         state.infoMessage = null;
-        if (action.payload.accessToken) {
-          localStorage.setItem('token', action.payload.accessToken);
+        if (token) {
+          localStorage.setItem('token', token);
+          localStorage.setItem('accessToken', token);
         }
+        localStorage.setItem('user', JSON.stringify(action.payload));
       }
     },
     verifyOTPFailure: (state, action) => {
@@ -103,6 +127,8 @@ const authSlice = createSlice({
       state.approvalPending = false;
       state.infoMessage = null;
       localStorage.removeItem('token');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
     },
   },
 });
@@ -115,3 +141,4 @@ export const {
   logout 
 } = authSlice.actions;
 export default authSlice.reducer;
+

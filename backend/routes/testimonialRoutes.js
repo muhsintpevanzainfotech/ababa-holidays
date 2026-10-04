@@ -20,7 +20,7 @@ router.post('/', protect, testimonialUpload.fields([{ name: 'image', maxCount: 1
 router.get('/', protect, getTestimonials);
 
 // Vendor/Admin routes
-router.put('/:id', protect, authorize('Vendor', 'Admin', 'Sub-Admin'), testimonialUpload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]), updateTestimonial);
-router.delete('/:id', protect, authorize('Vendor', 'Admin', 'Sub-Admin'), deleteTestimonial);
+router.put('/:id', protect, authorize('Vendor', 'Vendor-Staff', 'Admin', 'Sub-Admin'), testimonialUpload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]), updateTestimonial);
+router.delete('/:id', protect, authorize('Vendor', 'Vendor-Staff', 'Admin', 'Sub-Admin'), deleteTestimonial);
 
 module.exports = router;

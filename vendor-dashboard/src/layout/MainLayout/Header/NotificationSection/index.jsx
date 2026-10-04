@@ -2,7 +2,7 @@ import { Activity, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 // material-ui
-import { useTheme } from '@mui/material/styles';
+import { useTheme, useColorScheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
@@ -49,6 +49,7 @@ const status = [
 
 export default function NotificationSection() {
   const theme = useTheme();
+  const { mode } = useColorScheme();
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
 
   const [open, setOpen] = useState(false);
@@ -82,22 +83,26 @@ export default function NotificationSection() {
     event?.target.value && setValue(event?.target.value);
   };
 
+  const isDark = mode === 'dark' || theme.palette.mode === 'dark';
+
   return (
     <>
       <Box sx={{ display: 'flex' }}>
         <Avatar
           variant="rounded"
           sx={{
-            ...theme.typography.commonAvatar,
-            width: '44px',
-            height: '44px',
-            borderRadius: '14px',
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
             transition: 'all .2s ease-in-out',
-            color: theme.vars.palette.warning.dark,
-            background: theme.vars.palette.warning.light,
+            color: isDark ? '#41a0ae' : '#36669c',
+            background: isDark ? 'rgba(65, 160, 174, 0.18)' : 'rgba(54, 102, 156, 0.1)',
+            border: '1px solid',
+            borderColor: isDark ? 'rgba(65, 160, 174, 0.3)' : 'rgba(54, 102, 156, 0.2)',
+            cursor: 'pointer',
             '&:hover, &[aria-controls="menu-list-grow"]': {
-              color: theme.vars.palette.warning.light,
-              background: theme.vars.palette.warning.dark
+              color: '#ffffff',
+              background: '#36669c'
             }
           }}
           ref={anchorRef}
@@ -122,7 +127,22 @@ export default function NotificationSection() {
             <Transitions position={downMD ? 'top' : 'top-right'} in={open} {...TransitionProps}>
               <Paper>
                 <Activity mode={open ? 'visible' : 'hidden'}>
-                  <MainCard border={false} elevation={16} content={false} boxShadow shadow={theme.shadows[16]} sx={{ maxWidth: 330 }}>
+                  <MainCard
+                    border={false}
+                    elevation={16}
+                    content={false}
+                    boxShadow
+                    shadow={theme.shadows[16]}
+                    sx={{
+                      maxWidth: 340,
+                      bgcolor: isDark ? '#16152b' : '#ffffff',
+                      border: '1px solid',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0',
+                      borderRadius: '16px',
+                      overflow: 'hidden',
+                      boxShadow: isDark ? '0 12px 36px rgba(0,0,0,0.5)' : '0 12px 32px rgba(15, 23, 42, 0.1)'
+                    }}
+                  >
                     <Stack sx={{ gap: 2 }}>
                       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', pt: 2, px: 2 }}>
                         <Stack direction="row" sx={{ gap: 2 }}>

@@ -20,7 +20,7 @@ export default function TableCell(theme) {
         root: {
           transition: 'background-color 0.2s ease',
           '&.MuiTableRow-hover:hover': {
-            backgroundColor: 'rgba(37, 99, 235, 0.04) !important'
+            backgroundColor: 'rgba(54, 102, 156, 0.06) !important'
           }
         }
       }

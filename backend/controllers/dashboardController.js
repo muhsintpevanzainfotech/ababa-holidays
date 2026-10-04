@@ -15,8 +15,8 @@ const asyncHandler = require('../utils/asyncHandler');
 // @route   GET /api/dashboard/stats
 // @access  Private (Admin, Sub-Admin, Vendor)
 const getStats = asyncHandler(async (req, res, next) => {
-  const isVendor = req.user && req.user.role === 'Vendor';
-  const vendorId = req.user ? req.user._id : null;
+  const isVendorRole = req.user && ['Vendor', 'Vendor-Staff', 'Staff', 'vendor-staff', 'staff'].includes(req.user.role);
+  const vendorId = req.user ? (req.user.effectiveVendorId || req.user._id) : null;
 
   let totalUsers = 0;
   let totalVendors = 0;
@@ -29,7 +29,7 @@ const getStats = asyncHandler(async (req, res, next) => {
   let totalRevenue = 0;
   let recentItems = [];
 
-  if (isVendor && vendorId) {
+  if (isVendorRole && vendorId) {
     const [
       vendorPkgCount,
       vendorBookingCount,

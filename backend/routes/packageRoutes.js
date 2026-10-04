@@ -7,14 +7,14 @@ const {
   deletePackage
 } = require('../controllers/packageController');
 
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { protect, authorize, optionalProtect } = require('../middleware/authMiddleware');
 const { createUpload } = require('../middleware/uploadMiddleware');
 const upload = createUpload('packages');
 
 const router = express.Router();
 
 router.route('/')
-  .get(getPackages)
+  .get(optionalProtect, getPackages)
   .post(protect, authorize('Vendor', 'Vendor-Staff', 'Admin'), upload.any(), createPackage);
 
 router.route('/:id')

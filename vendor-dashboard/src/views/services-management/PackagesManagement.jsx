@@ -1,18 +1,25 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import {
   Grid, Typography, Button, Stack, Box, TextField, InputAdornment,
   Paper, Chip, IconButton, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, TablePagination, Tooltip,
   Dialog, DialogTitle, DialogContent, DialogActions, MenuItem,
-  Card, CardContent, CardMedia, Divider, CircularProgress, Avatar
+  Card, CardContent, CardMedia, Divider, CircularProgress, Avatar,
+  Snackbar, Alert, ToggleButton, ToggleButtonGroup, Radio, RadioGroup,
+  FormControlLabel, FormControl, FormLabel, Autocomplete
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
+import SaasHeader from 'ui-component/extended/SaasHeader';
+import StatusBadge from 'ui-component/extended/StatusBadge';
+import DataTable from 'ui-component/extended/DataTable';
 import { gridSpacing } from 'store/constant';
 import api from 'utils/api';
+import DynamicPackageForm from './DynamicPackageForm';
 
 // assets / icons
 import AddIcon from '@mui/icons-material/Add';
@@ -33,6 +40,14 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import StarIcon from '@mui/icons-material/Star';
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import TuneIcon from '@mui/icons-material/Tune';
+import SellIcon from '@mui/icons-material/Sell';
+import CategoryIcon from '@mui/icons-material/Category';
 
 const getFullImageUrl = (path) => {
   const baseUrl = import.meta.env.VITE_APP_API_URL
@@ -48,7 +63,16 @@ const getFullImageUrl = (path) => {
 
 const PackagesManagement = () => {
   const theme = useTheme();
+  const { user } = useSelector((state) => state.auth);
+  const isAdminUser = ['Admin', 'Sub-Admin', 'Staff'].includes(user?.role);
+  const isSystemAdmin = ['Admin', 'Sub-Admin'].includes(user?.role);
+  const isVendorStaff = user && (user.role === 'Vendor-Staff' || user.role === 'vendor-staff');
+  const isVendorAdmin = ['Admin', 'Sub-Admin', 'Vendor', 'vendor', 'Vendor-Admin'].includes(user?.role);
+  const currentUserId = (user?._id || user?.id || '').toString();
+  const hasPackagePermission = !isVendorStaff || (Array.isArray(user?.permissions) ? user.permissions.includes('manage_packages') : true);
+
   const [searchParams, setSearchParams] = useSearchParams();
+  const { customId, serviceName } = useParams();
   const initialServiceId = searchParams.get('service') || 'all';
 
   // Data states
@@ -58,7 +82,7 @@ const PackagesManagement = () => {
   const [services, setServices] = useState([]);
   const [vendorProfile, setVendorProfile] = useState(null);
 
-  // Selected Service Filter ('all' or specific service _id)
+  // Selected Service & Filter states
   const [selectedServiceId, setSelectedServiceId] = useState(initialServiceId);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -80,14 +104,46 @@ const PackagesManagement = () => {
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
 
+  // Toast notifications state
+  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+  const showToast = (message, severity = 'success') => {
+    setToast({ open: true, message, severity });
+  };
+
+  const [subServices, setSubServices] = useState([]);
+  const [categories, setCategories] = useState([]);
+
+  // Custom Billing Units State
+  const [customUnits, setCustomUnits] = useState([
+    'Per Person', 'Per Adult', 'Per Child', 'Per Couple', 'Per Group',
+    'Per Room', 'Per Night', 'Per Day', 'Per Vehicle', 'Fixed Rate', 'Starting From'
+  ]);
+  const [openCustomUnitDialog, setOpenCustomUnitDialog] = useState(false);
+  const [newCustomUnitInput, setNewCustomUnitInput] = useState('');
+
+  // Form Setup fields states
+  const [configuredFields, setConfiguredFields] = useState([]);
+  const [loadingFields, setLoadingFields] = useState(false);
+  const [dynamicValues, setDynamicValues] = useState({});
+  const [customFiles, setCustomFiles] = useState({});
+
   // Form State for Package (supporting multiple images + file uploads)
   const [formData, setFormData] = useState({
     title: '',
     serviceCategory: '',
+    selectionMode: 'single', // 'single' | 'multiple'
+    subService: '',
+    subServices: [],
+    category: '',
+    categories: [],
     price: '',
     originalPrice: '',
     discountPrice: '',
-    priceType: 'Per Person',
+    priceType: '',
+    currency: 'INR (₹)',
+    taxRate: '18',
+    taxPolicy: 'inclusive', // 'inclusive' | 'exclusive'
+    priceNotes: '',
     duration: '',
     location: '',
     description: '',
@@ -103,22 +159,37 @@ const PackagesManagement = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [profileRes, servicesRes, packagesRes] = await Promise.all([
+      const [profileRes, servicesRes, packagesRes, subServicesRes, categoriesRes] = await Promise.all([
         api.get('/vendors/profile').catch(() => ({ success: false })),
         api.get('/services').catch(() => ({ success: false })),
-        api.get('/packages?limit=200').catch(() => ({ success: false }))
+        api.get('/packages?limit=200').catch(() => ({ success: false })),
+        api.get('/sub-services?limit=200').catch(() => ({ success: false })),
+        api.get('/categories?limit=200').catch(() => ({ success: false }))
       ]);
 
-      if (servicesRes.success) {
-        setServices(servicesRes.data || []);
+      if (servicesRes.success || servicesRes.data) {
+        setServices(servicesRes.data || servicesRes || []);
       }
 
       if (profileRes.success && profileRes.data) {
         setVendorProfile(profileRes.data.profile || {});
       }
 
-      if (packagesRes.success) {
-        setPackages(packagesRes.data || []);
+      if (packagesRes.success || packagesRes.data) {
+        const loadedPkgs = packagesRes.data || packagesRes || [];
+        setPackages(loadedPkgs);
+        const loadedUnits = loadedPkgs.map(p => p.priceType).filter(Boolean);
+        if (loadedUnits.length > 0) {
+          setCustomUnits(prev => Array.from(new Set([...prev, ...loadedUnits])));
+        }
+      }
+
+      if (subServicesRes.success || subServicesRes.data) {
+        setSubServices(subServicesRes.data || subServicesRes || []);
+      }
+
+      if (categoriesRes.success || categoriesRes.data) {
+        setCategories(categoriesRes.data || categoriesRes || []);
       }
     } catch (error) {
       console.error('Failed to load packages or services:', error);
@@ -131,13 +202,26 @@ const PackagesManagement = () => {
     fetchData();
   }, []);
 
-  // Update selectedServiceId when URL query changes
+  // Update selectedServiceId when URL query or route parameters change
   useEffect(() => {
     const qService = searchParams.get('service');
     if (qService) {
       setSelectedServiceId(qService);
+    } else if (customId || serviceName) {
+      const match = services.find(
+        (s) =>
+          (customId && (s.customId === customId || s._id === customId)) ||
+          (serviceName && s.title && s.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') === serviceName)
+      );
+      if (match) {
+        setSelectedServiceId(match._id);
+      } else if (customId) {
+        setSelectedServiceId(customId);
+      }
+    } else {
+      setSelectedServiceId('all');
     }
-  }, [searchParams]);
+  }, [searchParams, customId, serviceName, services]);
 
   const handleSelectService = (serviceId) => {
     setSelectedServiceId(serviceId);
@@ -149,86 +233,231 @@ const PackagesManagement = () => {
     }
   };
 
-  // Filter packages by selected Service & search/status filters
-  const filteredPackages = packages.filter((pkg) => {
-    let matchesService = true;
-    if (selectedServiceId !== 'all') {
-      const pkgSvcId = pkg.serviceCategory?._id || pkg.serviceCategory || pkg.service?._id || pkg.service;
-      matchesService = pkgSvcId === selectedServiceId;
+  // Check if a package matches the service filter (by ID or title keyword)
+  const matchesServiceFilter = (pkg, filterVal) => {
+    if (!filterVal || filterVal === 'all') return true;
+    const pkgSvcId = (pkg.serviceCategory?._id || pkg.serviceCategory || pkg.service?._id || pkg.service || '').toString();
+    if (pkgSvcId && pkgSvcId === filterVal.toString()) return true;
+
+    const pkgSvcTitle = (
+      pkg.serviceCategory?.title ||
+      pkg.serviceCategory?.name ||
+      pkg.service?.title ||
+      pkg.service?.name ||
+      pkg.serviceName ||
+      pkg.category ||
+      ''
+    ).toLowerCase();
+
+    const searchVal = filterVal.toLowerCase();
+    return pkgSvcTitle.includes(searchVal) || searchVal.includes(pkgSvcTitle);
+  };
+
+  const matchesCreator = (pkg) => {
+    // System Admins (Admin, Sub-Admin) can view and control ALL packages
+    if (isSystemAdmin) return true;
+
+    // Vendors & Vendor Staff can ONLY view & control packages created by themselves or belonging to their vendor account
+    const creatorId = (pkg.createdBy?._id || pkg.createdBy?.id || pkg.createdBy || '').toString();
+    const pkgVendorId = (pkg.vendor?._id || pkg.vendor?.id || pkg.vendor || '').toString();
+    const effectiveVendorId = (user?.effectiveVendorId || user?.managedBy || currentUserId).toString();
+
+    if (!creatorId && !pkgVendorId) return true;
+
+    return (
+      creatorId === currentUserId ||
+      creatorId === effectiveVendorId ||
+      pkgVendorId === currentUserId ||
+      pkgVendorId === effectiveVendorId
+    );
+  };
+
+  const getCreatorDetails = (pkg) => {
+    if (!pkg) return { isStaff: false, staffName: '', mainVendorName: 'Vendor', fullLabel: 'Vendor' };
+
+    const mainVendorName = pkg.vendor?.companyName || pkg.vendor?.name || '';
+    const staffName = pkg.createdBy?.name || '';
+    const staffRole = (pkg.createdBy?.role || '').toLowerCase();
+
+    const createdById = (pkg.createdBy?._id || pkg.createdBy?.id || pkg.createdBy || '').toString();
+    const vendorId = (pkg.vendor?._id || pkg.vendor?.id || pkg.vendor || '').toString();
+
+    const isStaff = staffRole.includes('staff') || (createdById && vendorId && createdById !== vendorId);
+
+    if (isStaff && staffName) {
+      return {
+        isStaff: true,
+        staffName,
+        mainVendorName: mainVendorName || 'Main Vendor',
+        fullLabel: `Staff: ${staffName} • Vendor: ${mainVendorName || 'Main Vendor'}`
+      };
     }
+
+    const name = mainVendorName || staffName || 'Vendor Admin';
+    return {
+      isStaff: false,
+      staffName: '',
+      mainVendorName: name,
+      fullLabel: name
+    };
+  };
+
+  // Filter packages by selected Service, Creator, & search/status filters
+  const filteredPackages = packages.filter((pkg) => {
+    const matchesService = matchesServiceFilter(pkg, selectedServiceId);
+    const matchesUserCreator = matchesCreator(pkg);
 
     const title = pkg.title || '';
     const loc = pkg.location || '';
     const customId = pkg.customId || '';
+    const creatorName = (pkg.createdBy?.name || pkg.vendor?.companyName || pkg.vendor?.name || '').toLowerCase();
     const matchesSearch =
       title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       loc.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customId.toLowerCase().includes(searchTerm.toLowerCase());
+      customId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      creatorName.includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === 'All'
         ? true
         : statusFilter === 'Active'
-        ? pkg.status === 'Active' || pkg.isActive
-        : pkg.status === statusFilter;
+          ? pkg.status === 'Active' || pkg.isActive
+          : pkg.status === statusFilter;
 
-    return matchesService && matchesSearch && matchesStatus;
+    return matchesService && matchesUserCreator && matchesSearch && matchesStatus;
   });
 
   const paginatedPackages = filteredPackages.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const getPackageCountForService = (serviceId) => {
-    if (serviceId === 'all') return packages.length;
-    return packages.filter((pkg) => {
-      const pkgSvcId = pkg.serviceCategory?._id || pkg.serviceCategory || pkg.service?._id || pkg.service;
-      return pkgSvcId === serviceId;
-    }).length;
+    if (serviceId === 'all') return filteredPackages.length;
+    return filteredPackages.filter((pkg) => matchesServiceFilter(pkg, serviceId)).length;
+  };
+
+  const fetchFormSetupFields = async (svcId) => {
+    if (!svcId) {
+      setConfiguredFields([]);
+      return;
+    }
+    setLoadingFields(true);
+    try {
+      const res = await api.get(`/package-fields/setup/${svcId}`);
+      let fieldsArr = [];
+      if (res) {
+        if (Array.isArray(res.data)) fieldsArr = res.data;
+        else if (Array.isArray(res.data?.data)) fieldsArr = res.data.data;
+        else if (Array.isArray(res)) fieldsArr = res;
+      }
+      setConfiguredFields(fieldsArr);
+    } catch (err) {
+      console.error('Failed to load form setup fields:', err);
+      setConfiguredFields([]);
+    } finally {
+      setLoadingFields(false);
+    }
   };
 
   // Open Create/Edit Package Dialog
   const handleOpenForm = (pkg = null) => {
     setSelectedPackage(pkg);
     setSelectedFiles([]);
-    if (pkg) {
-      const svcId = pkg.serviceCategory?._id || pkg.serviceCategory || pkg.service?._id || pkg.service || (services[0]?._id || '');
-      const existingImages = Array.isArray(pkg.images) ? [...pkg.images] : (pkg.images ? [pkg.images] : []);
-      
-      setFormData({
+    setCustomFiles({});
+
+    const activeSvcId = pkg
+      ? (pkg.serviceCategory?._id || pkg.serviceCategory || pkg.service?._id || pkg.service || (handledServices[0]?._id || services[0]?._id || ''))
+      : ((selectedServiceId !== 'all' ? selectedServiceId : handledServices[0]?._id || services[0]?._id) || '');
+
+    const existingImages = pkg ? (Array.isArray(pkg.images) ? [...pkg.images] : (pkg.images ? [pkg.images] : [])) : [];
+
+    const initialDynamic = pkg
+      ? {
+        ...(pkg.customData || {}),
         title: pkg.title || '',
-        serviceCategory: svcId,
         price: pkg.price || '',
         originalPrice: pkg.originalPrice || '',
         discountPrice: pkg.discountPrice || '',
-        priceType: pkg.priceType || 'Per Person',
+        priceType: pkg.priceType || '',
         duration: pkg.duration || '',
         location: pkg.location || '',
         description: pkg.description || '',
         inclusions: Array.isArray(pkg.inclusions) ? pkg.inclusions.join(', ') : pkg.inclusions || '',
         exclusions: Array.isArray(pkg.exclusions) ? pkg.exclusions.join(', ') : pkg.exclusions || '',
-        status: pkg.status || 'Active',
-        images: existingImages,
-        newUrlInput: ''
-      });
-    } else {
-      const defaultSvc = (selectedServiceId !== 'all' ? selectedServiceId : services[0]?._id) || '';
-      setFormData({
+        status: pkg.status || 'Active'
+      }
+      : {
         title: '',
-        serviceCategory: defaultSvc,
         price: '',
-        originalPrice: '',
-        discountPrice: '',
-        priceType: 'Per Person',
+        priceType: '',
         duration: '',
         location: '',
         description: '',
         inclusions: '',
         exclusions: '',
-        status: 'Active',
-        images: [],
-        newUrlInput: ''
-      });
+        status: 'Active'
+      };
+
+    const isMultiMode = (Array.isArray(pkg?.subServices) && pkg.subServices.length > 0) || (Array.isArray(pkg?.categories) && pkg.categories.length > 0);
+    const subSvcSelected = pkg?.subServices && pkg.subServices.length > 0
+      ? pkg.subServices.map(s => s._id || s)
+      : (pkg?.subService ? [pkg.subService._id || pkg.subService] : []);
+    const catSelected = pkg?.categories && pkg.categories.length > 0
+      ? pkg.categories.map(c => c._id || c)
+      : (pkg?.category ? [pkg.category._id || pkg.category] : []);
+
+    const pkgPriceType = pkg ? (pkg.priceType || '') : '';
+    if (pkgPriceType && !customUnits.includes(pkgPriceType)) {
+      setCustomUnits((prev) => [...prev, pkgPriceType]);
+    }
+
+    setFormData({
+      title: pkg?.title || '',
+      serviceCategory: activeSvcId,
+      selectionMode: isMultiMode ? 'multiple' : 'single',
+      subService: pkg?.subService?._id || pkg?.subService || (subSvcSelected[0] || ''),
+      subServices: subSvcSelected,
+      category: pkg?.category?._id || pkg?.category || (catSelected[0] || ''),
+      categories: catSelected,
+      price: pkg?.price !== undefined && pkg?.price !== null ? pkg.price : '',
+      originalPrice: pkg?.originalPrice !== undefined && pkg?.originalPrice !== null ? pkg.originalPrice : '',
+      discountPrice: pkg?.discountPrice !== undefined && pkg?.discountPrice !== null ? pkg.discountPrice : '',
+      priceType: pkgPriceType,
+      currency: pkg?.currency || 'INR (₹)',
+      taxRate: pkg?.taxRate !== undefined && pkg?.taxRate !== null ? pkg.taxRate : '18',
+      taxPolicy: pkg?.taxPolicy || 'inclusive',
+      priceNotes: pkg?.priceNotes || '',
+      duration: pkg?.duration || '',
+      location: pkg?.location || '',
+      description: pkg?.description || '',
+      inclusions: Array.isArray(pkg?.inclusions) ? pkg.inclusions.join(', ') : pkg?.inclusions || '',
+      exclusions: Array.isArray(pkg?.exclusions) ? pkg.exclusions.join(', ') : pkg?.exclusions || '',
+      status: pkg?.status || 'Active',
+      images: existingImages,
+      newUrlInput: ''
+    });
+
+    setDynamicValues(initialDynamic);
+    if (activeSvcId) {
+      fetchFormSetupFields(activeSvcId);
     }
     setOpenFormDialog(true);
+  };
+
+  const handleServiceCategoryChange = (newSvcId) => {
+    setFormData((prev) => ({ ...prev, serviceCategory: newSvcId }));
+    if (newSvcId) {
+      fetchFormSetupFields(newSvcId);
+    }
+  };
+
+  const handleDynamicValueChange = (fieldName, val) => {
+    setDynamicValues((prev) => ({ ...prev, [fieldName]: val }));
+    if (['title', 'price', 'priceType', 'duration', 'location', 'description', 'inclusions', 'exclusions', 'status'].includes(fieldName)) {
+      setFormData((prev) => ({ ...prev, [fieldName]: val }));
+    }
+  };
+
+  const handleDynamicFileChange = (fieldName, filesArr) => {
+    setCustomFiles((prev) => ({ ...prev, [fieldName]: filesArr }));
   };
 
   // Image Form Handlers
@@ -236,7 +465,7 @@ const PackagesManagement = () => {
     const url = formData.newUrlInput.trim();
     if (!url) return;
     if (formData.images.includes(url)) {
-      alert('This image URL is already added');
+      showToast('This image URL is already added', 'warning');
       return;
     }
     setFormData((prev) => ({
@@ -275,48 +504,80 @@ const PackagesManagement = () => {
 
   // Submit Package Form (JSON or FormData if local files attached)
   const handleSubmitForm = async () => {
-    if (!formData.title.trim()) {
-      alert('Package Title is required');
-      return;
-    }
     if (!formData.serviceCategory) {
-      alert('Please select a Service Category for this package');
+      showToast('Please select a Service Category for this package', 'error');
       return;
     }
 
     setSubmitting(true);
     try {
-      const inclusionsArr = formData.inclusions
-        ? formData.inclusions.split(',').map((s) => s.trim()).filter(Boolean)
-        : [];
-      const exclusionsArr = formData.exclusions
-        ? formData.exclusions.split(',').map((s) => s.trim()).filter(Boolean)
-        : [];
+      const titleVal =
+        dynamicValues.title ||
+        dynamicValues.name ||
+        dynamicValues.package_title ||
+        dynamicValues.title_name ||
+        formData.title ||
+        'Package Listing';
 
-      const hasFiles = selectedFiles.length > 0;
+      const priceVal = Number(
+        dynamicValues.price || dynamicValues.rate || dynamicValues.amount || formData.price || 0
+      );
+
+      const inclusionsArr = typeof dynamicValues.inclusions === 'string'
+        ? dynamicValues.inclusions.split(',').map((s) => s.trim()).filter(Boolean)
+        : Array.isArray(dynamicValues.inclusions)
+          ? dynamicValues.inclusions
+          : [];
+
+      const exclusionsArr = typeof dynamicValues.exclusions === 'string'
+        ? dynamicValues.exclusions.split(',').map((s) => s.trim()).filter(Boolean)
+        : Array.isArray(dynamicValues.exclusions)
+          ? dynamicValues.exclusions
+          : [];
+
+      const hasFiles = selectedFiles.length > 0 || Object.keys(customFiles).length > 0;
+      const payloadCustomData = { ...dynamicValues };
 
       if (hasFiles) {
         const fd = new FormData();
-        fd.append('title', formData.title);
+        fd.append('title', titleVal);
         fd.append('serviceCategory', formData.serviceCategory);
         fd.append('service', formData.serviceCategory);
-        fd.append('price', Number(formData.price) || 0);
-        fd.append('originalPrice', Number(formData.originalPrice) || 0);
-        fd.append('discountPrice', Number(formData.discountPrice) || 0);
-        fd.append('priceType', formData.priceType);
-        fd.append('duration', formData.duration || '');
-        fd.append('location', formData.location || '');
-        fd.append('description', formData.description || '');
-        fd.append('status', formData.status || 'Active');
+        if (formData.subService) fd.append('subService', formData.subService);
+        if (formData.category) fd.append('category', formData.category);
+        fd.append('price', priceVal);
+        fd.append('originalPrice', Number(formData.originalPrice || dynamicValues.originalPrice) || 0);
+        fd.append('discountPrice', Number(formData.discountPrice || dynamicValues.discountPrice) || 0);
+        fd.append('priceType', formData.priceType || dynamicValues.priceType || 'Per Person');
+        if (formData.priceNotes) fd.append('priceNotes', formData.priceNotes);
+        fd.append('duration', dynamicValues.duration || formData.duration || '');
+        fd.append('location', dynamicValues.location || formData.location || '');
+        fd.append('description', dynamicValues.description || formData.description || '');
+        fd.append('selectionMode', formData.selectionMode || 'single');
+        if (formData.selectionMode === 'multiple' && Array.isArray(formData.subServices)) {
+          formData.subServices.forEach((subId) => fd.append('subServices', subId));
+        }
+        if (formData.selectionMode === 'multiple' && Array.isArray(formData.categories)) {
+          formData.categories.forEach((catId) => fd.append('categories', catId));
+        }
+        fd.append('currency', formData.currency || 'INR (₹)');
+        fd.append('taxRate', Number(formData.taxRate) || 0);
+        fd.append('taxPolicy', formData.taxPolicy || 'inclusive');
+        fd.append('status', formData.status || dynamicValues.status || 'Active');
+        fd.append('customData', JSON.stringify(payloadCustomData));
 
         inclusionsArr.forEach((inc) => fd.append('inclusions', inc));
         exclusionsArr.forEach((exc) => fd.append('exclusions', exc));
 
-        // Append existing image URL strings
         formData.images.forEach((img) => fd.append('images', img));
-
-        // Append new binary files
         selectedFiles.forEach((file) => fd.append('images', file));
+
+        Object.keys(customFiles).forEach((fName) => {
+          const filesArr = customFiles[fName];
+          if (Array.isArray(filesArr)) {
+            filesArr.forEach((file) => fd.append(`customFile_${fName}`, file));
+          }
+        });
 
         if (selectedPackage) {
           await api.put(`/packages/${selectedPackage._id}`, fd, true);
@@ -325,20 +586,30 @@ const PackagesManagement = () => {
         }
       } else {
         const payload = {
-          title: formData.title,
+          title: titleVal,
           serviceCategory: formData.serviceCategory,
           service: formData.serviceCategory,
-          price: Number(formData.price) || 0,
-          originalPrice: Number(formData.originalPrice) || 0,
-          discountPrice: Number(formData.discountPrice) || 0,
-          priceType: formData.priceType,
-          duration: formData.duration,
-          location: formData.location,
-          description: formData.description,
-          status: formData.status,
+          selectionMode: formData.selectionMode || 'single',
+          subService: formData.subService || undefined,
+          subServices: formData.selectionMode === 'multiple' ? formData.subServices : undefined,
+          category: formData.category || undefined,
+          categories: formData.selectionMode === 'multiple' ? formData.categories : undefined,
+          price: priceVal,
+          originalPrice: Number(formData.originalPrice || dynamicValues.originalPrice) || 0,
+          discountPrice: Number(formData.discountPrice || dynamicValues.discountPrice) || 0,
+          priceType: formData.priceType || dynamicValues.priceType || 'Per Person',
+          currency: formData.currency || 'INR (₹)',
+          taxRate: Number(formData.taxRate) || 0,
+          taxPolicy: formData.taxPolicy || 'inclusive',
+          priceNotes: formData.priceNotes || '',
+          duration: dynamicValues.duration || formData.duration || '',
+          location: dynamicValues.location || formData.location || '',
+          description: dynamicValues.description || formData.description || '',
+          status: formData.status || dynamicValues.status || 'Active',
           inclusions: inclusionsArr,
           exclusions: exclusionsArr,
-          images: formData.images
+          images: formData.images,
+          customData: payloadCustomData
         };
 
         if (selectedPackage) {
@@ -349,9 +620,10 @@ const PackagesManagement = () => {
       }
 
       setOpenFormDialog(false);
+      showToast(selectedPackage ? 'Package updated successfully!' : 'Package created successfully!', 'success');
       fetchData();
     } catch (error) {
-      alert(error.message || 'Failed to save package');
+      showToast(error.message || 'Failed to save package', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -375,153 +647,628 @@ const PackagesManagement = () => {
       await api.delete(`/packages/${itemToDelete._id}`);
       setOpenDeleteDialog(false);
       setItemToDelete(null);
+      showToast('Package deleted successfully!', 'success');
       fetchData();
     } catch (error) {
-      alert(error.message || 'Failed to delete package');
+      showToast(error.message || 'Failed to delete package', 'error');
     }
   };
 
-  const handledServices = (vendorProfile?.selectedServices && vendorProfile.selectedServices.length > 0)
-    ? services.filter((svc) => {
-        const handledIds = vendorProfile.selectedServices.map((s) => (s._id ? s._id.toString() : s.toString()));
-        return handledIds.includes(svc._id.toString());
-      })
-    : services;
+  const handledServices = (isAdminUser || !vendorProfile?.selectedServices || vendorProfile.selectedServices.length === 0)
+    ? services
+    : services.filter((svc) => {
+      const handledIds = vendorProfile.selectedServices.map((s) => (s._id ? s._id.toString() : s.toString()));
+      return handledIds.includes(svc._id.toString());
+    });
 
   const selectedServiceObj = handledServices.find((s) => s._id === selectedServiceId) || services.find((s) => s._id === selectedServiceId);
 
-  return (
-    <Grid container spacing={gridSpacing}>
-      {/* PAGE HEADER */}
-      <Grid size={12}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between', gap: 2, mb: 1 }}>
-          <Box>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <InventoryIcon color="secondary" sx={{ fontSize: 32 }} />
-              <Typography variant="h2" fontWeight="800">
-                Vendor Packages Management
-              </Typography>
-            </Stack>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Select a service category below to manage packages, upload image galleries, and configure pricing.
-            </Typography>
-          </Box>
+  if (!hasPackagePermission) {
+    return (
+      <Paper
+        elevation={0}
+        sx={{
+          p: 4,
+          textAlign: 'center',
+          borderRadius: '16px',
+          border: '1px solid',
+          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e2e8f0',
+          backgroundColor: theme.palette.mode === 'dark' ? '#111936' : '#ffffff',
+          mt: 3
+        }}
+      >
+        <Typography variant="h3" color="error" gutterBottom sx={{ fontWeight: 800 }}>
+          Access Denied
+        </Typography>
+        <Typography variant="body1" sx={{ color: theme.palette.mode === 'dark' ? '#cbd5e1' : '#64748b', mb: 3 }}>
+          Your staff account does not have authorization to access Packages &amp; Listings management.
+        </Typography>
+        <Button variant="contained" color="primary" onClick={() => window.location.href = '/dashboard'} sx={{ borderRadius: '10px', fontWeight: 700 }}>
+          Return to Dashboard
+        </Button>
+      </Paper>
+    );
+  }
 
-          <Button
-            variant="contained"
-            color="secondary"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenForm(null)}
+  if (openFormDialog) {
+    return (
+      <Grid container spacing={gridSpacing}>
+        {/* TOAST SNACKBAR NOTIFICATION */}
+        <Snackbar
+          open={toast.open}
+          autoHideDuration={5000}
+          onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <Alert
+            onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+            severity={toast.severity}
+            variant="filled"
+            sx={{ width: '100%', borderRadius: '10px', fontWeight: 600 }}
+          >
+            {toast.message}
+          </Alert>
+        </Snackbar>
+
+        {/* FULL PAGE HEADER */}
+        <Grid size={12}>
+          <Paper
+            elevation={0}
             sx={{
-              borderRadius: '10px',
-              px: 3,
-              py: 1.2,
-              fontWeight: 700,
-              boxShadow: '0 6px 18px rgba(124, 58, 237, 0.35)',
-              textTransform: 'none'
+              p: 2.5,
+              borderRadius: '16px',
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
             }}
           >
-            Create New Package
-          </Button>
-        </Stack>
-      </Grid>
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={() => setOpenFormDialog(false)}
+                  startIcon={<ChevronLeftIcon />}
+                  sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700 }}
+                >
+                  Back to Packages
+                </Button>
+                <Box>
+                  <Typography variant="h3" fontWeight="bold">
+                    {selectedPackage ? 'Edit Package Listing' : 'Create New Package Listing'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {selectedPackage
+                      ? `Update pricing, photos, location, and custom fields for "${selectedPackage.title}"`
+                      : 'Fill in the package details, setup dynamic fields, and upload image galleries.'}
+                  </Typography>
+                </Box>
+              </Stack>
+              <Stack direction="row" spacing={1.5}>
+                <Button onClick={() => setOpenFormDialog(false)} color="inherit" disabled={submitting} sx={{ borderRadius: '10px', px: 2.5 }}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={handleSubmitForm}
+                  disabled={submitting}
+                  sx={{ borderRadius: '10px', px: 3, fontWeight: 700 }}
+                >
+                  {submitting ? 'Saving Package...' : selectedPackage ? 'Update Package & Photos' : 'Create Package Listing'}
+                </Button>
+              </Stack>
+            </Stack>
+          </Paper>
+        </Grid>
 
-      {/* SERVICE SELECTOR CARDS BAR */}
-      <Grid size={12}>
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2.5,
-            borderRadius: '18px',
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
-          }}
-        >
-          <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.8px', color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <LayersIcon fontSize="small" color="secondary" /> Select Service Category to View Its Packages:
-          </Typography>
+        {/* CARD 1: PACKAGE SPECIFICATIONS, SERVICES & CATEGORIES */}
+        <Grid size={12}>
+          <MainCard title="Package Specifications, Services & Categories">
+            <Grid container spacing={2.5}>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  disabled
+                  label="Package ID"
+                  value={selectedPackage?.customId || 'AUTO'}
+                  helperText="Auto-Generated (e.g. PKG202600001)"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Chip label="AUTO" size="small" color="primary" sx={{ height: 20, fontSize: '10px', fontWeight: 800 }} />
+                      </InputAdornment>
+                    )
+                  }}
+                />
+              </Grid>
 
-          <Grid container spacing={1.5}>
-            {/* "All Services" Tab Card */}
-            <Grid size={{ xs: 6, sm: 4, md: 2.4 }}>
-              <Paper
-                elevation={0}
-                onClick={() => handleSelectService('all')}
-                sx={{
-                  p: 2,
-                  borderRadius: '14px',
-                  border: '2px solid',
-                  borderColor: selectedServiceId === 'all' ? 'secondary.main' : 'divider',
-                  bgcolor: selectedServiceId === 'all' ? 'secondary.light' : 'background.default',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  '&:hover': { borderColor: 'secondary.main', transform: 'translateY(-2px)' }
-                }}
-              >
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight={800} color={selectedServiceId === 'all' ? 'secondary.main' : 'text.primary'}>
-                      All Services
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Package Status *"
+                  value={formData.status}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, status: e.target.value }));
+                    handleDynamicValueChange('status', e.target.value);
+                  }}
+                >
+                  <MenuItem value="Active">🟢 Active & Published</MenuItem>
+                  <MenuItem value="Draft">🟡 Draft</MenuItem>
+                  <MenuItem value="Inactive">🔴 Inactive</MenuItem>
+                </TextField>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: '8px', bgcolor: 'action.hover' }}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" gutterBottom>
+                    Offering Vendor / Partner *
+                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <StorefrontIcon color="primary" fontSize="small" />
+                    <Typography variant="subtitle2" fontWeight="800">
+                      {vendorProfile?.companyName || vendorProfile?.name || user?.name || 'Ababa Vendor Partner'}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Full Catalog
-                    </Typography>
-                  </Box>
-                  <Chip
-                    label={getPackageCountForService('all')}
+                  </Stack>
+                </Box>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Service Category *"
+                  value={formData.serviceCategory}
+                  onChange={(e) => handleServiceCategoryChange(e.target.value)}
+                  required
+                >
+                  {handledServices.map((svc) => (
+                    <MenuItem key={svc._id} value={svc._id}>
+                      {svc.title}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 8 }}>
+                <FormControl component="fieldset" fullWidth>
+                  <FormLabel component="legend" sx={{ fontWeight: 700, fontSize: '0.85rem', mb: 0.8 }}>
+                    Sub Service & Category Mode (Choose single or multiple selection)
+                  </FormLabel>
+                  <ToggleButtonGroup
+                    value={formData.selectionMode || 'single'}
+                    exclusive
+                    onChange={(e, val) => {
+                      if (val) setFormData((prev) => ({ ...prev, selectionMode: val }));
+                    }}
                     size="small"
-                    color={selectedServiceId === 'all' ? 'secondary' : 'default'}
-                    sx={{ fontWeight: 800 }}
+                    color="secondary"
+                  >
+                    <ToggleButton value="single" sx={{ px: 2.5, fontWeight: 700 }}>
+                      🎯 Single Select
+                    </ToggleButton>
+                    <ToggleButton value="multiple" sx={{ px: 2.5, fontWeight: 700 }}>
+                      📚 Multiple Select
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </FormControl>
+              </Grid>
+
+              {/* Sub Service Field (Single or Multi) */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                {formData.selectionMode === 'multiple' ? (
+                  <Autocomplete
+                    multiple
+                    options={subServices.filter((sub) => !formData.serviceCategory || (sub.service?._id || sub.service) === formData.serviceCategory)}
+                    getOptionLabel={(option) => option.title || ''}
+                    value={subServices.filter((s) => (formData.subServices || []).includes(s._id))}
+                    onChange={(e, newValues) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        subServices: newValues.map((v) => v._id),
+                        subService: newValues.length > 0 ? newValues[0]._id : ''
+                      }));
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Sub Services (Multiple)" placeholder="Select sub services..." />
+                    )}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip label={option.title} size="small" key={option._id} {...getTagProps({ index })} />
+                      ))
+                    }
                   />
-                </Stack>
-              </Paper>
+                ) : (
+                  <TextField
+                    fullWidth
+                    select
+                    label="Sub Service"
+                    value={formData.subService}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, subService: e.target.value, subServices: [e.target.value] }))}
+                  >
+                    <MenuItem value="">-- Select Sub Service --</MenuItem>
+                    {subServices
+                      .filter((sub) => !formData.serviceCategory || (sub.service?._id || sub.service) === formData.serviceCategory)
+                      .map((sub) => (
+                        <MenuItem key={sub._id} value={sub._id}>
+                          {sub.title}
+                        </MenuItem>
+                      ))}
+                  </TextField>
+                )}
+              </Grid>
+
+              {/* Category Field (Single or Multi) */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                {formData.selectionMode === 'multiple' ? (
+                  <Autocomplete
+                    multiple
+                    options={categories}
+                    getOptionLabel={(option) => option.name || option.title || ''}
+                    value={categories.filter((c) => (formData.categories || []).includes(c._id))}
+                    onChange={(e, newValues) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        categories: newValues.map((v) => v._id),
+                        category: newValues.length > 0 ? newValues[0]._id : ''
+                      }));
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Package Categories (Multiple)" placeholder="Select categories..." />
+                    )}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip label={option.name || option.title} size="small" key={option._id} {...getTagProps({ index })} />
+                      ))
+                    }
+                  />
+                ) : (
+                  <TextField
+                    fullWidth
+                    select
+                    label="Package Category"
+                    value={formData.category}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value, categories: [e.target.value] }))}
+                  >
+                    <MenuItem value="">-- Select Category --</MenuItem>
+                    {categories.map((c) => (
+                      <MenuItem key={c._id} value={c._id}>
+                        {c.name || c.title}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              </Grid>
             </Grid>
+          </MainCard>
+        </Grid>
 
-            {/* Individual Handled Services Cards */}
-            {handledServices.map((svc) => {
-              const isSelected = selectedServiceId === svc._id;
-              const count = getPackageCountForService(svc._id);
+        {/* CARD 2: PACKAGE PRICING & RATE DETAILS */}
+        <Grid size={12}>
+          <MainCard title="Package Pricing & Rate Details">
+            <Typography variant="h4" fontWeight="800" sx={{ mb: 2, color: 'secondary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ReceiptIcon /> Billing, Discounts &amp; Tax Setup
+            </Typography>
 
-              return (
-                <Grid key={svc._id} size={{ xs: 6, sm: 4, md: 2.4 }}>
-                  <Paper
-                    elevation={0}
-                    onClick={() => handleSelectService(svc._id)}
+            <Grid container spacing={2.5}>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  label="Standard Base Price (₹) *"
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
+                  placeholder="e.g. 15000"
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">₹</InputAdornment>
+                  }}
+                  helperText="Standard rate before discounts"
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  label="Offer / Discounted Price (₹)"
+                  type="number"
+                  value={formData.discountPrice}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, discountPrice: e.target.value }))}
+                  placeholder="e.g. 12000"
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <Chip label="OFFER" size="small" color="secondary" sx={{ height: 20, fontSize: '9px', fontWeight: 800 }} />
+                      </InputAdornment>
+                    )
+                  }}
+                  helperText="Optional promotional price"
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  label="Original MRP Price (Strike-through) (₹)"
+                  type="number"
+                  value={formData.originalPrice}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, originalPrice: e.target.value }))}
+                  placeholder="e.g. 18000"
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">₹</InputAdornment>
+                  }}
+                  helperText="Shows crossed-out price"
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                  <Autocomplete
+                    freeSolo
+                    fullWidth
+                    options={customUnits}
+                    value={formData.priceType || ''}
+                    inputValue={formData.priceType || ''}
+                    onInputChange={(event, newInputValue) => {
+                      setFormData((prev) => ({ ...prev, priceType: newInputValue }));
+                    }}
+                    onChange={(event, newValue) => {
+                      const val = typeof newValue === 'string' ? newValue : newValue?.label || newValue || '';
+                      if (val) {
+                        setFormData((prev) => ({ ...prev, priceType: val }));
+                        setCustomUnits((prev) => Array.from(new Set([...prev, val])));
+                      }
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        label="Billing Model / Unit *"
+                        placeholder="Enter Custom"
+                        helperText="Select preset or type custom unit"
+                      />
+                    )}
+                  />
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<AddIcon />}
+                    onClick={() => setOpenCustomUnitDialog(true)}
                     sx={{
-                      p: 2,
-                      borderRadius: '14px',
-                      border: '2px solid',
-                      borderColor: isSelected ? 'secondary.main' : 'divider',
-                      bgcolor: isSelected ? 'secondary.light' : 'background.default',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      '&:hover': { borderColor: 'secondary.main', transform: 'translateY(-2px)' }
+                      height: 53,
+                      px: 2.5,
+                      minWidth: 'auto',
+                      whiteSpace: 'nowrap',
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      borderRadius: '10px',
+                      boxShadow: '0 4px 12px rgba(103, 58, 183, 0.25)',
+                      flexShrink: 0
                     }}
                   >
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Box sx={{ minWidth: 0, pr: 1 }}>
-                        <Typography variant="subtitle1" fontWeight={800} noWrap color={isSelected ? 'secondary.main' : 'text.primary'}>
-                          {svc.title}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          {svc.customId || 'Service Category'}
-                        </Typography>
-                      </Box>
+                    Custom Unit
+                  </Button>
+                </Stack>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 3 }}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Currency *"
+                  value={formData.currency || 'INR (₹)'}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, currency: e.target.value }))}
+                >
+                  <MenuItem value="INR (₹)">INR (₹)</MenuItem>
+                  <MenuItem value="USD ($)">USD ($)</MenuItem>
+                  <MenuItem value="AED (AED)">AED (AED)</MenuItem>
+                  <MenuItem value="EUR (€)">EUR (€)</MenuItem>
+                  <MenuItem value="GBP (£)">GBP (£)</MenuItem>
+                </TextField>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 3 }}>
+                <TextField
+                  fullWidth
+                  label="Tax / GST Rate (%)"
+                  type="number"
+                  value={formData.taxRate}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, taxRate: e.target.value }))}
+                  placeholder="e.g. 5, 12, 18"
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>
+                  }}
+                  helperText="Applicable GST/VAT percentage"
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 6 }}>
+                <FormControl component="fieldset">
+                  <FormLabel component="legend" sx={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                    Tax Policy
+                  </FormLabel>
+                  <RadioGroup
+                    row
+                    value={formData.taxPolicy || 'inclusive'}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, taxPolicy: e.target.value }))}
+                  >
+                    <FormControlLabel
+                      value="inclusive"
+                      control={<Radio color="secondary" />}
+                      label={<Typography variant="body2" fontWeight={600}>Inclusive of Taxes (GST Included)</Typography>}
+                    />
+                    <FormControlLabel
+                      value="exclusive"
+                      control={<Radio color="secondary" />}
+                      label={<Typography variant="body2" fontWeight={600}>Exclusive (+ Tax Added at Checkout)</Typography>}
+                    />
+                  </RadioGroup>
+                </FormControl>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 6 }}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  label="Pricing Terms & Booking Deposit Notes"
+                  value={formData.priceNotes}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, priceNotes: e.target.value }))}
+                  placeholder="e.g. Requires 20% advance booking deposit. Non-refundable cancellation within 48h."
+                  helperText="Special pricing policy or deposit instructions"
+                />
+              </Grid>
+
+              {/* LIVE CUSTOMER PRICE CARD PREVIEW */}
+              <Grid size={12}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2.5,
+                    borderRadius: '16px',
+                    background: theme.palette.mode === 'dark'
+                      ? 'linear-gradient(135deg, #090d16 0%, #1e1b4b 100%)'
+                      : 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)',
+                    border: '1.5px solid',
+                    borderColor: 'secondary.main'
+                  }}
+                >
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                    <Chip
+                      icon={<ReceiptIcon style={{ fontSize: 16 }} />}
+                      label="Customer Price Card Preview"
+                      color="secondary"
+                      size="small"
+                      sx={{ fontWeight: 800 }}
+                    />
+                    <Typography variant="caption" color="text.secondary" fontWeight={800} letterSpacing={1}>
+                      LIVE PREVIEW
+                    </Typography>
+                  </Stack>
+                  <Divider sx={{ mb: 2 }} />
+
+                  <Stack direction="row" alignItems="baseline" spacing={1.5} flexWrap="wrap">
+                    <Typography variant="h1" fontWeight="900" color="secondary.main">
+                      ₹{Number(formData.discountPrice || formData.price || 0).toLocaleString('en-IN')}
+                    </Typography>
+
+                    {formData.originalPrice && Number(formData.originalPrice) > Number(formData.discountPrice || formData.price || 0) && (
+                      <Typography variant="h3" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                        ₹{Number(formData.originalPrice).toLocaleString('en-IN')}
+                      </Typography>
+                    )}
+
+                    <Typography variant="h4" fontWeight="700" color="text.secondary">
+                      {formData.priceType ? `/ ${formData.priceType}` : ''}
+                    </Typography>
+                  </Stack>
+
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5 }} flexWrap="wrap">
+                    <Chip
+                      label={formData.taxPolicy === 'inclusive' ? `Incl. ${formData.taxRate || 0}% GST` : `+ ${formData.taxRate || 0}% GST Excl.`}
+                      size="small"
+                      color={formData.taxPolicy === 'inclusive' ? 'success' : 'info'}
+                      sx={{ fontWeight: 800, borderRadius: '6px' }}
+                    />
+
+                    {formData.discountPrice && formData.price && Number(formData.price) > Number(formData.discountPrice) && (
                       <Chip
-                        label={count}
+                        label={`Save ₹${(Number(formData.price) - Number(formData.discountPrice)).toLocaleString('en-IN')}`}
                         size="small"
-                        color={isSelected ? 'secondary' : 'default'}
-                        sx={{ fontWeight: 800, flexShrink: 0 }}
+                        color="warning"
+                        sx={{ fontWeight: 800, borderRadius: '6px' }}
                       />
-                    </Stack>
-                  </Paper>
-                </Grid>
-              );
-            })}
-          </Grid>
-        </Paper>
+                    )}
+
+                    {formData.originalPrice && Number(formData.originalPrice) > Number(formData.discountPrice || formData.price || 0) && (
+                      <Chip
+                        label={`${Math.round(((Number(formData.originalPrice) - Number(formData.discountPrice || formData.price || 0)) / Number(formData.originalPrice)) * 100)}% OFF`}
+                        size="small"
+                        color="error"
+                        sx={{ fontWeight: 800, borderRadius: '6px' }}
+                      />
+                    )}
+                  </Stack>
+
+                  {formData.priceNotes && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5, fontStyle: 'italic' }}>
+                      Deposit / Terms: {formData.priceNotes}
+                    </Typography>
+                  )}
+                </Paper>
+              </Grid>
+            </Grid>
+          </MainCard>
+        </Grid>
+
+        {/* CARD 3: FORM SETUP FIELDS CONFIGURED BY ADMIN */}
+        <Grid size={12}>
+          <MainCard title="Form Setup Fields & Packages Specifications">
+            <DynamicPackageForm
+              fields={configuredFields}
+              values={dynamicValues}
+              onChange={handleDynamicValueChange}
+              onFileChange={handleDynamicFileChange}
+              loading={loadingFields}
+            />
+          </MainCard>
+        </Grid>
+
+        {/* BOTTOM ACTION BAR */}
+        <Grid size={12}>
+          <Stack direction="row" justifyContent="flex-end" spacing={2}>
+            <Button onClick={() => setOpenFormDialog(false)} color="inherit" disabled={submitting} sx={{ borderRadius: '10px', px: 3 }}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={handleSubmitForm}
+              disabled={submitting}
+              sx={{ borderRadius: '10px', px: 4, fontWeight: 700 }}
+            >
+              {submitting ? 'Saving Package...' : selectedPackage ? 'Update Package & Photos' : 'Create Package Listing'}
+            </Button>
+          </Stack>
+        </Grid>
+      </Grid>
+    );
+  }
+
+  return (
+    <Grid container spacing={gridSpacing}>
+      {/* TOAST SNACKBAR NOTIFICATION */}
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={5000}
+        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+          severity={toast.severity}
+          variant="filled"
+          sx={{ width: '100%', borderRadius: '10px', fontWeight: 600 }}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
+      {/* PAGE HEADER */}
+      <Grid size={12}>
+        <SaasHeader
+          title={selectedServiceId !== 'all' ? `${selectedServiceObj?.title || 'Service'} Packages` : 'All Packages'}
+          subtitle={
+            selectedServiceId !== 'all'
+              ? `Manage package listings and pricing for ${selectedServiceObj?.title || 'this service category'}.`
+              : 'Browse all registered packages across all service categories. Select a service category from the side menu to create a new package.'
+          }
+          actionLabel={selectedServiceId !== 'all' ? 'Create New Package' : undefined}
+          actionIcon={selectedServiceId !== 'all' ? <AddIcon /> : undefined}
+          onActionClick={selectedServiceId !== 'all' ? () => handleOpenForm(null) : undefined}
+          loading={loading}
+        />
       </Grid>
 
       {/* FILTER & SEARCH TOOLBAR */}
@@ -529,91 +1276,103 @@ const PackagesManagement = () => {
         <Paper
           elevation={0}
           sx={{
-            p: 2,
-            borderRadius: '14px',
+            p: 2.5,
+            borderRadius: '16px',
             border: '1px solid',
             borderColor: 'divider',
             bgcolor: 'background.paper',
-            display: 'flex',
-            flexDirection: { xs: 'column', md: 'row' },
-            alignItems: { md: 'center' },
-            justifyContent: 'space-between',
-            gap: 2
+            boxShadow: '0 2px 12px rgba(0,0,0,0.02)'
           }}
         >
-          <Box>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Typography variant="h3" fontWeight="800">
-                {selectedServiceId === 'all' ? 'All Package Listings' : `${selectedServiceObj?.title || 'Selected Service'} Packages`}
-              </Typography>
-              <Chip
-                label={`${filteredPackages.length} Packages Found`}
-                size="small"
-                color="secondary"
-                sx={{ fontWeight: 700 }}
-              />
-            </Stack>
-            {selectedServiceId !== 'all' && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3 }}>
-                Showing only package listings belonging to <strong>{selectedServiceObj?.title}</strong>
-              </Typography>
-            )}
-          </Box>
-
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="center">
-            <TextField
-              placeholder="Search packages by title, location, ID..."
-              size="small"
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
-              sx={{ width: { xs: '100%', sm: 260 } }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-                  </InputAdornment>
-                ),
-                endAdornment: searchTerm ? (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => { setSearchTerm(''); setPage(0); }}>
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null
-              }}
-            />
-
-            <Stack direction="row" spacing={0.5}>
-              {['All', 'Active', 'Inactive', 'Draft'].map((st) => (
+          <Stack spacing={2}>
+            {/* ROW 1: TITLE & COUNT */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1}>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Typography variant="h3" fontWeight="800">
+                  {selectedServiceId === 'all' ? 'All Package Listings' : `${selectedServiceObj?.title || 'Selected Service'} Packages`}
+                </Typography>
                 <Chip
-                  key={st}
-                  label={st}
+                  label={`${filteredPackages.length} Package${filteredPackages.length !== 1 ? 's' : ''} Found`}
                   size="small"
-                  onClick={() => { setStatusFilter(st); setPage(0); }}
-                  color={statusFilter === st ? 'secondary' : 'default'}
-                  variant={statusFilter === st ? 'filled' : 'outlined'}
-                  sx={{ cursor: 'pointer', fontWeight: 600 }}
+                  color="secondary"
+                  sx={{ fontWeight: 800, borderRadius: '6px' }}
                 />
-              ))}
+              </Stack>
+              {selectedServiceId !== 'all' && (
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  Showing packages under <strong>{selectedServiceObj?.title}</strong>
+                </Typography>
+              )}
             </Stack>
 
-            <Stack direction="row" sx={{ bgcolor: 'grey.100', borderRadius: '8px', p: 0.3 }}>
-              <IconButton
+            <Divider />
+
+            {/* ROW 2: SEARCH (LEFT) & STATUS FILTER + VIEW MODE (RIGHT) */}
+            <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }} justifyContent="space-between" spacing={2}>
+              {/* LEFT: SEARCH INPUT */}
+              <TextField
+                placeholder="Search title, location, ID, creator..."
                 size="small"
-                color={viewMode === 'grid' ? 'secondary' : 'default'}
-                onClick={() => setViewMode('grid')}
-                title="Grid View"
-              >
-                <GridViewIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                color={viewMode === 'table' ? 'secondary' : 'default'}
-                onClick={() => setViewMode('table')}
-                title="Table View"
-              >
-                <ViewListIcon fontSize="small" />
-              </IconButton>
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
+                sx={{ width: { xs: '100%', sm: 300, md: 360 } }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchTerm ? (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => { setSearchTerm(''); setPage(0); }}>
+                        <ClearIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null
+                }}
+              />
+
+              {/* RIGHT SIDE: STATUS FILTER & VIEW MODE SWITCHER */}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="center" justifyContent="flex-end">
+                {/* STATUS FILTER DROPDOWN */}
+                <TextField
+                  select
+                  size="small"
+                  label="Filter Status"
+                  value={statusFilter}
+                  onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+                  sx={{ minWidth: 170 }}
+                >
+                  <MenuItem value="All">All Statuses</MenuItem>
+                  <MenuItem value="Active">🟢 Active &amp; Published</MenuItem>
+                  <MenuItem value="Draft">🟡 Draft</MenuItem>
+                  <MenuItem value="Inactive">🔴 Inactive</MenuItem>
+                </TextField>
+
+                {/* VIEW MODE SWITCHER */}
+                <Stack direction="row" alignItems="center" spacing={0.5} sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'grey.100', borderRadius: '10px', p: 0.5 }}>
+                  <Button
+                    size="small"
+                    variant={viewMode === 'grid' ? 'contained' : 'text'}
+                    color={viewMode === 'grid' ? 'secondary' : 'inherit'}
+                    onClick={() => setViewMode('grid')}
+                    startIcon={<GridViewIcon fontSize="small" />}
+                    sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 700, py: 0.5, px: 1.5 }}
+                  >
+                    Grid
+                  </Button>
+                  <Button
+                    size="small"
+                    variant={viewMode === 'table' ? 'contained' : 'text'}
+                    color={viewMode === 'table' ? 'secondary' : 'inherit'}
+                    onClick={() => setViewMode('table')}
+                    startIcon={<ViewListIcon fontSize="small" />}
+                    sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 700, py: 0.5, px: 1.5 }}
+                  >
+                    Table
+                  </Button>
+                </Stack>
+              </Stack>
             </Stack>
           </Stack>
         </Paper>
@@ -690,7 +1449,7 @@ const PackagesManagement = () => {
                         onError={(e) => { e.target.onerror = null; e.target.src = '/public/defaults/default_travel.png'; }}
                         sx={{ objectFit: 'cover', width: '100%' }}
                       />
-                      
+
                       {/* Top Left: Service Category Badge */}
                       <Chip
                         label={svcTitle}
@@ -779,9 +1538,26 @@ const PackagesManagement = () => {
 
                     <CardContent sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <Box>
-                        <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                          {pkg.customId || 'PKG-LISTING'}
-                        </Typography>
+                        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                          <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                            {pkg.customId || 'PKG-LISTING'}
+                          </Typography>
+                          {(() => {
+                            const creatorDetails = getCreatorDetails(pkg);
+                            return (
+                              <Tooltip title={creatorDetails.isStaff ? `Created by Staff: ${creatorDetails.staffName} | Main Vendor: ${creatorDetails.mainVendorName}` : `Vendor: ${creatorDetails.mainVendorName}`}>
+                                <Chip
+                                  icon={<StorefrontIcon style={{ fontSize: 13 }} />}
+                                  label={creatorDetails.isStaff ? `Staff: ${creatorDetails.staffName} (${creatorDetails.mainVendorName})` : `By: ${creatorDetails.mainVendorName}`}
+                                  size="small"
+                                  variant="outlined"
+                                  color={creatorDetails.isStaff ? "secondary" : "info"}
+                                  sx={{ fontWeight: 700, borderRadius: '6px', height: 'auto', py: 0.2, px: 0.6, fontSize: '0.7rem' }}
+                                />
+                              </Tooltip>
+                            );
+                          })()}
+                        </Stack>
                         <Typography variant="h3" fontWeight="800" sx={{ mb: 1, lineHeight: 1.3 }}>
                           {pkg.title}
                         </Typography>
@@ -850,99 +1626,144 @@ const PackagesManagement = () => {
           </Grid>
         ) : (
           /* TABLE VIEW */
-          <MainCard content={false}>
-            <TableContainer>
-              <Table>
-                <TableHead sx={{ bgcolor: 'grey.50' }}>
-                  <TableRow>
-                    <TableCell sx={{ pl: 3 }}>Package Info & Photos</TableCell>
-                    <TableCell>Service Category</TableCell>
-                    <TableCell>Price</TableCell>
-                    <TableCell>Duration</TableCell>
-                    <TableCell>Location</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell align="center" sx={{ pr: 3 }}>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {paginatedPackages.map((pkg) => {
-                    const svcTitle = pkg.serviceCategory?.title || pkg.service?.title || 'Service';
-                    const pkgImages = Array.isArray(pkg.images) ? pkg.images : [];
-                    const thumbUrl = pkgImages.length > 0 ? getFullImageUrl(pkgImages[0]) : '/public/defaults/default_travel.png';
+          <DataTable
+            columns={[
+              {
+                headerName: 'Package Info & Photos',
+                field: 'title',
+                render: (pkg) => {
+                  const pkgImages = Array.isArray(pkg.images) ? pkg.images : [];
+                  const thumbUrl = pkgImages.length > 0 ? getFullImageUrl(pkgImages[0]) : '/public/defaults/default_travel.png';
 
-                    return (
-                      <TableRow key={pkg._id} hover>
-                        <TableCell sx={{ pl: 3 }}>
-                          <Stack direction="row" spacing={1.5} alignItems="center">
-                            <Box sx={{ position: 'relative' }}>
-                              <Avatar
-                                src={thumbUrl}
-                                variant="rounded"
-                                sx={{ width: 50, height: 50, borderRadius: '8px', bgcolor: 'grey.200' }}
-                              />
-                              {pkgImages.length > 1 && (
-                                <Chip
-                                  label={`+${pkgImages.length - 1}`}
-                                  size="small"
-                                  sx={{
-                                    position: 'absolute',
-                                    bottom: -4,
-                                    right: -4,
-                                    height: 16,
-                                    fontSize: '9px',
-                                    fontWeight: 800,
-                                    bgcolor: 'secondary.main',
-                                    color: '#fff',
-                                    px: 0.5
-                                  }}
-                                />
-                              )}
-                            </Box>
-                            <Box>
-                              <Typography variant="subtitle1" fontWeight="800">{pkg.title}</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {pkg.customId || 'ID'} • {pkgImages.length} Photo{pkgImages.length !== 1 ? 's' : ''}
-                              </Typography>
-                            </Box>
-                          </Stack>
-                        </TableCell>
-                        <TableCell>
-                          <Chip label={svcTitle} size="small" color="secondary" sx={{ fontWeight: 600 }} />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="subtitle2" fontWeight="800" color="secondary.main">
-                            ₹{pkg.price?.toLocaleString('en-IN')}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">/{pkg.priceType || 'Person'}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="600">{pkg.duration || 'N/A'}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="600">{pkg.location || 'N/A'}</Typography>
-                        </TableCell>
-                        <TableCell>
+                  return (
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      <Box sx={{ position: 'relative' }}>
+                        <Avatar
+                          src={thumbUrl}
+                          variant="rounded"
+                          sx={{ width: 50, height: 50, borderRadius: '8px', bgcolor: 'grey.200' }}
+                        />
+                        {pkgImages.length > 1 && (
                           <Chip
-                            label={pkg.status || (pkg.isActive ? 'Active' : 'Inactive')}
+                            label={`+${pkgImages.length - 1}`}
                             size="small"
-                            color={pkg.status === 'Active' || pkg.isActive ? 'success' : 'default'}
-                            sx={{ fontWeight: 600 }}
+                            sx={{
+                              position: 'absolute',
+                              bottom: -4,
+                              right: -4,
+                              height: 16,
+                              fontSize: '9px',
+                              fontWeight: 800,
+                              bgcolor: 'secondary.main',
+                              color: '#fff',
+                              px: 0.5
+                            }}
                           />
-                        </TableCell>
-                        <TableCell align="center" sx={{ pr: 3 }}>
-                          <Stack direction="row" spacing={1} justifyContent="center">
-                            <IconButton size="small" onClick={() => handleOpenView(pkg)} color="info"><VisibilityIcon fontSize="small" /></IconButton>
-                            <IconButton size="small" onClick={() => handleOpenForm(pkg)} color="primary"><EditIcon fontSize="small" /></IconButton>
-                            <IconButton size="small" onClick={() => handleDeleteClick(pkg)} color="error"><DeleteIcon fontSize="small" /></IconButton>
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </MainCard>
+                        )}
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle1" fontWeight="800">{pkg.title}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {pkg.customId || 'ID'} • {pkgImages.length} Photo{pkgImages.length !== 1 ? 's' : ''}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  );
+                }
+              },
+              {
+                headerName: 'Service Category',
+                field: 'serviceCategory',
+                render: (pkg) => {
+                  const svcTitle = pkg.serviceCategory?.title || pkg.service?.title || 'Service';
+                  return <Chip label={svcTitle} size="small" color="secondary" sx={{ fontWeight: 600 }} />;
+                }
+              },
+              {
+                headerName: 'Price',
+                field: 'price',
+                render: (pkg) => (
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight="800" color="secondary.main">
+                      ₹{pkg.price?.toLocaleString('en-IN')}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">/{pkg.priceType || 'Person'}</Typography>
+                  </Box>
+                )
+              },
+              {
+                headerName: 'Duration',
+                field: 'duration',
+                render: (pkg) => <Typography variant="body2" fontWeight="600">{pkg.duration || 'N/A'}</Typography>
+              },
+              {
+                headerName: 'Location',
+                field: 'location',
+                render: (pkg) => <Typography variant="body2" fontWeight="600">{pkg.location || 'N/A'}</Typography>
+              },
+              {
+                headerName: 'Created By & Vendor',
+                field: 'createdBy',
+                render: (pkg) => {
+                  const details = getCreatorDetails(pkg);
+                  const creatorId = (pkg.createdBy?._id || pkg.createdBy?.id || pkg.createdBy || '').toString();
+                  const isMe = creatorId === currentUserId;
+
+                  return (
+                    <Box>
+                      {details.isStaff ? (
+                        <Stack spacing={0.3}>
+                          <Chip
+                            label={isMe ? `Staff: ${details.staffName} (You)` : `Staff: ${details.staffName}`}
+                            size="small"
+                            color={isMe ? 'secondary' : 'info'}
+                            variant="filled"
+                            sx={{ fontWeight: 800, fontSize: '0.72rem' }}
+                          />
+                          <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
+                            Main: <strong>{details.mainVendorName}</strong>
+                          </Typography>
+                        </Stack>
+                      ) : (
+                        <Chip
+                          label={isMe ? `${details.mainVendorName} (You)` : details.mainVendorName}
+                          size="small"
+                          color={isMe ? 'secondary' : 'default'}
+                          variant={isMe ? 'filled' : 'outlined'}
+                          sx={{ fontWeight: 700, fontSize: '0.75rem' }}
+                        />
+                      )}
+                    </Box>
+                  );
+                }
+              },
+              {
+                headerName: 'Status',
+                field: 'status',
+                render: (pkg) => <StatusBadge status={pkg.status || (pkg.isActive ? 'Active' : 'Inactive')} />
+              },
+              {
+                headerName: 'Actions',
+                align: 'center',
+                render: (pkg) => (
+                  <Stack direction="row" spacing={1} justifyContent="center">
+                    <IconButton size="small" onClick={() => handleOpenView(pkg)} color="info"><VisibilityIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => handleOpenForm(pkg)} color="primary"><EditIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => handleDeleteClick(pkg)} color="error"><DeleteIcon fontSize="small" /></IconButton>
+                  </Stack>
+                )
+              }
+            ]}
+            rows={filteredPackages}
+            loading={loading}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            totalCount={filteredPackages.length}
+            onPageChange={(e, newPage) => setPage(newPage)}
+            onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+            emptyTitle="No Packages Found"
+            emptySubtitle="No packages match your criteria."
+          />
         )}
       </Grid>
 
@@ -963,333 +1784,7 @@ const PackagesManagement = () => {
         </Grid>
       )}
 
-      {/* CREATE / EDIT PACKAGE FORM DIALOG */}
-      <Dialog open={openFormDialog} onClose={() => !submitting && setOpenFormDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle variant="h3" fontWeight="bold">
-          {selectedPackage ? 'Edit Package & Photos' : 'Create New Package Listing'}
-        </DialogTitle>
-        <Divider />
-        <DialogContent dividers>
-          <Grid container spacing={2.5}>
-            <Grid size={{ xs: 12, md: 8 }}>
-              <TextField
-                fullWidth
-                label="Package Document Title *"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="e.g. 4 Days Luxury Kerala Houseboat & Resort Package"
-                required
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
-                fullWidth
-                select
-                label="Service Category *"
-                value={formData.serviceCategory}
-                onChange={(e) => setFormData({ ...formData, serviceCategory: e.target.value })}
-                required
-              >
-                {handledServices.map((svc) => (
-                  <MenuItem key={svc._id} value={svc._id}>
-                    {svc.title}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
 
-            <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Package Rate (₹) *"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                placeholder="e.g. 12500"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
-                fullWidth
-                select
-                label="Price Charge Type"
-                value={formData.priceType}
-                onChange={(e) => setFormData({ ...formData, priceType: e.target.value })}
-              >
-                <MenuItem value="Per Person">Per Person</MenuItem>
-                <MenuItem value="Per Day">Per Day</MenuItem>
-                <MenuItem value="Per Vehicle">Per Vehicle</MenuItem>
-                <MenuItem value="Per Houseboat">Per Houseboat</MenuItem>
-                <MenuItem value="Flat Package Rate">Flat Package Rate</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
-                fullWidth
-                label="Duration"
-                value={formData.duration}
-                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                placeholder="e.g. 3 Days / 2 Nights"
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Destination / Location"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="e.g. Munnar & Alleppey, Kerala"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                select
-                label="Publication Status"
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              >
-                <MenuItem value="Active">🟢 Active & Published</MenuItem>
-                <MenuItem value="Draft">🟡 Draft</MenuItem>
-                <MenuItem value="Inactive">🔴 Inactive</MenuItem>
-              </TextField>
-            </Grid>
-
-            <Grid size={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Package Overview & Highlights"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe package highlights, accommodation type, meals included, and itinerary points..."
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                multiline
-                rows={2}
-                label="Inclusions (Comma-separated)"
-                value={formData.inclusions}
-                onChange={(e) => setFormData({ ...formData, inclusions: e.target.value })}
-                placeholder="Welcome Drink, Breakfast, AC Cab, Sightseeing"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                multiline
-                rows={2}
-                label="Exclusions (Comma-separated)"
-                value={formData.exclusions}
-                onChange={(e) => setFormData({ ...formData, exclusions: e.target.value })}
-                placeholder="Flight Tickets, Personal Expenses, Entry Fees"
-              />
-            </Grid>
-
-            {/* PACKAGE MULTI-IMAGE MANAGEMENT SECTION */}
-            <Grid size={12}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2.5,
-                  borderRadius: '14px',
-                  border: '1.5px dashed',
-                  borderColor: 'secondary.main',
-                  bgcolor: 'secondary.light'
-                }}
-              >
-                <Typography variant="subtitle1" fontWeight="800" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <PhotoLibraryIcon color="secondary" fontSize="small" /> Package Image Gallery & Photo Management
-                </Typography>
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
-                  Add multiple photo URLs or upload image files for this package. The first photo is set as the primary cover banner.
-                </Typography>
-
-                <Grid container spacing={2}>
-                  {/* Add Image via URL */}
-                  <Grid size={{ xs: 12, md: 7 }}>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      label="Add Photo Image URL"
-                      value={formData.newUrlInput}
-                      onChange={(e) => setFormData({ ...formData, newUrlInput: e.target.value })}
-                      placeholder="https://images.unsplash.com/photo-1593693397690-362cb9666fc2"
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <Button
-                              variant="contained"
-                              color="secondary"
-                              size="small"
-                              onClick={handleAddImageUrl}
-                              startIcon={<AddPhotoAlternateIcon />}
-                              sx={{ borderRadius: '6px', textTransform: 'none', fontWeight: 700 }}
-                            >
-                              Add URL
-                            </Button>
-                          </InputAdornment>
-                        )
-                      }}
-                    />
-                  </Grid>
-
-                  {/* Upload Local Image Files */}
-                  <Grid size={{ xs: 12, md: 5 }}>
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      component="label"
-                      fullWidth
-                      startIcon={<CloudUploadIcon />}
-                      sx={{
-                        py: 1,
-                        borderRadius: '8px',
-                        borderStyle: 'dashed',
-                        fontWeight: 700,
-                        textTransform: 'none'
-                      }}
-                    >
-                      Upload Image Files
-                      <input
-                        type="file"
-                        hidden
-                        multiple
-                        accept="image/*"
-                        onChange={handleSelectFiles}
-                      />
-                    </Button>
-                  </Grid>
-                </Grid>
-
-                {/* CURRENT IMAGES PREVIEW GALLERY LIST */}
-                {(formData.images.length > 0 || selectedFiles.length > 0) && (
-                  <Box sx={{ mt: 2.5 }}>
-                    <Typography variant="caption" fontWeight="800" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                      Attached Photos ({formData.images.length + selectedFiles.length}):
-                    </Typography>
-
-                    <Grid container spacing={1.5}>
-                      {/* Existing Image URLs */}
-                      {formData.images.map((imgUrl, index) => (
-                        <Grid key={`img-${index}`} size={{ xs: 6, sm: 4, md: 3 }}>
-                          <Paper
-                            elevation={0}
-                            sx={{
-                              position: 'relative',
-                              p: 1,
-                              borderRadius: '12px',
-                              border: '1px solid',
-                              borderColor: index === 0 ? 'secondary.main' : 'divider',
-                              bgcolor: 'background.paper',
-                              textAlign: 'center'
-                            }}
-                          >
-                            <Box
-                              component="img"
-                              src={getFullImageUrl(imgUrl)}
-                              alt={`Photo ${index + 1}`}
-                              onError={(e) => { e.target.onerror = null; e.target.src = '/public/defaults/default_travel.png'; }}
-                              sx={{
-                                width: '100%',
-                                height: 90,
-                                borderRadius: '8px',
-                                objectFit: 'cover'
-                              }}
-                            />
-                            <Typography variant="caption" display="block" noWrap sx={{ mt: 0.5, fontWeight: 700, fontSize: '10px' }}>
-                              {index === 0 ? '⭐ Primary Banner' : `Photo #${index + 1}`}
-                            </Typography>
-                            <Stack direction="row" spacing={0.5} justifyContent="center" sx={{ mt: 0.5 }}>
-                              {index !== 0 && (
-                                <Button
-                                  size="small"
-                                  color="secondary"
-                                  onClick={() => handleSetPrimaryImage(index)}
-                                  sx={{ fontSize: '9px', py: 0, px: 0.5, minWidth: 0 }}
-                                >
-                                  Make Cover
-                                </Button>
-                              )}
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleRemoveExistingImage(index)}
-                              >
-                                <DeleteIcon fontSize="small" style={{ fontSize: 16 }} />
-                              </IconButton>
-                            </Stack>
-                          </Paper>
-                        </Grid>
-                      ))}
-
-                      {/* Newly Uploaded Local Files */}
-                      {selectedFiles.map((file, index) => (
-                        <Grid key={`file-${index}`} size={{ xs: 6, sm: 4, md: 3 }}>
-                          <Paper
-                            elevation={0}
-                            sx={{
-                              position: 'relative',
-                              p: 1,
-                              borderRadius: '12px',
-                              border: '1px dashed',
-                              borderColor: 'primary.main',
-                              bgcolor: 'primary.light',
-                              textAlign: 'center'
-                            }}
-                          >
-                            <Box
-                              component="img"
-                              src={URL.createObjectURL(file)}
-                              alt={file.name}
-                              sx={{
-                                width: '100%',
-                                height: 90,
-                                borderRadius: '8px',
-                                objectFit: 'cover'
-                              }}
-                            />
-                            <Typography variant="caption" display="block" noWrap sx={{ mt: 0.5, fontWeight: 700, fontSize: '10px' }}>
-                              📁 {file.name}
-                            </Typography>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => handleRemoveSelectedFile(index)}
-                              sx={{ mt: 0.5 }}
-                            >
-                              <DeleteIcon fontSize="small" style={{ fontSize: 16 }} />
-                            </IconButton>
-                          </Paper>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </Box>
-                )}
-              </Paper>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, px: 3 }}>
-          <Button onClick={() => setOpenFormDialog(false)} color="inherit" disabled={submitting}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={handleSubmitForm}
-            disabled={submitting}
-            sx={{ borderRadius: '8px', px: 3, fontWeight: 700 }}
-          >
-            {submitting ? 'Saving Package...' : selectedPackage ? 'Update Package & Photos' : 'Create Package'}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* QUICK VIEW PACKAGE & PHOTO GALLERY MODAL */}
       <Dialog open={openViewDialog} onClose={() => setOpenViewDialog(false)} maxWidth="md" fullWidth>
@@ -1310,6 +1805,14 @@ const PackagesManagement = () => {
                       label={selectedPackage.status || (selectedPackage.isActive ? 'Active' : 'Inactive')}
                       size="small"
                       color={selectedPackage.status === 'Active' || selectedPackage.isActive ? 'success' : 'default'}
+                      sx={{ fontWeight: 700 }}
+                    />
+                    <Chip
+                      icon={<StorefrontIcon style={{ fontSize: 13 }} />}
+                      label={`Created by: ${selectedPackage.createdBy?.name || selectedPackage.vendor?.companyName || selectedPackage.vendor?.name || 'Vendor Admin'}`}
+                      size="small"
+                      variant="outlined"
+                      color="info"
                       sx={{ fontWeight: 700 }}
                     />
                   </Stack>
@@ -1440,6 +1943,29 @@ const PackagesManagement = () => {
                           <Typography variant="body2" sx={{ mt: 0.5 }}><strong>Custom Package ID:</strong> {selectedPackage.customId || 'N/A'}</Typography>
                         </Box>
 
+                        <Box sx={{ p: 1.5, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : '#f8fafc', borderRadius: '10px', border: '1px solid', borderColor: 'divider' }}>
+                          <Typography variant="subtitle2" fontWeight="800" color="text.secondary" sx={{ mb: 0.8 }}>
+                            Ownership &amp; Vendor Info
+                          </Typography>
+                          {(() => {
+                            const details = getCreatorDetails(selectedPackage);
+                            return details.isStaff ? (
+                              <Stack spacing={0.5}>
+                                <Typography variant="body2" fontWeight={700} color="info.main">
+                                  👤 <strong>Staff Member:</strong> {details.staffName} {selectedPackage.createdBy?.email ? `(${selectedPackage.createdBy.email})` : ''}
+                                </Typography>
+                                <Typography variant="body2" fontWeight={700} color="secondary.main">
+                                  🏢 <strong>Main Vendor Account:</strong> {details.mainVendorName} {selectedPackage.vendor?.email ? `(${selectedPackage.vendor.email})` : ''}
+                                </Typography>
+                              </Stack>
+                            ) : (
+                              <Typography variant="body2" fontWeight={700} color="secondary.main">
+                                🏢 <strong>Vendor Account:</strong> {details.mainVendorName} {selectedPackage.vendor?.email ? `(${selectedPackage.vendor.email})` : ''}
+                              </Typography>
+                            );
+                          })()}
+                        </Box>
+
                         {Array.isArray(selectedPackage.inclusions) && selectedPackage.inclusions.length > 0 && (
                           <Box>
                             <Typography variant="subtitle2" fontWeight="800" color="success.main" sx={{ mb: 0.5 }}>Included</Typography>
@@ -1476,8 +2002,49 @@ const PackagesManagement = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ADD CUSTOM BILLING UNIT DIALOG */}
+      <Dialog open={openCustomUnitDialog} onClose={() => setOpenCustomUnitDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle variant="h4" fontWeight="bold">Add Custom Billing Unit</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Specify a custom billing unit or pricing basis for your package (e.g., Per Session, Per Slot, Per Boat, Per Flight).
+          </Typography>
+          <TextField
+            fullWidth
+            autoFocus
+            label="Custom Unit Name *"
+            value={newCustomUnitInput}
+            onChange={(e) => setNewCustomUnitInput(e.target.value)}
+            placeholder="Enter Custom"
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setOpenCustomUnitDialog(false)} color="inherit">Cancel</Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={() => {
+              const val = newCustomUnitInput.trim();
+              if (val) {
+                if (!customUnits.includes(val)) {
+                  setCustomUnits((prev) => [...prev, val]);
+                }
+                setFormData((prev) => ({ ...prev, priceType: val }));
+                setNewCustomUnitInput('');
+                setOpenCustomUnitDialog(false);
+                showToast(`Added custom unit "${val}"`, 'success');
+              }
+            }}
+            sx={{ borderRadius: '8px', px: 3, fontWeight: 700 }}
+          >
+            Add &amp; Select Unit
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Grid>
   );
 };
 
 export default PackagesManagement;
+

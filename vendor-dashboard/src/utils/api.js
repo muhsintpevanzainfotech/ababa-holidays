@@ -1,12 +1,39 @@
+import { isTokenExpired } from './jwt';
+
 const API_URL = import.meta.env.VITE_APP_API_URL;
 
+const clearAuthSession = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('user');
+  if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+    window.location.href = '/login';
+  }
+};
+
 const getHeaders = () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
   const headers = {};
+  
   if (token) {
+    if (isTokenExpired(token)) {
+      clearAuthSession();
+      return headers;
+    }
     headers['Authorization'] = `Bearer ${token}`;
   }
   return headers;
+};
+
+const handleResponse = async (response) => {
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 401) {
+    clearAuthSession();
+  }
+  if (!response.ok) {
+    throw new Error(data.message || 'Something went wrong');
+  }
+  return data;
 };
 
 const api = {
@@ -14,9 +41,7 @@ const api = {
     const response = await fetch(`${API_URL}${endpoint}`, {
       headers: getHeaders(),
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Something went wrong');
-    return data;
+    return handleResponse(response);
   },
 
   post: async (endpoint, body, isFormData = false) => {
@@ -25,9 +50,7 @@ const api = {
       headers: isFormData ? getHeaders() : { ...getHeaders(), 'Content-Type': 'application/json' },
       body: isFormData ? body : JSON.stringify(body),
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Something went wrong');
-    return data;
+    return handleResponse(response);
   },
 
   put: async (endpoint, body, isFormData = false) => {
@@ -36,9 +59,16 @@ const api = {
       headers: isFormData ? getHeaders() : { ...getHeaders(), 'Content-Type': 'application/json' },
       body: isFormData ? body : JSON.stringify(body),
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Something went wrong');
-    return data;
+    return handleResponse(response);
+  },
+
+  patch: async (endpoint, body, isFormData = false) => {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: 'PATCH',
+      headers: isFormData ? getHeaders() : { ...getHeaders(), 'Content-Type': 'application/json' },
+      body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
+    });
+    return handleResponse(response);
   },
 
   delete: async (endpoint) => {
@@ -46,10 +76,9 @@ const api = {
       method: 'DELETE',
       headers: getHeaders(),
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Something went wrong');
-    return data;
+    return handleResponse(response);
   },
 };
 
 export default api;
+

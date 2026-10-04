@@ -20,7 +20,7 @@ export default function Tabs(theme) {
           ...theme.applyStyles('dark', {
             color: theme.vars.palette.text.secondary,
             '&.Mui-selected': {
-              color: '#c2d099'
+              color: '#77f07f'
             }
           })
         }

@@ -14,9 +14,9 @@ const router = express.Router();
 router.get('/', getPolicies);
 router.get('/:id', getPolicy);
 
-// All management routes are protected and restricted to Admin or Vendor
+// All management routes are protected and restricted to Admin, Vendor or Vendor-Staff
 router.use(protect);
-router.use(authorize('Admin', 'Vendor'));
+router.use(authorize('Admin', 'Vendor', 'Vendor-Staff'));
 
 router.post('/', upsertPolicy);
 router.put('/:id', updatePolicy);

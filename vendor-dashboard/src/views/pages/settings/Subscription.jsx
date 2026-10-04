@@ -113,6 +113,42 @@ const DEFAULT_PLANS = [
 const VendorSubscriptionSettings = () => {
   const theme = useTheme();
   const { user } = useSelector((state) => state.auth);
+  const isDarkMode = theme.palette.mode === 'dark';
+
+  const authUser = user || (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch (e) {
+      return {};
+    }
+  })();
+
+  if (authUser && (authUser.role === 'Vendor-Staff' || authUser.role === 'vendor-staff')) {
+    return (
+      <Paper
+        elevation={0}
+        sx={{
+          p: 4,
+          textAlign: 'center',
+          borderRadius: '16px',
+          border: '1px solid',
+          borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : '#e2e8f0',
+          backgroundColor: isDarkMode ? '#111936' : '#ffffff',
+          mt: 3
+        }}
+      >
+        <Typography variant="h3" color="error" gutterBottom sx={{ fontWeight: 800 }}>
+          Access Denied
+        </Typography>
+        <Typography variant="body1" sx={{ color: isDarkMode ? '#cbd5e1' : '#64748b', mb: 3 }}>
+          Subscription membership plans & billing upgrades are restricted to the Primary Vendor Account Owner.
+        </Typography>
+        <Button variant="contained" color="primary" onClick={() => window.location.href = '/dashboard'} sx={{ borderRadius: '10px', fontWeight: 700 }}>
+          Return to Dashboard
+        </Button>
+      </Paper>
+    );
+  }
 
   // Component States
   const [loading, setLoading] = useState(true);

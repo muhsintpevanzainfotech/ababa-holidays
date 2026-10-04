@@ -30,7 +30,7 @@ const PasskeyModal = ({ isOpen, onClose, onVerified, title = "Security Verificat
 
     const checkStatusAndInit = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
             const response = await fetch(`${import.meta.env.VITE_APP_API_URL}/settings/passkey-status`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -63,7 +63,7 @@ const PasskeyModal = ({ isOpen, onClose, onVerified, title = "Security Verificat
         setSendingEmail(true);
         setError('');
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
             const response = await fetch(`${import.meta.env.VITE_APP_API_URL}/settings/generate-passkey`, {
                 method: 'POST',
                 headers: {
@@ -90,7 +90,7 @@ const PasskeyModal = ({ isOpen, onClose, onVerified, title = "Security Verificat
         setLoading(true);
         setError('');
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
             const response = await fetch(`${import.meta.env.VITE_APP_API_URL}/settings/verify-passkey`, {
                 method: 'POST',
                 headers: {

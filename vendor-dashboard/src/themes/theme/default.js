@@ -1,28 +1,34 @@
 // ==============================|| DEFAULT THEME COLORS ||============================== //
+// User Custom Palette:
+// #3a2f6b - Deep Purple/Navy (RGB: 58, 47, 107)
+// #36669c - Classic Blue (RGB: 54, 102, 156)
+// #41a0ae - Teal/Cyan (RGB: 65, 160, 174)
+// #3ec995 - Emerald Mint Green (RGB: 62, 201, 149)
+// #77f07f - Bright Lime Green (RGB: 119, 240, 127)
 
 const defaultColor = {
   // paper & background
   paper: '#ffffff',
 
-  // primary (Electric Blue)
-  primaryLight: '#eff6ff',
-  primary200: '#bfdbfe',
-  primaryMain: '#2563eb',
-  primaryDark: '#1d4ed8',
-  primary800: '#1e40af',
+  // primary (#36669c Classic Blue & #41a0ae Teal)
+  primaryLight: '#edf6f8',
+  primary200: '#bce1e6',
+  primaryMain: '#36669c',
+  primaryDark: '#3a2f6b',
+  primary800: '#28204d',
 
-  // secondary (Violet / Purple)
-  secondaryLight: '#f5f3ff',
-  secondary200: '#ddd6fe',
-  secondaryMain: '#7c3aed',
-  secondaryDark: '#6d28d9',
-  secondary800: '#5b21b6',
+  // secondary (#41a0ae Teal & #3a2f6b Deep Purple)
+  secondaryLight: '#eaf4f6',
+  secondary200: '#aedbe1',
+  secondaryMain: '#41a0ae',
+  secondaryDark: '#3a2f6b',
+  secondary800: '#251e47',
 
-  // success (Emerald Green)
+  // success (#3ec995 Emerald Mint & #77f07f Lime Mint)
   successLight: '#ecfdf5',
-  success200: '#a7f3d0',
-  successMain: '#10b981',
-  successDark: '#047857',
+  success200: '#77f07f',
+  successMain: '#3ec995',
+  successDark: '#269e72',
 
   // error (Crimson Red)
   errorLight: '#fef2f2',
@@ -34,7 +40,7 @@ const defaultColor = {
   orangeMain: '#f97316',
   orangeDark: '#c2410c',
 
-  // warning (Warm Amber)
+  // warning (Warm Amber / Cyan Accent)
   warningLight: '#fffbeb',
   warningMain: '#f59e0b',
   warningDark: '#b45309',
@@ -51,32 +57,32 @@ const defaultColor = {
 
   // ==============================|| DARK THEME VARIANTS ||============================== //
 
-  // paper & background
-  darkPaper: '#111827',
-  darkBackground: '#0b0f19',
+  // paper & background (#3a2f6b inspired dark tones)
+  darkPaper: '#16152b',
+  darkBackground: '#0e0d1d',
 
   // dark levels
-  darkLevel1: '#1f2937',
-  darkLevel2: '#17202e',
+  darkLevel1: '#212040',
+  darkLevel2: '#3a2f6b',
 
   // text variants
   darkTextTitle: '#f9fafb',
   darkTextPrimary: '#e5e7eb',
   darkTextSecondary: '#9ca3af',
 
-  // primary dark
-  darkPrimaryLight: '#eff6ff',
-  darkPrimaryMain: '#3b82f6',
-  darkPrimaryDark: '#2563eb',
-  darkPrimary200: '#bfdbfe',
-  darkPrimary800: '#1d4ed8',
+  // primary dark (#36669c / #41a0ae)
+  darkPrimaryLight: 'rgba(65, 160, 174, 0.15)',
+  darkPrimaryMain: '#36669c',
+  darkPrimaryDark: '#3a2f6b',
+  darkPrimary200: '#41a0ae',
+  darkPrimary800: '#3a2f6b',
 
-  // secondary dark
-  darkSecondaryLight: '#f5f3ff',
-  darkSecondaryMain: '#8b5cf6',
-  darkSecondaryDark: '#7c3aed',
-  darkSecondary200: '#ddd6fe',
-  darkSecondary800: '#6d28d9'
+  // secondary dark (#41a0ae / #3ec995)
+  darkSecondaryLight: 'rgba(62, 201, 149, 0.15)',
+  darkSecondaryMain: '#41a0ae',
+  darkSecondaryDark: '#3a2f6b',
+  darkSecondary200: '#3ec995',
+  darkSecondary800: '#2b2252'
 };
 
 export default defaultColor;

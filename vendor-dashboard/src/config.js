@@ -1,5 +1,5 @@
 export const DASHBOARD_PATH = '/';
-export const DEFAULT_THEME_MODE = 'light';
+export const DEFAULT_THEME_MODE = 'dark';
 
 export const CSS_VAR_PREFIX = '';
 
@@ -12,3 +12,4 @@ const config = {
 };
 
 export default config;
+

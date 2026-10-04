@@ -27,15 +27,13 @@ export default function NavGroup({ item, lastItem, remItems, lastItemId, setSele
   const openMini = Boolean(anchorEl);
 
   useEffect(() => {
-    if (lastItem) {
-      if (item.id === lastItemId) {
-        const localItem = { ...item };
-        const elements = remItems.map((ele) => ele.elements);
-        localItem.children = elements.flat(1);
-        setCurrentItem(localItem);
-      } else {
-        setCurrentItem(item);
-      }
+    if (lastItem && item.id === lastItemId) {
+      const localItem = { ...item };
+      const elements = remItems.map((ele) => ele.elements);
+      localItem.children = elements.flat(1);
+      setCurrentItem(localItem);
+    } else {
+      setCurrentItem(item);
     }
   }, [item, lastItem, remItems, lastItemId]);
 

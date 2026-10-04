@@ -5,6 +5,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const ErrorResponse = require('../utils/errorResponse');
 const User = require('../models/User');
 const Subscription = require('../models/Subscription');
+const Booking = require('../models/Booking');
 const { generateOTP, hashOTP, hashToken } = require('../utils/authHelpers');
 const { deleteFile } = require('../utils/fileHelpers');
 
@@ -15,36 +16,48 @@ const resolveAddressIds = async (address) => {
   const mongoose = require('mongoose');
 
   // Resolve Country
-  if (address.country && !mongoose.Types.ObjectId.isValid(address.country)) {
+  let countryId = address.country;
+  if (countryId && typeof countryId === 'object' && countryId._id) {
+    countryId = countryId._id;
+  }
+
+  if (!countryId || !mongoose.Types.ObjectId.isValid(countryId)) {
     const Country = require('../models/Country');
-    const countryName = String(address.country).trim();
+    const countryName = countryId ? String(countryId).trim() : 'India';
     let countryObj = await Country.findOne({ name: { $regex: new RegExp(`^${countryName}$`, 'i') } });
     if (!countryObj) {
-      // If not found, look for India or create a default country
       countryObj = await Country.findOne({ name: { $regex: /^india$/i } });
       if (!countryObj) {
-        countryObj = await Country.create({ name: countryName || 'India', code: 'IN', dialCode: '+91' });
+        countryObj = await Country.create({ name: 'India', code: 'IN', dialCode: '+91' });
       }
     }
     address.country = countryObj._id;
+  } else {
+    address.country = countryId;
   }
 
   // Resolve State
-  if (address.state && !mongoose.Types.ObjectId.isValid(address.state)) {
+  let stateId = address.state;
+  if (stateId && typeof stateId === 'object' && stateId._id) {
+    stateId = stateId._id;
+  }
+
+  if (stateId && !mongoose.Types.ObjectId.isValid(stateId)) {
     const State = require('../models/State');
-    const stateName = String(address.state).trim();
+    const stateName = String(stateId).trim();
     let stateObj = await State.findOne({ 
       name: { $regex: new RegExp(`^${stateName}$`, 'i') },
       country: address.country
     });
     if (!stateObj) {
-      // Create the state
       stateObj = await State.create({ 
         name: stateName, 
         country: address.country 
       });
     }
     address.state = stateObj._id;
+  } else if (stateId) {
+    address.state = stateId;
   }
 
   return address;
@@ -54,6 +67,11 @@ const resolveAddressIds = async (address) => {
 // @route   PUT /api/vendors/:id/approve
 // @access  Private/Admin
 const approveVendor = asyncHandler(async (req, res, next) => {
+  const mongoose = require('mongoose');
+  if (!req.params.id || req.params.id === 'undefined' || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return next(new ErrorResponse('Invalid Vendor ID parameter', 400));
+  }
+
   const profile = await VendorProfile.findOne({ user: req.params.id });
 
   if (!profile) {
@@ -120,6 +138,11 @@ const approveVendor = asyncHandler(async (req, res, next) => {
 // @route   PUT /api/vendors/:id/subscription
 // @access  Private/(Vendor/Admin)
 const updateSubscription = asyncHandler(async (req, res, next) => {
+  const mongoose = require('mongoose');
+  if (!req.params.id || req.params.id === 'undefined' || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return next(new ErrorResponse('Invalid Vendor ID parameter', 400));
+  }
+
   const { plan, subscriptionId } = req.body;
 
   const profile = await VendorProfile.findOne({ user: req.params.id });
@@ -163,22 +186,23 @@ const getVendors = asyncHandler(async (req, res, next) => {
   res.json({ success: true, count: data.length, data });
 });
 
-// @desc    Get Current Vendor Profile (Vendor only)
+// @desc    Get Current Vendor Profile (Vendor or Vendor-Staff)
 // @route   GET /api/vendors/profile
 // @access  Private/Vendor
 const getVendorProfile = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user.id).select('-password');
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  const user = await User.findById(targetVendorId).select('-password');
 
   if (!user) {
     return next(new ErrorResponse('User account not found', 404));
   }
 
-  let profile = await VendorProfile.findOne({ user: req.user.id })
-    .populate('selectedServices', 'title description image')
+  let profile = await VendorProfile.findOne({ user: targetVendorId })
+    .populate('selectedServices', 'title description image customId formSchema isActive')
     .populate('subscription');
 
   if (!profile) {
-    profile = await VendorProfile.create({ user: req.user.id, companyName: user.name || 'Vendor Partner' });
+    profile = await VendorProfile.create({ user: targetVendorId, companyName: user.name || 'Vendor Partner' });
   }
 
   res.status(200).json({
@@ -191,10 +215,11 @@ const getVendorProfile = asyncHandler(async (req, res, next) => {
 // @route   PUT /api/vendors/profile
 // @access  Private/Vendor
 const updateVendorProfile = asyncHandler(async (req, res, next) => {
-  let profile = await VendorProfile.findOne({ user: req.user.id });
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  let profile = await VendorProfile.findOne({ user: targetVendorId });
 
   if (!profile) {
-    profile = new VendorProfile({ user: req.user.id });
+    profile = new VendorProfile({ user: targetVendorId });
   }
 
   // Update User model fields if provided
@@ -297,6 +322,11 @@ const updateVendorProfile = asyncHandler(async (req, res, next) => {
 // @route   DELETE /api/vendors/:id
 // @access  Private/Admin
 const deleteVendor = asyncHandler(async (req, res, next) => {
+  const mongoose = require('mongoose');
+  if (!req.params.id || req.params.id === 'undefined' || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return next(new ErrorResponse('Invalid Vendor ID parameter', 400));
+  }
+
   const user = await User.findById(req.params.id);
 
   if (!user || user.role !== 'Vendor') {
@@ -568,6 +598,271 @@ const updateVendor = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Get all staff members for current vendor
+// @route   GET /api/vendors/staff
+// @access  Private (Vendor or Admin)
+const getVendorStaff = asyncHandler(async (req, res, next) => {
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  const staff = await User.find({
+    managedBy: targetVendorId,
+    role: { $in: ['Vendor-Staff', 'Staff'] }
+  }).select('-password').sort('-createdAt');
+
+  res.status(200).json({
+    success: true,
+    count: staff.length,
+    data: staff
+  });
+});
+
+// @desc    Create new staff member for vendor
+// @route   POST /api/vendors/staff
+// @access  Private (Vendor or Admin)
+const createVendorStaff = asyncHandler(async (req, res, next) => {
+  const { name, email, password, phone, permissions } = req.body;
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+
+  if (!name || !email || !password) {
+    return next(new ErrorResponse('Please provide name, email, and password', 400));
+  }
+
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    return next(new ErrorResponse('User already exists with this email', 400));
+  }
+
+  if (phone) {
+    const phoneExists = await User.findOne({ phone });
+    if (phoneExists) {
+      return next(new ErrorResponse('User already exists with this phone number', 400));
+    }
+  }
+
+  let parsedPermissions = [];
+  if (permissions) {
+    parsedPermissions = typeof permissions === 'string' ? JSON.parse(permissions) : permissions;
+  }
+
+  const staffUser = await User.create({
+    name,
+    email,
+    password,
+    phone,
+    role: 'Vendor-Staff',
+    managedBy: targetVendorId,
+    isVerified: true,
+    permissions: parsedPermissions
+  });
+
+  try {
+    const loginUrl = process.env.VENDOR_LOGIN_URL || 'https://ababa-holidays-vendor.vercel.app/login';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+        <h2 style="color: #2c3e50; text-align: center;">Welcome to ABABA Holidays!</h2>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>You have been added as a Vendor Staff member for your agency. You can log in using the credentials below:</p>
+        
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin-bottom: 5px;"><strong>Email:</strong> ${email}</p>
+          <p style="margin-top: 0;"><strong>Password:</strong> ${password}</p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${loginUrl}" style="background-color: #2563eb; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Vendor Portal</a>
+        </div>
+      </div>
+    `;
+
+    await sendEmail({
+      email,
+      subject: 'Welcome to ABABA Holidays - Vendor Staff Account Ready',
+      html
+    });
+  } catch (err) {
+    console.error('Failed to send email to vendor staff:', err);
+  }
+
+  res.status(201).json({
+    success: true,
+    message: 'Vendor staff member created successfully',
+    data: staffUser
+  });
+});
+
+// @desc    Update staff member for vendor
+// @route   PUT /api/vendors/staff/:id
+// @access  Private (Vendor or Admin)
+const updateVendorStaff = asyncHandler(async (req, res, next) => {
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  const staff = await User.findById(req.params.id);
+
+  if (!staff) {
+    return next(new ErrorResponse('Staff member not found', 404));
+  }
+
+  if (staff.managedBy?.toString() !== targetVendorId && req.user.role !== 'Admin') {
+    return next(new ErrorResponse('Not authorized to manage this staff member', 403));
+  }
+
+  const { name, email, phone, password, permissions, isSuspended } = req.body;
+
+  if (email && email !== staff.email) {
+    const existing = await User.findOne({ email });
+    if (existing) return next(new ErrorResponse('Email already registered', 400));
+    staff.email = email;
+  }
+
+  if (phone && phone !== staff.phone) {
+    const existing = await User.findOne({ phone });
+    if (existing) return next(new ErrorResponse('Phone number already registered', 400));
+    staff.phone = phone;
+  }
+
+  if (name) staff.name = name;
+  if (password && password.trim() !== '') staff.password = password;
+  if (isSuspended !== undefined) staff.isSuspended = isSuspended === true || isSuspended === 'true';
+
+  if (permissions) {
+    staff.permissions = typeof permissions === 'string' ? JSON.parse(permissions) : permissions;
+  }
+
+  await staff.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Staff member updated successfully',
+    data: staff
+  });
+});
+
+// @desc    Delete staff member for vendor
+// @route   DELETE /api/vendors/staff/:id
+// @access  Private (Vendor or Admin)
+const deleteVendorStaff = asyncHandler(async (req, res, next) => {
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  const staff = await User.findById(req.params.id);
+
+  if (!staff) {
+    return next(new ErrorResponse('Staff member not found', 404));
+  }
+
+  if (staff.managedBy?.toString() !== targetVendorId && req.user.role !== 'Admin') {
+    return next(new ErrorResponse('Not authorized to delete this staff member', 403));
+  }
+
+  await staff.deleteOne();
+
+  res.status(200).json({
+    success: true,
+    message: 'Staff member removed successfully'
+  });
+});
+
+// @desc    Get Vendor Wallet Summary & Financials
+// @route   GET /api/vendors/wallet
+// @access  Private (Vendor or Vendor-Staff)
+const getVendorWallet = asyncHandler(async (req, res, next) => {
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  
+  const bookings = await Booking.find({ vendor: targetVendorId })
+    .populate('package', 'title price')
+    .sort('-createdAt');
+
+  const totalBookings = bookings.length;
+  let grossEarnings = 0;
+  let completedEarnings = 0;
+  let pendingEarnings = 0;
+
+  bookings.forEach(b => {
+    const price = b.totalPrice || 0;
+    if (b.bookingStatus === 'Completed') {
+      grossEarnings += price;
+      completedEarnings += price;
+    } else if (b.bookingStatus === 'Confirmed') {
+      grossEarnings += price;
+      pendingEarnings += price;
+    } else if (b.bookingStatus === 'Pending') {
+      pendingEarnings += price;
+    }
+  });
+
+  const platformFeePercentage = 10; // 10% platform fee
+  const netEarnings = Math.round(grossEarnings * (1 - platformFeePercentage / 100));
+
+  const profile = await VendorProfile.findOne({ user: targetVendorId });
+  const payouts = profile?.payoutHistory || [];
+
+  const totalWithdrawn = payouts
+    .filter(p => p.status === 'Completed' || p.status === 'Approved' || p.status === 'Pending')
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const walletBalance = Math.max(0, netEarnings - totalWithdrawn);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      walletBalance,
+      grossEarnings,
+      netEarnings,
+      completedEarnings,
+      pendingEarnings,
+      totalBookings,
+      platformFeePercentage,
+      bankDetails: profile?.bankDetails || {},
+      payouts,
+      recentTransactions: bookings.slice(0, 10).map(b => ({
+        id: b._id,
+        customId: b.customId || b._id,
+        customerName: b.contactDetails?.name || b.user?.name || 'Customer',
+        packageTitle: b.package?.title || 'Tour Booking',
+        amount: b.totalPrice || 0,
+        netAmount: Math.round((b.totalPrice || 0) * 0.9),
+        status: b.bookingStatus,
+        date: b.createdAt
+      }))
+    }
+  });
+});
+
+// @desc    Request Vendor Payout Withdrawal
+// @route   POST /api/vendors/wallet/payout
+// @access  Private (Vendor)
+const requestVendorPayout = asyncHandler(async (req, res, next) => {
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  const { amount, notes } = req.body;
+
+  if (!amount || amount <= 0) {
+    return next(new ErrorResponse('Please specify a valid payout withdrawal amount', 400));
+  }
+
+  let profile = await VendorProfile.findOne({ user: targetVendorId });
+  if (!profile) {
+    return next(new ErrorResponse('Vendor profile not found', 404));
+  }
+
+  const payoutItem = {
+    payoutId: 'PO-' + Date.now().toString().slice(-6),
+    amount: Number(amount),
+    status: 'Pending',
+    notes: notes || 'Withdrawal request to bank account',
+    requestedAt: new Date(),
+    bankAccount: profile.bankDetails?.accountNumber ? `...${String(profile.bankDetails.accountNumber).slice(-4)}` : 'Default Bank'
+  };
+
+  if (!profile.payoutHistory) {
+    profile.payoutHistory = [];
+  }
+
+  profile.payoutHistory.unshift(payoutItem);
+  await profile.save();
+
+  res.status(201).json({
+    success: true,
+    message: 'Payout withdrawal request submitted successfully',
+    data: payoutItem
+  });
+});
+
 module.exports = {
   getVendor,
   getVendorProfile,
@@ -577,5 +872,11 @@ module.exports = {
   updateVendorProfile,
   getVendors,
   deleteVendor,
-  createVendor
+  createVendor,
+  getVendorStaff,
+  createVendorStaff,
+  updateVendorStaff,
+  deleteVendorStaff,
+  getVendorWallet,
+  requestVendorPayout
 };

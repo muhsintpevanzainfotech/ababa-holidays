@@ -61,9 +61,11 @@ const getBookings = async (req, res, next) => {
   try {
     let query = {};
 
-    // If Vendor, only show their bookings
-    if (req.user.role === 'Vendor' || req.user.role === 'Sub Vendor') {
-      query.vendor = req.user.id;
+    // If Vendor/Vendor-Staff/Staff, only show their vendor's bookings
+    const isVendorRole = req.user && ['Vendor', 'Vendor-Staff', 'Staff', 'Sub Vendor', 'vendor-staff', 'staff'].includes(req.user.role);
+    if (isVendorRole && req.user.role !== 'Admin' && req.user.role !== 'Sub-Admin') {
+      const targetVendorId = req.user.effectiveVendorId || req.user.id;
+      query.vendor = targetVendorId;
     }
 
     const bookings = await Booking.find(query)
@@ -92,8 +94,9 @@ const updateBookingStatus = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    // Ensure only the vendor who owns this booking or an Admin can update
-    if (booking.vendor.toString() !== req.user.id && req.user.role !== 'Admin' && req.user.role !== 'Sub-Admin') {
+    // Ensure only the vendor or staff who owns this booking or an Admin can update
+    const targetVendorId = req.user.effectiveVendorId || req.user.id;
+    if (booking.vendor.toString() !== req.user.id && booking.vendor.toString() !== targetVendorId && req.user.role !== 'Admin' && req.user.role !== 'Sub-Admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to update this booking' });
     }
 

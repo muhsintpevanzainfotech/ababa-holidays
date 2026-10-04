@@ -1,8 +1,7 @@
-// assets
-import { IconPhoto, IconNews, IconMessage2, IconBrush, IconBriefcase, IconListDetails, IconMail, IconQuestionMark, IconWorld, IconUsers, IconBox } from '@tabler/icons-react';
+import { IconPhoto, IconNews, IconMessage2, IconBrush, IconBriefcase, IconListDetails, IconMail, IconQuestionMark, IconWorld, IconUsers, IconBox, IconWallet, IconReceipt } from '@tabler/icons-react';
 
 // constant
-const icons = { IconPhoto, IconNews, IconMessage2, IconBrush, IconBriefcase, IconListDetails, IconMail, IconQuestionMark, IconWorld, IconUsers, IconBox };
+const icons = { IconPhoto, IconNews, IconMessage2, IconBrush, IconBriefcase, IconListDetails, IconMail, IconQuestionMark, IconWorld, IconUsers, IconBox, IconWallet, IconReceipt };
 
 // ==============================|| PLATFORM MANAGEMENT MENU ITEMS ||============================== //
 
@@ -11,6 +10,22 @@ const platform = {
   title: 'Platform Studio',
   type: 'group',
   children: [
+    {
+      id: 'bookings',
+      title: 'Customer Bookings',
+      type: 'item',
+      url: '/platform/bookings',
+      icon: icons.IconReceipt,
+      breadcrumbs: true
+    },
+    {
+      id: 'wallet',
+      title: 'Wallet & Financials',
+      type: 'item',
+      url: '/platform/wallet',
+      icon: icons.IconWallet,
+      breadcrumbs: true
+    },
     {
       id: 'banners',
       title: 'Banners',
@@ -46,14 +61,21 @@ const platform = {
     {
       id: 'packages',
       title: 'Packages & Listings',
-      type: 'item',
-      url: '/platform/packages',
+      type: 'collapse',
       icon: icons.IconBox,
-      breadcrumbs: true
+      children: [
+        {
+          id: 'all-packages',
+          title: 'All Packages',
+          type: 'item',
+          url: '/platform/packages',
+          breadcrumbs: true
+        }
+      ]
     },
     {
       id: 'vendors',
-      title: 'Vendor Network',
+      title: 'Vendor Staff & Team',
       type: 'item',
       url: '/platform/vendors',
       icon: icons.IconUsers,

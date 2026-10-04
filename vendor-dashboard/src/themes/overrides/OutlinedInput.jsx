@@ -19,7 +19,7 @@ export default function OutlinedInput(theme, borderRadius, outlinedFilled) {
           },
 
           '&.Mui-focused': {
-            boxShadow: '0 0 0 3.5px rgba(37, 99, 235, 0.15)'
+            boxShadow: '0 0 0 3.5px rgba(54, 102, 156, 0.25)'
           },
 
           '&.MuiInputBase-multiline': {

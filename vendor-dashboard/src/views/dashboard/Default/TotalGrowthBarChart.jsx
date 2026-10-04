@@ -79,13 +79,6 @@ export default function TotalGrowthBarChart({ isLoading, stats }) {
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Total Growth & Revenue</Typography>
                 <Typography variant="h3" sx={{ fontWeight: 800, color: 'primary.main' }}>{formattedRevenue}</Typography>
               </Stack>
-              <TextField id="standard-select-currency" select value={value} onChange={(e) => setValue(e.target.value)}>
-                {status.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </TextField>
             </Stack>
             <Box
               sx={{

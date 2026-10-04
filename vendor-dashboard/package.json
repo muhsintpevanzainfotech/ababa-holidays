@@ -14,6 +14,7 @@
     "@tabler/icons-react": "3.35.0",
     "@vitejs/plugin-react": "5.1.1",
     "apexcharts": "5.3.6",
+    "formik": "^2.4.9",
     "framer-motion": "12.23.25",
     "lodash-es": "4.17.21",
     "material-ui-popup-state": "5.3.6",

@@ -23,9 +23,9 @@ router.get('/vendor', getVendorBlogs);
 router.get('/vendor/:id', getVendorBlogs);
 router.get('/:id', getBlog);
 
-// Protected routes (Admin/Sub-Admin/Vendor)
-router.post('/', protect, authorize('Admin', 'Sub-Admin', 'Vendor'), upload.single('image'), createBlog);
-router.put('/:id', protect, authorize('Admin', 'Sub-Admin', 'Vendor'), upload.single('image'), updateBlog);
-router.delete('/:id', protect, authorize('Admin', 'Sub-Admin', 'Vendor'), deleteBlog);
+// Protected routes (Admin/Sub-Admin/Vendor/Vendor-Staff)
+router.post('/', protect, authorize('Admin', 'Sub-Admin', 'Vendor', 'Vendor-Staff'), upload.single('image'), createBlog);
+router.put('/:id', protect, authorize('Admin', 'Sub-Admin', 'Vendor', 'Vendor-Staff'), upload.single('image'), updateBlog);
+router.delete('/:id', protect, authorize('Admin', 'Sub-Admin', 'Vendor', 'Vendor-Staff'), deleteBlog);
 
 module.exports = router;
