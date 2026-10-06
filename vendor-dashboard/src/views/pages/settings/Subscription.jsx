@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, useColorScheme } from '@mui/material/styles';
 import {
   Grid, Typography, Stack, Box, Button, Chip,
   Snackbar, Alert, CircularProgress, Paper, Divider,
@@ -27,93 +27,67 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import GroupIcon from '@mui/icons-material/Group';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import LockIcon from '@mui/icons-material/Lock';
+import CancelIcon from '@mui/icons-material/Cancel';
+import TuneIcon from '@mui/icons-material/Tune';
+import SecurityIcon from '@mui/icons-material/Security';
 
-const DEFAULT_PLANS = [
-  {
-    _id: 'starter_plan_id',
-    plan: 'Starter',
-    title: 'Starter Vendor Plan',
-    price: 4999,
-    durationInDays: 365,
-    description: 'Perfect for small travel agencies & individual tour operators starting out.',
-    packageLimit: 15,
-    staffLimit: 3,
-    userLimit: 500,
-    crmEnabled: true,
-    websiteEnabled: false,
-    testimonialEnabled: true,
-    contactUsEnabled: true,
-    enquiriesFollowupEnabled: false,
-    instagramReelsEnabled: false,
-    isPopular: false,
-    features: [
-      'List up to 15 Travel Packages',
-      '3 Staff Sub-Accounts Access',
-      'Basic CRM Lead Management',
-      'Customer Enquiries & Contact Us Inbox',
-      'Standard Search Listing Priority',
-      'Email & WhatsApp Support'
-    ]
-  },
-  {
-    _id: 'pro_plan_id',
-    plan: 'Professional',
-    title: 'Professional Partner Plan',
-    price: 9999,
-    durationInDays: 365,
-    description: 'Our most popular membership for growing agencies seeking maximum visibility & CRM tools.',
-    packageLimit: -1, // Unlimited
-    staffLimit: 10,
-    userLimit: -1,
-    crmEnabled: true,
-    websiteEnabled: true,
-    testimonialEnabled: true,
-    contactUsEnabled: true,
-    enquiriesFollowupEnabled: true,
-    instagramReelsEnabled: true,
-    isPopular: true,
-    features: [
-      'Unlimited Travel Package Listings',
-      '10 Staff Sub-Accounts with Role Permissions',
-      'Advanced Lead CRM & Auto Follow-up Automation',
-      'Custom Agency Website Builder Access',
-      'Instagram Reels & Social Media Integration',
-      'Featured Package Banner Badges',
-      'Priority 24/7 Vendor Support'
-    ]
-  },
-  {
-    _id: 'enterprise_plan_id',
-    plan: 'Enterprise',
-    title: 'Enterprise Corporate Plan',
-    price: 19999,
-    durationInDays: 365,
-    description: 'Designed for large fleet owners, hotel chains & premier travel consolidators.',
-    packageLimit: -1,
-    staffLimit: -1, // Unlimited
-    userLimit: -1,
-    crmEnabled: true,
-    websiteEnabled: true,
-    testimonialEnabled: true,
-    contactUsEnabled: true,
-    enquiriesFollowupEnabled: true,
-    instagramReelsEnabled: true,
-    isPopular: false,
-    features: [
-      'Everything in Professional Plan',
-      'Unlimited Staff Sub-Accounts',
-      'Top 1% Homepage & Search Placement',
-      'Dedicated Account Manager & VIP Onboarding',
-      'Custom API & Booking Webhooks Integration',
-      'Zero Platform Commission Surcharge'
-    ]
-  }
-];
+const getAllFeaturesWithLimits = (plan = {}) => {
+  const isEnterprise = plan.plan === 'Enterprise';
+  const isPro = plan.plan === 'Professional';
+
+  return [
+    {
+      name: 'Packages Catalog',
+      enabled: plan.packagesEnabled !== false,
+      limit: plan.packageLimit !== undefined ? plan.packageLimit : (isEnterprise ? -1 : isPro ? 50 : 15),
+      unit: 'Max'
+    },
+    {
+      name: 'Booking Management',
+      enabled: plan.bookingEnabled !== false,
+      limit: plan.bookingLimit !== undefined ? plan.bookingLimit : -1,
+      unit: 'Bookings'
+    },
+    {
+      name: 'Staff Sub-Accounts',
+      enabled: plan.staffEnabled !== false,
+      limit: plan.staffLimit !== undefined ? plan.staffLimit : (isEnterprise ? -1 : isPro ? 10 : 3),
+      unit: 'Licenses'
+    },
+    {
+      name: 'Customer Users',
+      enabled: plan.userEnabled !== false,
+      limit: plan.userLimit !== undefined ? plan.userLimit : (isEnterprise ? -1 : isPro ? 2500 : 500),
+      unit: 'Users'
+    },
+    {
+      name: 'Banner Showcase',
+      enabled: plan.bannerEnabled !== false,
+      limit: plan.bannerLimit !== undefined ? plan.bannerLimit : -1,
+      unit: 'Banners'
+    },
+    {
+      name: 'Blogs & News',
+      enabled: plan.blogsNewsEnabled !== false,
+      limit: plan.blogLimit !== undefined ? plan.blogLimit : -1,
+      unit: 'Blogs'
+    },
+    { name: 'Customer Testimonials', enabled: plan.testimonialEnabled !== false, limit: plan.testimonialLimit },
+    { name: 'Enquiries Follow-up', enabled: plan.enquiriesFollowupEnabled !== false, limit: plan.enquiryLimit },
+    { name: 'Contact Us Inbox', enabled: plan.contactUsEnabled !== false, limit: plan.contactUsLimit },
+    { name: 'Availability Calendar', enabled: plan.availabilityEnabled !== false, limit: plan.availabilityLimit },
+    { name: 'CRM Access', enabled: plan.crmEnabled !== false, limit: plan.crmLimit },
+    { name: 'Website Module', enabled: plan.websiteEnabled !== false, limit: plan.websiteLimit },
+    { name: 'API & Developer Documentation', enabled: plan.apiDocEnabled !== false, limit: plan.apiDocLimit }
+  ];
+};
+
 
 const VendorSubscriptionSettings = () => {
   const theme = useTheme();
+  const { mode, systemMode } = useColorScheme();
   const { user } = useSelector((state) => state.auth);
-  const isDarkMode = theme.palette.mode === 'dark';
+  const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark' || theme.palette.mode === 'dark';
 
   const authUser = user || (() => {
     try {
@@ -154,7 +128,7 @@ const VendorSubscriptionSettings = () => {
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
   const [activeSubscription, setActiveSubscription] = useState(null);
-  const [availablePlans, setAvailablePlans] = useState(DEFAULT_PLANS);
+  const [availablePlans, setAvailablePlans] = useState([]);
   const [currentPlanName, setCurrentPlanName] = useState('Starter');
   
   // Upgrade Modal State
@@ -191,7 +165,7 @@ const VendorSubscriptionSettings = () => {
         }));
         setAvailablePlans(fetchedPlans);
       } else {
-        setAvailablePlans(DEFAULT_PLANS);
+        setAvailablePlans([]);
       }
     } catch (err) {
       console.error('Failed to load subscription details:', err);
@@ -222,8 +196,9 @@ const VendorSubscriptionSettings = () => {
         subscriptionId: selectedPlanForUpgrade._id
       };
 
+      const vendorId = user?._id || user?.id || 'me';
       // Send PUT request to update vendor subscription in backend
-      const res = await api.put(`/vendors/${user.id}/subscription`, payload);
+      const res = await api.put(`/vendors/${vendorId}/subscription`, payload);
 
       if (res.success) {
         setToast({
@@ -251,7 +226,7 @@ const VendorSubscriptionSettings = () => {
   const activePlanObj = availablePlans.find(p => 
     p.plan?.toLowerCase() === currentPlanName?.toLowerCase() || 
     p.title?.toLowerCase().includes(currentPlanName?.toLowerCase())
-  ) || DEFAULT_PLANS[0];
+  ) || availablePlans[0] || {};
 
   return (
     <Grid container spacing={gridSpacing}>
@@ -300,7 +275,7 @@ const VendorSubscriptionSettings = () => {
                   {activePlanObj.description || 'Your registered agency membership tier on Ababa Travels platform.'}
                 </Typography>
 
-                <Stack direction="row" spacing={2} flexWrap="wrap" gap={1}>
+                <Stack direction="row" spacing={1.5} flexWrap="wrap" gap={1}>
                   <Chip
                     icon={<InventoryIcon style={{ color: '#fff', fontSize: 16 }} />}
                     label={`Packages: ${activePlanObj.packageLimit === -1 ? 'Unlimited' : `${activePlanObj.packageLimit || 15} Max`}`}
@@ -313,6 +288,11 @@ const VendorSubscriptionSettings = () => {
                   />
                   <Chip
                     icon={<SpeedIcon style={{ color: '#fff', fontSize: 16 }} />}
+                    label={`Bookings: ${activePlanObj.bookingLimit === -1 ? 'Unlimited' : `${activePlanObj.bookingLimit || 'Unlimited'}`}`}
+                    sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 700 }}
+                  />
+                  <Chip
+                    icon={<VerifiedIcon style={{ color: '#fff', fontSize: 16 }} />}
                     label="Status: Auto-Renew Active"
                     sx={{ bgcolor: 'rgba(16, 185, 129, 0.3)', color: '#fff', fontWeight: 700 }}
                   />
@@ -362,7 +342,7 @@ const VendorSubscriptionSettings = () => {
                 <RocketLaunchIcon color="secondary" /> Choose or Upgrade Your Membership Tier
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Select a higher tier to unlock unlimited package listings, additional staff seats, and advanced lead CRM tools
+                Select a higher tier to unlock unlimited package listings, additional staff seats, and feature access permissions
               </Typography>
             </Box>
           </Stack>
@@ -459,7 +439,7 @@ const VendorSubscriptionSettings = () => {
                   </Stack>
 
                   {/* Price Tag */}
-                  <Box sx={{ my: 2.5, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+                  <Box sx={{ my: 2, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
                     <Stack direction="row" alignItems="baseline" spacing={0.5}>
                       <Typography variant="h1" fontWeight={900} sx={{ fontSize: '2.2rem', color: 'text.primary' }}>
                         ₹{planObj.price?.toLocaleString('en-IN')}
@@ -473,32 +453,92 @@ const VendorSubscriptionSettings = () => {
                     </Typography>
                   </Box>
 
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.6 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5, lineHeight: 1.6 }}>
                     {planObj.description || 'Comprehensive plan designed to boost your travel agency bookings.'}
                   </Typography>
 
-                  {/* Feature Checklist */}
-                  <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px', color: 'text.secondary' }}>
-                    Included Features & Limits:
+                  {/* FEATURE PERMISSIONS & RESOURCE LIMITS UNIFIED SECTION */}
+                  <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px', color: isDarkMode ? '#80deea' : 'secondary.main', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <TuneIcon sx={{ fontSize: 14 }} /> Feature Access & Resource Limits
                   </Typography>
-
-                  <Stack spacing={1.5} sx={{ mb: 4 }}>
-                    {(planObj.features && planObj.features.length > 0
-                      ? planObj.features
-                      : [
-                          `List up to ${planObj.packageLimit === -1 ? 'Unlimited' : (planObj.packageLimit || 15)} Packages`,
-                          `${planObj.staffLimit === -1 ? 'Unlimited' : (planObj.staffLimit || 3)} Staff Licenses`,
-                          planObj.crmEnabled ? 'Advanced CRM Lead Management' : 'Basic Contact Form Inbox',
-                          planObj.websiteEnabled ? 'Custom Agency Website Builder' : 'Standard Directory Profile',
-                          planObj.instagramReelsEnabled ? 'Instagram Reels Showcase' : 'Standard Media Gallery'
-                        ]
-                    ).map((feat, idx) => (
-                      <Stack key={idx} direction="row" spacing={1.2} alignItems="center">
-                        <CheckCircleIcon color="success" sx={{ fontSize: 18, flexShrink: 0 }} />
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '13.5px' }}>
-                          {feat}
-                        </Typography>
-                      </Stack>
+                  <Stack spacing={0.8} sx={{ mb: 3 }}>
+                    {getAllFeaturesWithLimits(planObj).map((feat, idx) => (
+                      <Box
+                        key={idx}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          py: 0.75,
+                          px: 1.2,
+                          borderRadius: '10px',
+                          bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#f8fafc',
+                          border: '1px solid',
+                          borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : '#e2e8f0'
+                        }}
+                      >
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          {feat.enabled ? (
+                            <CheckCircleIcon sx={{ color: '#22c55e', fontSize: 16, flexShrink: 0 }} />
+                          ) : (
+                            <CancelIcon sx={{ color: isDarkMode ? '#64748b' : '#94a3b8', fontSize: 16, flexShrink: 0 }} />
+                          )}
+                          <Typography variant="body2" sx={{ fontWeight: feat.enabled ? 700 : 500, color: feat.enabled ? (isDarkMode ? '#ffffff' : '#0f172a') : (isDarkMode ? '#94a3b8' : '#64748b'), fontSize: '12px' }}>
+                            {feat.name}
+                          </Typography>
+                        </Stack>
+                        {feat.enabled ? (
+                          feat.limit !== undefined && feat.limit !== null ? (
+                            <Chip
+                              label={feat.limit === -1 ? 'Unlimited' : `${feat.limit} ${feat.unit || 'Max'}`}
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '10px',
+                                fontWeight: 800,
+                                bgcolor: feat.limit === -1 
+                                  ? (isDarkMode ? 'rgba(34, 197, 94, 0.25)' : '#dcfce7')
+                                  : (isDarkMode ? 'rgba(59, 130, 246, 0.25)' : '#eff6ff'),
+                                color: feat.limit === -1
+                                  ? (isDarkMode ? '#4ade80' : '#15803d')
+                                  : (isDarkMode ? '#60a5fa' : '#1d4ed8'),
+                                border: '1px solid',
+                                borderColor: feat.limit === -1
+                                  ? (isDarkMode ? 'rgba(34, 197, 94, 0.5)' : '#86efac')
+                                  : (isDarkMode ? 'rgba(59, 130, 246, 0.5)' : '#93c5fd')
+                              }}
+                            />
+                          ) : (
+                            <Chip
+                              label="Enabled"
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                bgcolor: isDarkMode ? 'rgba(34, 197, 94, 0.25)' : '#dcfce7',
+                                color: isDarkMode ? '#4ade80' : '#15803d',
+                                border: '1px solid',
+                                borderColor: isDarkMode ? 'rgba(34, 197, 94, 0.5)' : '#86efac'
+                              }}
+                            />
+                          )
+                        ) : (
+                          <Chip
+                            label="Locked"
+                            size="small"
+                            sx={{
+                              height: 20,
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9',
+                              color: isDarkMode ? '#94a3b8' : '#64748b',
+                              border: '1px solid',
+                              borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : '#cbd5e1'
+                            }}
+                          />
+                        )}
+                      </Box>
                     ))}
                   </Stack>
                 </Box>
@@ -552,19 +592,19 @@ const VendorSubscriptionSettings = () => {
         <MainCard title="Membership & Upgrade FAQs" icon={<HelpOutlineIcon />}>
           <Grid container spacing={3}>
             <Grid size={{ md: 6, xs: 12 }}>
-              <Box sx={{ p: 2.5, borderRadius: '14px', bgcolor: 'grey.50', border: '1px solid', borderColor: 'divider' }}>
-                <Typography variant="subtitle1" fontWeight={800} gutterBottom>
+              <Box sx={{ p: 2.5, borderRadius: '14px', bgcolor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'grey.50', border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="subtitle1" fontWeight={800} gutterBottom sx={{ color: 'text.primary' }}>
                   How fast is the plan upgrade activated?
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Plan upgrades are applied instantly to your vendor account upon confirmation. New package limits, staff licenses, and CRM features become immediately available in your Vendor Dashboard.
+                  Plan upgrades are applied instantly to your vendor account upon confirmation. New package limits, staff licenses, and feature permissions become immediately available in your Vendor Dashboard.
                 </Typography>
               </Box>
             </Grid>
 
             <Grid size={{ md: 6, xs: 12 }}>
-              <Box sx={{ p: 2.5, borderRadius: '14px', bgcolor: 'grey.50', border: '1px solid', borderColor: 'divider' }}>
-                <Typography variant="subtitle1" fontWeight={800} gutterBottom>
+              <Box sx={{ p: 2.5, borderRadius: '14px', bgcolor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'grey.50', border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="subtitle1" fontWeight={800} gutterBottom sx={{ color: 'text.primary' }}>
                   Can I change my membership plan later?
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -583,67 +623,149 @@ const VendorSubscriptionSettings = () => {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: '20px', p: 1 }
+          sx: {
+            borderRadius: '20px',
+            p: 1,
+            bgcolor: isDarkMode ? '#111936' : '#ffffff',
+            color: isDarkMode ? '#ffffff' : 'text.primary'
+          }
         }}
       >
         {selectedPlanForUpgrade && (
           <>
-            <DialogTitle sx={{ pb: 1 }}>
+            <DialogTitle sx={{ pb: 1, color: isDarkMode ? '#ffffff' : 'text.primary' }}>
               <Stack direction="row" spacing={1.5} alignItems="center">
                 <RocketLaunchIcon color="secondary" sx={{ fontSize: 28 }} />
                 <Box>
-                  <Typography variant="h3" fontWeight={800}>
+                  <Typography variant="h3" fontWeight={800} sx={{ color: isDarkMode ? '#ffffff' : 'text.primary' }}>
                     Confirm Upgrade to {selectedPlanForUpgrade.title || selectedPlanForUpgrade.plan}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{ color: isDarkMode ? '#cbd5e1' : 'text.secondary' }}>
                     Review your membership tier upgrade details
                   </Typography>
                 </Box>
               </Stack>
             </DialogTitle>
 
-            <Divider />
+            <Divider sx={{ borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'divider' }} />
 
             <DialogContent sx={{ py: 3 }}>
               <Stack spacing={2.5}>
                 {/* Plan Summary Box */}
-                <Paper elevation={0} sx={{ p: 2.5, bgcolor: 'secondary.light', borderRadius: '16px', border: '1px solid', borderColor: 'secondary.200' }}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2.5,
+                    bgcolor: isDarkMode ? 'rgba(124, 58, 237, 0.18)' : 'secondary.light',
+                    borderRadius: '16px',
+                    border: '1px solid',
+                    borderColor: isDarkMode ? 'rgba(124, 58, 237, 0.35)' : 'secondary.200'
+                  }}
+                >
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Box>
-                      <Typography variant="h4" fontWeight={800} color="secondary.main">
+                      <Typography variant="h4" fontWeight={800} sx={{ color: isDarkMode ? '#b388ff' : 'secondary.main' }}>
                         {selectedPlanForUpgrade.title || `${selectedPlanForUpgrade.plan} Plan`}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{ color: isDarkMode ? '#cbd5e1' : 'text.secondary' }}>
                         Includes {selectedPlanForUpgrade.packageLimit === -1 ? 'Unlimited' : selectedPlanForUpgrade.packageLimit} Package Listings &bull; {selectedPlanForUpgrade.staffLimit === -1 ? 'Unlimited' : selectedPlanForUpgrade.staffLimit} Staff Accounts
                       </Typography>
                     </Box>
-                    <Typography variant="h2" fontWeight={900} color="secondary.main">
+                    <Typography variant="h2" fontWeight={900} sx={{ color: isDarkMode ? '#b388ff' : 'secondary.main' }}>
                       ₹{selectedPlanForUpgrade.price?.toLocaleString('en-IN')}
-                      <Typography component="span" variant="caption" color="text.secondary">/yr</Typography>
+                      <Typography component="span" variant="caption" sx={{ color: isDarkMode ? '#cbd5e1' : 'text.secondary' }}>/yr</Typography>
                     </Typography>
                   </Stack>
                 </Paper>
 
-                {/* Features Included List */}
+                {/* UNIFIED FEATURE PERMISSIONS & RESOURCE LIMITS SUMMARY */}
                 <Box>
-                  <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1 }}>
-                    Key Features Unlocked:
+                  <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5, color: isDarkMode ? '#b388ff' : 'secondary.main' }}>
+                    <TuneIcon fontSize="small" /> Unlocked Features & Resource Limits:
                   </Typography>
-                  <Stack spacing={1}>
-                    {(selectedPlanForUpgrade.features && selectedPlanForUpgrade.features.length > 0
-                      ? selectedPlanForUpgrade.features
-                      : [
-                          'Increased package listing limits',
-                          'Multi-staff sub-account access',
-                          'CRM & Lead follow-up automation'
-                        ]
-                    ).map((f, i) => (
-                      <Stack key={i} direction="row" spacing={1} alignItems="center">
-                        <CheckCircleIcon color="success" sx={{ fontSize: 16 }} />
-                        <Typography variant="body2" fontWeight={600}>{f}</Typography>
-                      </Stack>
+                  <Grid container spacing={1}>
+                    {getAllFeaturesWithLimits(selectedPlanForUpgrade).map((f, i) => (
+                      <Grid key={i} size={6}>
+                        <Paper
+                          variant="outlined"
+                          sx={{
+                            p: 1,
+                            borderRadius: '10px',
+                            bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#f8fafc',
+                            borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : '#e2e8f0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                          }}
+                        >
+                          <Stack direction="row" spacing={0.8} alignItems="center" sx={{ minWidth: 0 }}>
+                            {f.enabled ? (
+                              <CheckCircleIcon sx={{ color: '#22c55e', fontSize: 15, flexShrink: 0 }} />
+                            ) : (
+                              <CancelIcon sx={{ color: isDarkMode ? '#64748b' : '#94a3b8', fontSize: 15, flexShrink: 0 }} />
+                            )}
+                            <Typography variant="caption" noWrap fontWeight={f.enabled ? 700 : 500} sx={{ color: f.enabled ? (isDarkMode ? '#ffffff' : '#0f172a') : (isDarkMode ? '#94a3b8' : '#64748b') }}>
+                              {f.name}
+                            </Typography>
+                          </Stack>
+                          {f.enabled ? (
+                            f.limit !== undefined && f.limit !== null ? (
+                              <Chip
+                                label={f.limit === -1 ? '∞' : `${f.limit}`}
+                                size="small"
+                                sx={{
+                                  height: 18,
+                                  fontSize: '9.5px',
+                                  fontWeight: 800,
+                                  ml: 0.5,
+                                  bgcolor: f.limit === -1 
+                                    ? (isDarkMode ? 'rgba(34, 197, 94, 0.25)' : '#dcfce7')
+                                    : (isDarkMode ? 'rgba(59, 130, 246, 0.25)' : '#eff6ff'),
+                                  color: f.limit === -1
+                                    ? (isDarkMode ? '#4ade80' : '#15803d')
+                                    : (isDarkMode ? '#60a5fa' : '#1d4ed8'),
+                                  border: '1px solid',
+                                  borderColor: f.limit === -1
+                                    ? (isDarkMode ? 'rgba(34, 197, 94, 0.5)' : '#86efac')
+                                    : (isDarkMode ? 'rgba(59, 130, 246, 0.5)' : '#93c5fd')
+                                }}
+                              />
+                            ) : (
+                              <Chip
+                                label="Active"
+                                size="small"
+                                sx={{
+                                  height: 18,
+                                  fontSize: '9px',
+                                  fontWeight: 700,
+                                  ml: 0.5,
+                                  bgcolor: isDarkMode ? 'rgba(34, 197, 94, 0.25)' : '#dcfce7',
+                                  color: isDarkMode ? '#4ade80' : '#15803d',
+                                  border: '1px solid',
+                                  borderColor: isDarkMode ? 'rgba(34, 197, 94, 0.5)' : '#86efac'
+                                }}
+                              />
+                            )
+                          ) : (
+                            <Chip
+                              label="Locked"
+                              size="small"
+                              sx={{
+                                height: 18,
+                                fontSize: '9px',
+                                fontWeight: 600,
+                                ml: 0.5,
+                                bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9',
+                                color: isDarkMode ? '#94a3b8' : '#64748b',
+                                border: '1px solid',
+                                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : '#cbd5e1'
+                              }}
+                            />
+                          )}
+                        </Paper>
+                      </Grid>
                     ))}
-                  </Stack>
+                  </Grid>
                 </Box>
 
                 {/* Billing Cycle Option */}

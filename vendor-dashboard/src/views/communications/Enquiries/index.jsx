@@ -54,6 +54,8 @@ import NewReleasesIcon from '@mui/icons-material/NewReleases';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PendingIcon from '@mui/icons-material/Pending';
 
+import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
+
 const EnquiryManagement = () => {
     const theme = useTheme();
     const { mode, systemMode } = useColorScheme();
@@ -62,6 +64,7 @@ const EnquiryManagement = () => {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [enquiries, setEnquiries] = useState([]);
+    const [subscription, setSubscription] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [openDrawer, setOpenDrawer] = useState(false);
@@ -80,6 +83,18 @@ const EnquiryManagement = () => {
     const fetchEnquiries = async () => {
         try {
             setLoading(true);
+            try {
+                const profileRes = await api.get('/vendors/profile');
+                const subData = profileRes?.data?.profile?.subscription || profileRes?.data?.subscription || profileRes?.data?.vendor?.subscription;
+                if (subData) {
+                    setSubscription(subData);
+                } else if (profileRes?.success) {
+                    setSubscription({ enquiriesFollowupEnabled: false, enquiryLimit: 0 });
+                }
+            } catch (err) {
+                console.error('Failed to load profile subscription', err);
+            }
+
             const response = await api.get('/enquiries');
             if (response.success) {
                 setEnquiries(response.data || []);
@@ -94,6 +109,9 @@ const EnquiryManagement = () => {
     useEffect(() => {
         fetchEnquiries();
     }, []);
+
+    const enquiryLimit = subscription?.enquiryLimit !== undefined ? subscription.enquiryLimit : -1;
+    const isEnquiriesAllowed = subscription ? (subscription?.enquiriesFollowupEnabled !== false && enquiryLimit !== 0) : true;
 
     const confirmDelete = async () => {
         if (!itemToDelete) return;
@@ -155,6 +173,15 @@ const EnquiryManagement = () => {
     const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
     const surfaceBgColor = isDarkMode ? '#090d16' : '#f8fafc';
     const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0';
+
+    if (!loading && !isEnquiriesAllowed) {
+        return (
+            <Box>
+                <SaasHeader title="Web Enquiries & Leads" subtitle="Track customer inquiries, quotes, and package requests." />
+                <SubscriptionRestrictedCard featureName="Enquiries & Auto Follow-up" reason={enquiryLimit === 0 ? 'limit' : 'permission'} />
+            </Box>
+        );
+    }
 
     return (
         <Box>

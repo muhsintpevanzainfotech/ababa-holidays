@@ -53,6 +53,7 @@ import FilterChip from 'ui-component/extended/FilterChip';
 import DataTable from 'ui-component/extended/DataTable';
 import { gridSpacing } from 'store/constant';
 import api from 'utils/api';
+import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
 
 // assets
 import AddIcon from '@mui/icons-material/Add';
@@ -123,6 +124,7 @@ const VendorStaffManagement = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [staffList, setStaffList] = useState([]);
+    const [subscription, setSubscription] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [filterAnchorEl, setFilterAnchorEl] = useState(null);
@@ -153,6 +155,18 @@ const VendorStaffManagement = () => {
     const fetchStaff = async () => {
         try {
             setLoading(true);
+            try {
+                const profileRes = await api.get('/vendors/profile');
+                const subData = profileRes?.data?.profile?.subscription || profileRes?.data?.subscription || profileRes?.data?.vendor?.subscription;
+                if (subData) {
+                    setSubscription(subData);
+                } else if (profileRes?.success) {
+                    setSubscription({ staffEnabled: false, staffLimit: 0 });
+                }
+            } catch (err) {
+                console.error('Failed to load profile subscription', err);
+            }
+
             const response = await api.get('/vendors/staff');
             if (response.success) {
                 setStaffList(response.data || []);
@@ -167,6 +181,9 @@ const VendorStaffManagement = () => {
     useEffect(() => {
         fetchStaff();
     }, []);
+
+    const staffLimit = subscription?.staffLimit !== undefined ? subscription.staffLimit : -1;
+    const isStaffAllowed = subscription ? (subscription?.staffEnabled !== false && staffLimit !== 0) : true;
 
     const formik = useFormik({
         initialValues: {
@@ -344,6 +361,15 @@ const VendorStaffManagement = () => {
     const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
     const surfaceBgColor = isDarkMode ? '#090d16' : '#f8fafc';
     const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0';
+
+    if (!loading && !isStaffAllowed) {
+        return (
+            <Box>
+                <SaasHeader title="Vendor Staff & Team" subtitle="Manage your agency staff sub-accounts, access credentials, and module permissions." />
+                <SubscriptionRestrictedCard featureName="Staff Sub-Accounts" reason={staffLimit === 0 ? 'limit' : 'permission'} />
+            </Box>
+        );
+    }
 
     return (
         <Box>

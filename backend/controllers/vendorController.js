@@ -138,33 +138,47 @@ const approveVendor = asyncHandler(async (req, res, next) => {
 // @route   PUT /api/vendors/:id/subscription
 // @access  Private/(Vendor/Admin)
 const updateSubscription = asyncHandler(async (req, res, next) => {
+  if (req.user.managedBy || ['vendor-staff', 'staff'].includes((req.user.role || '').toLowerCase())) {
+    return next(new ErrorResponse('Vendor Staff accounts are not authorized to upgrade or modify subscription plans.', 403));
+  }
+
   const mongoose = require('mongoose');
-  if (!req.params.id || req.params.id === 'undefined' || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+  let targetId = req.params.id;
+
+  if (!targetId || targetId === 'undefined' || targetId === 'me' || targetId === 'current' || targetId === 'profile') {
+    targetId = req.user.effectiveVendorId || req.user._id || req.user.id;
+  }
+
+  if (!targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
     return next(new ErrorResponse('Invalid Vendor ID parameter', 400));
   }
 
   const { plan, subscriptionId } = req.body;
 
-  const profile = await VendorProfile.findOne({ user: req.params.id });
+  let profile = await VendorProfile.findOne({ user: targetId });
+  if (!profile) {
+    profile = await VendorProfile.findOne({ _id: targetId });
+  }
 
   if (!profile) {
-    return next(new ErrorResponse('Vendor profile not found', 404));
+    profile = await VendorProfile.create({
+      user: targetId,
+      companyName: req.user.name || 'Vendor Partner',
+      subscriptionPlan: plan || 'Starter',
+      subscription: subscriptionId || null
+    });
+  } else {
+    if (plan) profile.subscriptionPlan = plan;
+    if (subscriptionId) profile.subscription = subscriptionId;
+    await profile.save();
   }
 
-  // Checking if the requester is the vendor themselves or an Admin
-  if (req.user.role !== 'Admin' && req.user.id !== profile.user.toString()) {
-    return next(new ErrorResponse('Unauthorized action', 403));
-  }
-
-  if (plan) profile.subscriptionPlan = plan;
-  if (subscriptionId) profile.subscription = subscriptionId;
-
-  await profile.save();
+  const updatedProfile = await VendorProfile.findById(profile._id).populate('subscription');
 
   res.status(200).json({
     success: true,
-    message: `Subscription updated to ${plan}`,
-    data: profile
+    message: `Subscription updated to ${plan || 'selected plan'}`,
+    data: updatedProfile
   });
 });
 
@@ -187,13 +201,14 @@ const getVendors = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Get Current Vendor Profile (Vendor or Vendor-Staff)
+// @desc    Get Vendor Profile
 // @route   GET /api/vendors/profile
 // @access  Private/Vendor
 const getVendorProfile = asyncHandler(async (req, res, next) => {
   const targetVendorId = req.user.effectiveVendorId || req.user.id;
-  const user = await User.findById(targetVendorId).select('-password');
+  const mainVendorUser = await User.findById(targetVendorId).select('-password');
 
-  if (!user) {
+  if (!mainVendorUser) {
     return next(new ErrorResponse('User account not found', 404));
   }
 
@@ -202,12 +217,36 @@ const getVendorProfile = asyncHandler(async (req, res, next) => {
     .populate('subscription');
 
   if (!profile) {
-    profile = await VendorProfile.create({ user: targetVendorId, companyName: user.name || 'Vendor Partner' });
+    profile = await VendorProfile.create({ user: targetVendorId, companyName: mainVendorUser.name || 'Vendor Partner' });
   }
+
+  const isStaffLogin = Boolean(req.user.managedBy || ['vendor-staff', 'staff'].includes((req.user.role || '').toLowerCase()));
+
+  const staffDetails = isStaffLogin ? {
+    _id: req.user._id,
+    name: req.user.name,
+    email: req.user.email,
+    role: req.user.role,
+    permissions: req.user.permissions || []
+  } : null;
+
+  const mainVendorDetails = {
+    _id: mainVendorUser._id,
+    name: mainVendorUser.name,
+    email: mainVendorUser.email,
+    companyName: profile.companyName || mainVendorUser.name,
+    role: mainVendorUser.role
+  };
 
   res.status(200).json({
     success: true,
-    data: { ...user.toObject(), profile }
+    data: {
+      ...mainVendorUser.toObject(),
+      profile,
+      isStaffLogin,
+      staffDetails,
+      mainVendorDetails
+    }
   });
 });
 
@@ -215,6 +254,10 @@ const getVendorProfile = asyncHandler(async (req, res, next) => {
 // @route   PUT /api/vendors/profile
 // @access  Private/Vendor
 const updateVendorProfile = asyncHandler(async (req, res, next) => {
+  if (req.user.managedBy || ['vendor-staff', 'staff'].includes((req.user.role || '').toLowerCase())) {
+    return next(new ErrorResponse('Vendor Staff accounts are not authorized to modify main agency profile details.', 403));
+  }
+
   const targetVendorId = req.user.effectiveVendorId || req.user.id;
   let profile = await VendorProfile.findOne({ user: targetVendorId });
 
@@ -231,7 +274,7 @@ const updateVendorProfile = asyncHandler(async (req, res, next) => {
   }
 
   // Parse nested objects if they are strings (from multipart/form-data)
-  ['spoc', 'tin', 'gst', 'bankDetails', 'seo', 'address', 'selectedServices', 'socialLinks'].forEach(key => {
+  ['spoc', 'tin', 'gst', 'bankDetails', 'seo', 'address', 'selectedServices', 'socialLinks', 'packageCommission'].forEach(key => {
     if (typeof req.body[key] === 'string') {
       try {
         req.body[key] = JSON.parse(req.body[key]);
@@ -542,7 +585,7 @@ const updateVendor = asyncHandler(async (req, res, next) => {
   await user.save();
 
   // Parse nested JSON fields if present
-  ['spoc', 'tin', 'gst', 'bankDetails', 'seo', 'address', 'selectedServices', 'socialLinks'].forEach(key => {
+  ['spoc', 'tin', 'gst', 'bankDetails', 'seo', 'address', 'selectedServices', 'socialLinks', 'packageCommission'].forEach(key => {
     if (typeof req.body[key] === 'string') {
       try {
         req.body[key] = JSON.parse(req.body[key]);
@@ -863,6 +906,84 @@ const requestVendorPayout = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Get Vendor API Key & Integration Security Status
+// @route   GET /api/vendors/api-key
+// @access  Private/Vendor
+const getVendorApiKey = asyncHandler(async (req, res, next) => {
+  const crypto = require('crypto');
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  let profile = await VendorProfile.findOne({ user: targetVendorId });
+
+  if (!profile) {
+    profile = await VendorProfile.create({ user: targetVendorId });
+  }
+
+  if (!profile.apiKey) {
+    const randomHex = crypto.randomBytes(18).toString('hex');
+    profile.apiKey = `ababa_live_sec_${randomHex}`;
+    profile.apiKeyCreatedAt = new Date();
+    await profile.save();
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      apiKey: profile.apiKey,
+      createdAt: profile.apiKeyCreatedAt || profile.updatedAt,
+      status: 'Active',
+      vendorId: targetVendorId
+    }
+  });
+});
+
+// @desc    Generate / Regenerate Vendor API Security Key
+// @route   POST /api/vendors/api-key/generate
+// @access  Private/Vendor
+const generateVendorApiKey = asyncHandler(async (req, res, next) => {
+  const crypto = require('crypto');
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  let profile = await VendorProfile.findOne({ user: targetVendorId });
+
+  if (!profile) {
+    profile = await VendorProfile.create({ user: targetVendorId });
+  }
+
+  const randomHex = crypto.randomBytes(18).toString('hex');
+  profile.apiKey = `ababa_live_sec_${randomHex}`;
+  profile.apiKeyCreatedAt = new Date();
+  await profile.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'New API Security Key generated successfully!',
+    data: {
+      apiKey: profile.apiKey,
+      createdAt: profile.apiKeyCreatedAt,
+      status: 'Active',
+      vendorId: targetVendorId
+    }
+  });
+});
+
+// @desc    Revoke / Delete Vendor API Security Key
+// @route   DELETE /api/vendors/api-key
+// @access  Private/Vendor
+const revokeVendorApiKey = asyncHandler(async (req, res, next) => {
+  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  let profile = await VendorProfile.findOne({ user: targetVendorId });
+
+  if (profile) {
+    profile.apiKey = undefined;
+    profile.apiKeyCreatedAt = undefined;
+    await profile.save();
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'API Security Key revoked successfully.'
+  });
+});
+
 module.exports = {
   getVendor,
   getVendorProfile,
@@ -878,5 +999,8 @@ module.exports = {
   updateVendorStaff,
   deleteVendorStaff,
   getVendorWallet,
-  requestVendorPayout
+  requestVendorPayout,
+  getVendorApiKey,
+  generateVendorApiKey,
+  revokeVendorApiKey
 };

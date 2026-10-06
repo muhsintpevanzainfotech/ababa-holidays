@@ -46,6 +46,8 @@ import PendingIcon from '@mui/icons-material/Pending';
 import PaidIcon from '@mui/icons-material/Paid';
 import SaveIcon from '@mui/icons-material/Save';
 
+import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
+
 const BookingsManagement = () => {
     const theme = useTheme();
     const isLightExplicit = theme.palette.mode === 'light' && document.documentElement.getAttribute('data-color-scheme') === 'light';
@@ -57,6 +59,7 @@ const BookingsManagement = () => {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [bookings, setBookings] = useState([]);
+    const [subscription, setSubscription] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
 
@@ -72,6 +75,15 @@ const BookingsManagement = () => {
     const fetchBookings = async () => {
         try {
             setLoading(true);
+            try {
+                const profileRes = await api.get('/vendors/profile');
+                if (profileRes?.success && profileRes?.data?.profile?.subscription) {
+                    setSubscription(profileRes.data.profile.subscription);
+                }
+            } catch (err) {
+                console.error('Failed to load profile subscription', err);
+            }
+
             const response = await api.get('/bookings');
             if (response.success) {
                 setBookings(response.data || []);
@@ -86,6 +98,9 @@ const BookingsManagement = () => {
     useEffect(() => {
         fetchBookings();
     }, []);
+
+    const bookingLimit = subscription?.bookingLimit !== undefined ? subscription.bookingLimit : -1;
+    const isBookingAllowed = subscription?.bookingEnabled !== false && bookingLimit !== 0;
 
     const handleOpenDrawer = (booking) => {
         setSelectedBooking(booking);
@@ -128,6 +143,15 @@ const BookingsManagement = () => {
     const confirmedCount = bookings.filter(b => b.bookingStatus === 'Confirmed' || b.bookingStatus === 'Completed').length;
     const pendingCount = bookings.filter(b => b.bookingStatus === 'Pending').length;
     const totalVolume = bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+    if (!loading && !isBookingAllowed) {
+        return (
+            <Box>
+                <SaasHeader title="Customer Bookings" subtitle="Manage customer reservations and bookings." />
+                <SubscriptionRestrictedCard featureName="Booking Management" reason={bookingLimit === 0 ? 'limit' : 'permission'} />
+            </Box>
+        );
+    }
 
     return (
         <Box>

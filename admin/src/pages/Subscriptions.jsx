@@ -42,6 +42,22 @@ import {
   deleteSubscriptionRequest
 } from '../store/slices/subscriptionsSlice';
 
+const FEATURE_CONFIGS = [
+  { key: 'packagesCatalog', enabledKey: 'packagesEnabled', limitKey: 'packageLimit', label: 'Packages Catalog', defaultLimit: 100 },
+  { key: 'bookingManagement', enabledKey: 'bookingEnabled', limitKey: 'bookingLimit', label: 'Booking Management', defaultLimit: 100 },
+  { key: 'staffSubAccounts', enabledKey: 'staffEnabled', limitKey: 'staffLimit', label: 'Staff Sub-Accounts', defaultLimit: 5 },
+  { key: 'customerUsers', enabledKey: 'userEnabled', limitKey: 'userLimit', label: 'Customer Users', defaultLimit: 500 },
+  { key: 'bannerShowcase', enabledKey: 'bannerEnabled', limitKey: 'bannerLimit', label: 'Banner Showcase', defaultLimit: 10 },
+  { key: 'blogsNews', enabledKey: 'blogsNewsEnabled', limitKey: 'blogLimit', label: 'Blogs & News', defaultLimit: 20 },
+  { key: 'testimonials', enabledKey: 'testimonialEnabled', limitKey: 'testimonialLimit', label: 'Testimonials', defaultLimit: 50 },
+  { key: 'enquiriesFollowup', enabledKey: 'enquiriesFollowupEnabled', limitKey: 'enquiryLimit', label: 'Enquiries Follow-up', defaultLimit: 100 },
+  { key: 'contactUsInbox', enabledKey: 'contactUsEnabled', limitKey: 'contactUsLimit', label: 'Contact Us Inbox', defaultLimit: 100 },
+  { key: 'availabilityCalendar', enabledKey: 'availabilityEnabled', limitKey: 'availabilityLimit', label: 'Availability Calendar', defaultLimit: 100 },
+  { key: 'crmAccess', enabledKey: 'crmEnabled', limitKey: 'crmLimit', label: 'CRM Access', defaultLimit: 100 },
+  { key: 'websiteModule', enabledKey: 'websiteEnabled', limitKey: 'websiteLimit', label: 'Website Module', defaultLimit: 1 },
+  { key: 'apiDocumentation', enabledKey: 'apiDocEnabled', limitKey: 'apiDocLimit', label: 'API & Developer Docs', defaultLimit: 100 }
+];
+
 const planStyles = {
   Free: {
     border: '1px solid var(--border)',
@@ -103,22 +119,28 @@ const Subscriptions = () => {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
 
+  const getInitialFeatureData = (subObj = null) => {
+    const data = {};
+    FEATURE_CONFIGS.forEach(feat => {
+      if (subObj) {
+        data[feat.enabledKey] = subObj[feat.enabledKey] !== false;
+        data[feat.limitKey] = subObj[feat.limitKey] !== undefined ? subObj[feat.limitKey] : -1;
+      } else {
+        data[feat.enabledKey] = true;
+        data[feat.limitKey] = -1; // Default to Unlimited (-1)
+      }
+    });
+    return data;
+  };
+
   const [formData, setFormData] = useState({
     plan: 'Professional',
     title: '',
     description: '',
     price: 0,
-    durationInDays: 30,
+    durationInDays: 365,
     features: [],
-    userLimit: 5,
-    packageLimit: 10,
-    staffLimit: 5,
-    crmEnabled: false,
-    websiteEnabled: false,
-    testimonialEnabled: false,
-    contactUsEnabled: false,
-    instagramReelsEnabled: false,
-    enquiriesFollowupEnabled: false,
+    ...getInitialFeatureData(),
     isActive: true,
     isVisible: true
   });
@@ -160,27 +182,17 @@ const Subscriptions = () => {
         title: sub.title,
         description: sub.description || '',
         price: sub.price || 0,
-        durationInDays: sub.durationInDays || 30,
+        durationInDays: sub.durationInDays !== undefined ? sub.durationInDays : 365,
         features: sub.features || [],
-        userLimit: sub.userLimit || 0,
-        packageLimit: sub.packageLimit || 0,
-        staffLimit: sub.staffLimit || 0,
-        crmEnabled: sub.crmEnabled || false,
-        websiteEnabled: sub.websiteEnabled || false,
-        testimonialEnabled: sub.testimonialEnabled || false,
-        contactUsEnabled: sub.contactUsEnabled || false,
-        instagramReelsEnabled: sub.instagramReelsEnabled || false,
-        enquiriesFollowupEnabled: sub.enquiriesFollowupEnabled || false,
+        ...getInitialFeatureData(sub),
         isActive: sub.isActive !== undefined ? sub.isActive : true,
         isVisible: sub.isVisible !== undefined ? sub.isVisible : true
       });
     } else {
       setFormData({
         plan: 'Professional', title: '', description: '', price: 0,
-        durationInDays: 30, features: [],
-        userLimit: 5, packageLimit: 10, staffLimit: 5,
-        crmEnabled: false, websiteEnabled: false, testimonialEnabled: false,
-        contactUsEnabled: false, instagramReelsEnabled: false, enquiriesFollowupEnabled: false,
+        durationInDays: 365, features: [],
+        ...getInitialFeatureData(),
         isActive: true, isVisible: true
       });
     }
@@ -241,6 +253,21 @@ const Subscriptions = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validation for enabled features with limitType === "limited"
+    for (const feat of FEATURE_CONFIGS) {
+      const isEnabled = formData[feat.enabledKey] !== false;
+      const limitVal = formData[feat.limitKey];
+      const isUnlimited = limitVal === -1 || limitVal === null || limitVal === undefined;
+
+      if (isEnabled && !isUnlimited) {
+        if (limitVal === '' || limitVal === null || limitVal === undefined || isNaN(limitVal) || Number(limitVal) < 0 || !Number.isInteger(Number(limitVal))) {
+          showToast('Validation Error', `Please enter a valid non-negative integer limit for ${feat.label}.`, 'error');
+          return;
+        }
+      }
+    }
+
     if (modalType === 'add') {
       dispatch(addSubscriptionRequest(formData));
       showToast('Success', 'Subscription plan created', 'success');
@@ -531,21 +558,36 @@ const Subscriptions = () => {
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', minHeight: '36px', lineHeight: '1.5' }}>{sub.description}</p>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '20px' }}>
-                    <div style={{ background: 'var(--bg-main)', padding: '10px 4px', borderRadius: '12px', border: '1px solid var(--border)', textAlign: 'center' }}>
-                      <Users size={14} color="var(--primary)" style={{ marginBottom: '4px', margin: '0 auto' }} />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '20px' }}>
+                    <div style={{ background: 'var(--bg-main)', padding: '8px 4px', borderRadius: '10px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                      <Users size={14} color="var(--primary)" style={{ marginBottom: '2px', margin: '0 auto' }} />
                       <p style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Users</p>
-                      <p style={{ fontWeight: '800', fontSize: '14px', color: 'var(--text-main)' }}>{sub.userLimit === -1 ? '∞' : sub.userLimit}</p>
+                      <p style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-main)' }}>{sub.userLimit === -1 ? '∞' : (sub.userLimit ?? 5)}</p>
                     </div>
-                    <div style={{ background: 'var(--bg-main)', padding: '10px 4px', borderRadius: '12px', border: '1px solid var(--border)', textAlign: 'center' }}>
-                      <Package size={14} color="var(--primary)" style={{ marginBottom: '4px', margin: '0 auto' }} />
+                    <div style={{ background: 'var(--bg-main)', padding: '8px 4px', borderRadius: '10px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                      <Package size={14} color="var(--primary)" style={{ marginBottom: '2px', margin: '0 auto' }} />
                       <p style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Pkgs</p>
-                      <p style={{ fontWeight: '800', fontSize: '14px', color: 'var(--text-main)' }}>{sub.packageLimit === -1 ? '∞' : sub.packageLimit}</p>
+                      <p style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-main)' }}>{sub.packageLimit === -1 ? '∞' : (sub.packageLimit ?? 10)}</p>
                     </div>
-                    <div style={{ background: 'var(--bg-main)', padding: '10px 4px', borderRadius: '12px', border: '1px solid var(--border)', textAlign: 'center' }}>
-                      <Users size={14} color="var(--primary)" style={{ marginBottom: '4px', margin: '0 auto' }} />
+                    <div style={{ background: 'var(--bg-main)', padding: '8px 4px', borderRadius: '10px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                      <Users size={14} color="var(--primary)" style={{ marginBottom: '2px', margin: '0 auto' }} />
                       <p style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Staff</p>
-                      <p style={{ fontWeight: '800', fontSize: '14px', color: 'var(--text-main)' }}>{sub.staffLimit === -1 ? '∞' : sub.staffLimit}</p>
+                      <p style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-main)' }}>{sub.staffLimit === -1 ? '∞' : (sub.staffLimit ?? 5)}</p>
+                    </div>
+                    <div style={{ background: 'var(--bg-main)', padding: '8px 4px', borderRadius: '10px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                      <CreditCard size={14} color="var(--primary)" style={{ marginBottom: '2px', margin: '0 auto' }} />
+                      <p style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Bookings</p>
+                      <p style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-main)' }}>{sub.bookingLimit === -1 ? '∞' : (sub.bookingLimit ?? '∞')}</p>
+                    </div>
+                    <div style={{ background: 'var(--bg-main)', padding: '8px 4px', borderRadius: '10px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                      <Globe size={14} color="var(--primary)" style={{ marginBottom: '2px', margin: '0 auto' }} />
+                      <p style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Banners</p>
+                      <p style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-main)' }}>{sub.bannerLimit === -1 ? '∞' : (sub.bannerLimit ?? '∞')}</p>
+                    </div>
+                    <div style={{ background: 'var(--bg-main)', padding: '8px 4px', borderRadius: '10px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                      <ShieldCheck size={14} color="var(--primary)" style={{ marginBottom: '2px', margin: '0 auto' }} />
+                      <p style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Blogs</p>
+                      <p style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-main)' }}>{sub.blogLimit === -1 ? '∞' : (sub.blogLimit ?? '∞')}</p>
                     </div>
                   </div>
 
@@ -556,16 +598,30 @@ const Subscriptions = () => {
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       {[
-                        { label: 'CRM Access', enabled: sub.crmEnabled },
-                        { label: 'Website Module', enabled: sub.websiteEnabled },
-                        { label: 'Testimonials', enabled: sub.testimonialEnabled },
-                        { label: 'Contact Us', enabled: sub.contactUsEnabled },
-                        { label: 'Insta Reels', enabled: sub.instagramReelsEnabled },
-                        { label: 'Enquiries', enabled: sub.enquiriesFollowupEnabled },
+                        { label: 'Packages Catalog', enabled: sub.packagesEnabled !== false, limit: sub.packageLimit },
+                        { label: 'Staff Sub-Accounts', enabled: true, limit: sub.staffLimit },
+                        { label: 'Customer Users', enabled: true, limit: sub.userLimit },
+                        { label: 'Booking Management', enabled: sub.bookingEnabled !== false, limit: sub.bookingLimit },
+                        { label: 'Banner Showcase', enabled: sub.bannerEnabled !== false, limit: sub.bannerLimit },
+                        { label: 'Blogs & News', enabled: sub.blogsNewsEnabled !== false, limit: sub.blogLimit },
+                        { label: 'Testimonials', enabled: sub.testimonialEnabled !== false },
+                        { label: 'Enquiries Follow-up', enabled: sub.enquiriesFollowupEnabled !== false },
+                        { label: 'Contact Us Inbox', enabled: sub.contactUsEnabled !== false },
+                        { label: 'Availability Calendar', enabled: sub.availabilityEnabled !== false },
+                        { label: 'CRM Access', enabled: sub.crmEnabled !== false },
+                        { label: 'Website Module', enabled: sub.websiteEnabled !== false },
+                        { label: 'API & Developer Docs', enabled: sub.apiDocEnabled !== false, limit: sub.apiDocLimit },
                       ].map((feature, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
-                          {feature.enabled ? <Check size={14} color="#22c55e" strokeWidth={3} /> : <X size={14} color="#ef4444" strokeWidth={3} />}
-                          <span style={{ color: feature.enabled ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: feature.enabled ? '600' : '400' }}>{feature.label}</span>
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11.5px', background: 'var(--bg-main)', padding: '5px 8px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {feature.enabled ? <Check size={13} color="#22c55e" strokeWidth={3} /> : <X size={13} color="#ef4444" strokeWidth={3} />}
+                            <span style={{ color: feature.enabled ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: feature.enabled ? '600' : '400' }}>{feature.label}</span>
+                          </div>
+                          {feature.enabled && feature.limit !== undefined && feature.limit !== null && (
+                            <span style={{ fontSize: '10px', fontWeight: '800', padding: '1px 6px', borderRadius: '6px', background: 'rgba(59,130,246,0.15)', color: 'var(--primary, #3b82f6)' }}>
+                              {feature.limit === -1 ? '∞' : feature.limit}
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -950,116 +1006,112 @@ const Subscriptions = () => {
             />
           </div>
 
+          {/* UNIFIED FEATURE ACCESS PERMISSIONS & RESOURCE LIMITS SECTION */}
           <div style={{ padding: '16px', background: 'var(--bg-main)', borderRadius: '12px', marginBottom: '24px', border: '1px solid var(--border)' }}>
             <h4 style={{ fontSize: '12px', fontWeight: '800', marginBottom: '16px', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
-              Resource Limits
+              Feature Access Permissions & Resource Limits
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label style={{ fontSize: '12px', margin: 0, fontWeight: '700', color: 'var(--text-main)' }}>Max Users</label>
-                  <label style={{
-                    fontSize: '11px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: modalType === 'view' ? 'default' : 'pointer',
-                    color: formData.userLimit === -1 ? 'var(--primary)' : 'var(--text-muted)',
-                    fontWeight: '700',
-                    userSelect: 'none',
-                    background: formData.userLimit === -1 ? 'rgba(var(--primary-rgb), 0.1)' : 'transparent',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    transition: 'all 0.2s ease'
-                  }}>
-                    <input 
-                      type="checkbox" 
-                      disabled={modalType === 'view'}
-                      checked={formData.userLimit === -1} 
-                      onChange={(e) => setFormData({ ...formData, userLimit: e.target.checked ? -1 : 5 })}
-                      style={{ width: '14px', height: '14px', accentColor: 'var(--primary)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
-                    />
-                    Unlimited
-                  </label>
-                </div>
-                <input
-                  type="number" className="form-control"
-                  disabled={modalType === 'view' || formData.userLimit === -1}
-                  value={formData.userLimit === -1 ? '' : formData.userLimit}
-                  placeholder={formData.userLimit === -1 ? '∞ Unlimited' : '5'}
-                  onChange={(e) => setFormData({ ...formData, userLimit: Number(e.target.value) })}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label style={{ fontSize: '12px', margin: 0, fontWeight: '700', color: 'var(--text-main)' }}>Max Packages</label>
-                  <label style={{
-                    fontSize: '11px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: modalType === 'view' ? 'default' : 'pointer',
-                    color: formData.packageLimit === -1 ? 'var(--primary)' : 'var(--text-muted)',
-                    fontWeight: '700',
-                    userSelect: 'none',
-                    background: formData.packageLimit === -1 ? 'rgba(var(--primary-rgb), 0.1)' : 'transparent',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    transition: 'all 0.2s ease'
-                  }}>
-                    <input 
-                      type="checkbox" 
-                      disabled={modalType === 'view'}
-                      checked={formData.packageLimit === -1} 
-                      onChange={(e) => setFormData({ ...formData, packageLimit: e.target.checked ? -1 : 10 })}
-                      style={{ width: '14px', height: '14px', accentColor: 'var(--primary)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
-                    />
-                    Unlimited
-                  </label>
-                </div>
-                <input
-                  type="number" className="form-control"
-                  disabled={modalType === 'view' || formData.packageLimit === -1}
-                  value={formData.packageLimit === -1 ? '' : formData.packageLimit}
-                  placeholder={formData.packageLimit === -1 ? '∞ Unlimited' : '10'}
-                  onChange={(e) => setFormData({ ...formData, packageLimit: Number(e.target.value) })}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label style={{ fontSize: '12px', margin: 0, fontWeight: '700', color: 'var(--text-main)' }}>Max Staff</label>
-                  <label style={{
-                    fontSize: '11px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: modalType === 'view' ? 'default' : 'pointer',
-                    color: formData.staffLimit === -1 ? 'var(--primary)' : 'var(--text-muted)',
-                    fontWeight: '700',
-                    userSelect: 'none',
-                    background: formData.staffLimit === -1 ? 'rgba(var(--primary-rgb), 0.1)' : 'transparent',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    transition: 'all 0.2s ease'
-                  }}>
-                    <input 
-                      type="checkbox" 
-                      disabled={modalType === 'view'}
-                      checked={formData.staffLimit === -1} 
-                      onChange={(e) => setFormData({ ...formData, staffLimit: e.target.checked ? -1 : 5 })}
-                      style={{ width: '14px', height: '14px', accentColor: 'var(--primary)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
-                    />
-                    Unlimited
-                  </label>
-                </div>
-                <input
-                  type="number" className="form-control"
-                  disabled={modalType === 'view' || formData.staffLimit === -1}
-                  value={formData.staffLimit === -1 ? '' : formData.staffLimit}
-                  placeholder={formData.staffLimit === -1 ? '∞ Unlimited' : '5'}
-                  onChange={(e) => setFormData({ ...formData, staffLimit: Number(e.target.value) })}
-                />
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+              {FEATURE_CONFIGS.map((feat) => {
+                const isEnabled = formData[feat.enabledKey] !== false;
+                const rawLimit = formData[feat.limitKey];
+                const isUnlimited = rawLimit === -1 || rawLimit === null || rawLimit === undefined;
+
+                return (
+                  <div
+                    key={feat.key}
+                    style={{
+                      padding: '14px',
+                      background: 'var(--bg-card)',
+                      borderRadius: '12px',
+                      border: '1px solid var(--border)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                      transition: 'all 0.2s ease',
+                      opacity: isEnabled ? 1 : 0.55
+                    }}
+                  >
+                    {/* 1. Accept / Enable Checkbox */}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', fontWeight: '800', margin: 0, cursor: modalType === 'view' ? 'default' : 'pointer', color: 'var(--text-main)' }}>
+                      <input
+                        type="checkbox"
+                        disabled={modalType === 'view'}
+                        checked={isEnabled}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFormData(prev => ({ ...prev, [feat.enabledKey]: checked }));
+                        }}
+                        style={{ width: '17px', height: '17px', accentColor: 'var(--primary)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
+                      />
+                      {feat.label}
+                    </label>
+
+                    {/* 2. Limit Controls Box (Visually disabled when feature is disabled) */}
+                    <div style={{ pointerEvents: isEnabled && modalType !== 'view' ? 'auto' : 'none', display: 'flex', flexDirection: 'column', gap: '8px', opacity: isEnabled ? 1 : 0.6 }}>
+                      <div>
+                        <label style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', letterSpacing: '0.04em' }}>
+                          Limit Type
+                        </label>
+                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', cursor: isEnabled ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '6px', color: isEnabled ? 'var(--text-main)' : 'var(--text-muted)' }}>
+                            <input
+                              type="radio"
+                              name={`limitType_${feat.key}`}
+                              value="limited"
+                              disabled={!isEnabled || modalType === 'view'}
+                              checked={!isUnlimited}
+                              onChange={() => {
+                                const newLimit = (rawLimit !== -1 && rawLimit !== null && rawLimit !== undefined && rawLimit >= 0) ? rawLimit : (feat.defaultLimit || 10);
+                                setFormData(prev => ({ ...prev, [feat.limitKey]: newLimit }));
+                              }}
+                              style={{ accentColor: 'var(--primary)', cursor: isEnabled ? 'pointer' : 'default' }}
+                            />
+                            Limited
+                          </label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', cursor: isEnabled ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: '6px', color: isEnabled ? 'var(--text-main)' : 'var(--text-muted)' }}>
+                            <input
+                              type="radio"
+                              name={`limitType_${feat.key}`}
+                              value="unlimited"
+                              disabled={!isEnabled || modalType === 'view'}
+                              checked={isUnlimited}
+                              onChange={() => {
+                                setFormData(prev => ({ ...prev, [feat.limitKey]: -1 }));
+                              }}
+                              style={{ accentColor: 'var(--primary)', cursor: isEnabled ? 'pointer' : 'default' }}
+                            />
+                            Unlimited
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* 3. Limit Value Input (Visible when Limited is selected) */}
+                      {!isUnlimited && (
+                        <div>
+                          <label style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', letterSpacing: '0.04em' }}>
+                            Limit
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            className="form-control"
+                            style={{ height: '34px', fontSize: '12.5px', fontWeight: '700', padding: '4px 10px' }}
+                            disabled={!isEnabled || modalType === 'view'}
+                            value={rawLimit !== null && rawLimit !== undefined && rawLimit >= 0 ? rawLimit : ''}
+                            placeholder="e.g. 100"
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                              setFormData(prev => ({ ...prev, [feat.limitKey]: val }));
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -1107,44 +1159,6 @@ const Subscriptions = () => {
                 ))}
               </div>
             )}
-          </div>
-
-          <h4 style={{ fontSize: '12px', fontWeight: '800', marginBottom: '14px', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
-            Feature Access Permissions
-          </h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '32px' }}>
-            {[
-              { key: 'crmEnabled', label: 'CRM Access' },
-              { key: 'websiteEnabled', label: 'Website Module' },
-              { key: 'testimonialEnabled', label: 'Testimonials' },
-              { key: 'contactUsEnabled', label: 'Contact Us' },
-              { key: 'instagramReelsEnabled', label: 'Instagram Reels' },
-              { key: 'enquiriesFollowupEnabled', label: 'Enquiries Follow-up' },
-            ].map((f) => (
-              <label key={f.key} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                fontSize: '12.5px',
-                fontWeight: '600',
-                cursor: modalType === 'view' ? 'default' : 'pointer',
-                padding: '10px 14px',
-                background: 'var(--bg-main)',
-                borderRadius: '10px',
-                border: '1px solid var(--border)',
-                userSelect: 'none',
-                color: formData[f.key] ? 'var(--text-main)' : 'var(--text-muted)'
-              }}>
-                <input
-                  type="checkbox"
-                  disabled={modalType === 'view'}
-                  style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: modalType === 'view' ? 'default' : 'pointer' }}
-                  checked={formData[f.key]}
-                  onChange={(e) => setFormData({ ...formData, [f.key]: e.target.checked })}
-                />
-                {f.label}
-              </label>
-            ))}
           </div>
 
           {modalType === 'view' ? (

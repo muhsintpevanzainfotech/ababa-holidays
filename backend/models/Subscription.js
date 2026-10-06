@@ -23,15 +23,67 @@ const subscriptionSchema = new mongoose.Schema({
   }],
   userLimit: {
     type: Number,
-    default: 0 // Use -1 for unlimited
+    default: -1 // Use -1 for unlimited
   },
   packageLimit: {
     type: Number,
-    default: 0 // Use -1 for unlimited
+    default: -1 // Use -1 for unlimited
   },
   staffLimit: {
     type: Number,
-    default: 0 // Use -1 for unlimited
+    default: -1 // Use -1 for unlimited
+  },
+  bookingLimit: {
+    type: Number,
+    default: -1 // Use -1 for unlimited
+  },
+  bannerLimit: {
+    type: Number,
+    default: -1 // Use -1 for unlimited
+  },
+  blogLimit: {
+    type: Number,
+    default: -1 // Use -1 for unlimited
+  },
+  testimonialLimit: {
+    type: Number,
+    default: -1
+  },
+  enquiryLimit: {
+    type: Number,
+    default: -1
+  },
+  contactUsLimit: {
+    type: Number,
+    default: -1
+  },
+  availabilityLimit: {
+    type: Number,
+    default: -1
+  },
+  crmLimit: {
+    type: Number,
+    default: -1
+  },
+  websiteLimit: {
+    type: Number,
+    default: -1
+  },
+  apiDocLimit: {
+    type: Number,
+    default: -1
+  },
+  staffEnabled: {
+    type: Boolean,
+    default: true
+  },
+  userEnabled: {
+    type: Boolean,
+    default: true
+  },
+  apiDocEnabled: {
+    type: Boolean,
+    default: true
   },
   images: [{
     type: String
@@ -42,31 +94,47 @@ const subscriptionSchema = new mongoose.Schema({
   },
   durationInDays: {
     type: Number,
-    default: 30 // Use -1 for unlimited
+    default: 365 // Use -1 for unlimited
   },
   crmEnabled: {
     type: Boolean,
-    default: false
+    default: true
   },
   websiteEnabled: {
     type: Boolean,
-    default: false
+    default: true
+  },
+  bannerEnabled: {
+    type: Boolean,
+    default: true
+  },
+  blogsNewsEnabled: {
+    type: Boolean,
+    default: true
   },
   testimonialEnabled: {
     type: Boolean,
-    default: false
+    default: true
   },
   contactUsEnabled: {
     type: Boolean,
-    default: false
+    default: true
   },
   enquiriesFollowupEnabled: {
     type: Boolean,
-    default: false
+    default: true
   },
-  instagramReelsEnabled: {
+  bookingEnabled: {
     type: Boolean,
-    default: false
+    default: true
+  },
+  packagesEnabled: {
+    type: Boolean,
+    default: true
+  },
+  availabilityEnabled: {
+    type: Boolean,
+    default: true
   },
   startDate: {
     type: Date,

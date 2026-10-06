@@ -227,38 +227,92 @@ const WalletManagement = () => {
             <Paper
                 elevation={0}
                 sx={{
-                    p: 2.5,
+                    p: 3,
                     mb: 3,
-                    borderRadius: '14px',
+                    borderRadius: '16px',
                     border: '1px solid',
                     borderColor: 'divider',
-                    bgcolor: 'background.paper'
+                    bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'background.paper'),
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
                 }}
             >
-                <Grid container spacing={2} alignItems="center">
-                    <Grid size={{ xs: 12, md: 7 }}>
+                <Stack spacing={2.5}>
+                    {/* Header */}
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
                         <Stack direction="row" spacing={2} alignItems="center">
                             <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 44, height: 44 }}>
                                 <AccountBalanceIcon />
                             </Avatar>
                             <Box>
-                                <Typography variant="subtitle1" fontWeight="700">
+                                <Typography variant="h4" fontWeight="800">
                                     Registered Payout Bank Account
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                                    {walletData.bankDetails?.bankName ? (
-                                        `${walletData.bankDetails.bankName} • A/C: ...${String(walletData.bankDetails.accountNumber || '').slice(-4)} • IFSC: ${walletData.bankDetails.ifscCode || 'N/A'}`
-                                    ) : (
-                                        'No bank account linked yet. Please update bank details in Agency Profile settings.'
-                                    )}
+                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                    Verified bank account details for direct payout settlement
                                 </Typography>
                             </Box>
                         </Stack>
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 5 }} sx={{ textAlign: { md: 'right' } }}>
                         <StatusBadge label="Automated Payout Processing" icon={<InfoIcon sx={{ fontSize: '0.85rem !important' }} />} />
-                    </Grid>
-                </Grid>
+                    </Stack>
+
+                    <Divider />
+
+                    {/* Full Bank Details Grid */}
+                    {walletData.bankDetails && (walletData.bankDetails.accountNumber || walletData.bankDetails.bankName) ? (
+                        <Grid container spacing={2.5}>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" textTransform="uppercase">
+                                    Bank Name
+                                </Typography>
+                                <Typography variant="subtitle1" fontWeight="800" color="text.primary">
+                                    {walletData.bankDetails.bankName || 'N/A'}
+                                </Typography>
+                            </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" textTransform="uppercase">
+                                    Account Holder Name
+                                </Typography>
+                                <Typography variant="subtitle1" fontWeight="800" color="text.primary">
+                                    {walletData.bankDetails.accountName || 'N/A'}
+                                </Typography>
+                            </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" textTransform="uppercase">
+                                    Full Account Number
+                                </Typography>
+                                <Typography variant="subtitle1" fontWeight="900" color="primary.main" sx={{ fontFamily: 'monospace', letterSpacing: 0.5 }}>
+                                    {walletData.bankDetails.accountNumber || 'N/A'}
+                                </Typography>
+                            </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" textTransform="uppercase">
+                                    IFSC Code
+                                </Typography>
+                                <Typography variant="subtitle1" fontWeight="800" color="text.primary" sx={{ fontFamily: 'monospace' }}>
+                                    {walletData.bankDetails.ifscCode || 'N/A'}
+                                </Typography>
+                            </Grid>
+
+                            {walletData.bankDetails.branch && (
+                                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" textTransform="uppercase">
+                                        Branch Name
+                                    </Typography>
+                                    <Typography variant="subtitle1" fontWeight="700" color="text.primary">
+                                        {walletData.bankDetails.branch}
+                                    </Typography>
+                                </Grid>
+                            )}
+                        </Grid>
+                    ) : (
+                        <Alert severity="warning" sx={{ borderRadius: '10px' }}>
+                            No payout bank account details linked yet. Please update your bank account details in Agency Profile settings.
+                        </Alert>
+                    )}
+                </Stack>
             </Paper>
 
             {/* Main Content Card */}
@@ -381,12 +435,35 @@ const WalletManagement = () => {
                     Request Bank Payout Withdrawal
                 </DialogTitle>
                 <DialogContent>
-                    <Box sx={{ mb: 2.5, p: 2, borderRadius: '12px', bgcolor: 'grey.50', border: '1px solid', borderColor: 'divider' }}>
-                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 800, textTransform: 'uppercase' }}>Available Balance</Typography>
-                        <Typography variant="h3" fontWeight="900" color="#ff5252">
-                            ₹{(walletData.walletBalance || 0).toLocaleString('en-IN')}
-                        </Typography>
-                    </Box>
+                    <Grid container spacing={1.5} sx={{ mb: 2.5 }}>
+                        <Grid size={{ xs: 6 }}>
+                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'grey.50'), border: '1px solid', borderColor: 'divider' }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 800, textTransform: 'uppercase' }}>Available Balance</Typography>
+                                <Typography variant="h4" fontWeight="900" color="#ff5252">
+                                    ₹{(walletData.walletBalance || 0).toLocaleString('en-IN')}
+                                </Typography>
+                            </Box>
+                        </Grid>
+                        <Grid size={{ xs: 6 }}>
+                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'grey.50'), border: '1px solid', borderColor: 'divider' }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 800, textTransform: 'uppercase' }}>Payout Bank</Typography>
+                                <Typography variant="subtitle2" fontWeight="800" color="primary.main" noWrap>
+                                    {walletData.bankDetails?.bankName || 'Linked Bank'}
+                                </Typography>
+                            </Box>
+                        </Grid>
+                    </Grid>
+
+                    {walletData.bankDetails?.accountNumber && (
+                        <Box sx={{ p: 1.5, mb: 2.5, borderRadius: '10px', bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(99,102,241,0.1)' : '#eff6ff'), border: '1px solid', borderColor: 'primary.light' }}>
+                            <Typography variant="caption" fontWeight="800" color="primary.main" display="block">
+                                TARGET BANK ACCOUNT:
+                            </Typography>
+                            <Typography variant="body2" fontWeight="700" color="text.primary" sx={{ fontFamily: 'monospace' }}>
+                                {walletData.bankDetails.bankName} • A/C: {walletData.bankDetails.accountNumber} • IFSC: {walletData.bankDetails.ifscCode}
+                            </Typography>
+                        </Box>
+                    )}
 
                     <Stack spacing={2.5}>
                         <TextField

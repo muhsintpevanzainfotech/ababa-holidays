@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, CheckCircle, Package, Briefcase } from 'lucide-react';
+import { Star, CheckCircle, Package, Briefcase, Percent } from 'lucide-react';
 import { getFieldError } from '../components/SharedUI';
 
 const Step6Services = ({ 
@@ -130,6 +130,50 @@ const Step6Services = ({
             })}
           </div>
         )}
+      </div>
+
+      {/* PACKAGE COMMISSION SETUP */}
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', marginTop: '24px' }}>
+        <h4 style={{ fontSize: '13px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '16px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Percent size={14} color="var(--primary)" /> Package Commission Setup
+        </h4>
+        <div style={{ background: 'var(--bg-card)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+                Commission Type
+              </label>
+              <select
+                disabled={isViewMode}
+                value={formik.values.packageCommission?.type || 'Percentage'}
+                onChange={(e) => formik.setFieldValue('packageCommission.type', e.target.value)}
+                className="input-field"
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-main)', fontWeight: '600' }}
+              >
+                <option value="Percentage">Percentage (%)</option>
+                <option value="Flat">Flat Amount (₹)</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+                Package Commission Rate {formik.values.packageCommission?.type === 'Percentage' ? '(%)' : '(₹)'}
+              </label>
+              <input
+                type="number"
+                disabled={isViewMode}
+                name="packageCommission.rate"
+                value={formik.values.packageCommission?.rate !== undefined ? formik.values.packageCommission.rate : 0}
+                onChange={(e) => formik.setFieldValue('packageCommission.rate', Number(e.target.value) || 0)}
+                placeholder="e.g. 10"
+                className="input-field"
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-main)', fontWeight: '700' }}
+              />
+            </div>
+          </div>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+            💡 Admin commission rate applied on bookings for packages created by this vendor.
+          </p>
+        </div>
       </div>
     </div>
   );

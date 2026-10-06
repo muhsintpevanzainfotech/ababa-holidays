@@ -106,6 +106,10 @@ export const useVendorForm = (isPublic = false) => {
       subscriptionPlan: 'Free',
       subscription: '',
       selectedServices: [],
+      packageCommission: {
+        rate: 0,
+        type: 'Percentage'
+      },
       socialMedia: [{ platform: '', url: '' }]
     },
     validationSchema,
@@ -116,7 +120,7 @@ export const useVendorForm = (isPublic = false) => {
         
         // Append nested objects and primitives
         Object.keys(values).forEach(key => {
-          if (['spoc', 'address', 'bankDetails', 'seo', 'gst', 'tin'].includes(key)) {
+          if (['spoc', 'address', 'bankDetails', 'seo', 'gst', 'tin', 'packageCommission'].includes(key)) {
             formData.append(key, JSON.stringify(values[key]));
           } else if (['socialMedia', 'selectedServices'].includes(key)) {
             formData.append(key, JSON.stringify(values[key]));
@@ -231,6 +235,10 @@ export const useVendorForm = (isPublic = false) => {
             selectedServices: Array.isArray(profile.selectedServices)
               ? profile.selectedServices.map(s => (typeof s === 'object' ? s._id : s))
               : [],
+            packageCommission: {
+              rate: profile.packageCommission?.rate !== undefined ? profile.packageCommission.rate : 0,
+              type: profile.packageCommission?.type || 'Percentage'
+            },
             socialMedia: profile.socialMedia || [{ platform: '', url: '' }]
           });
 

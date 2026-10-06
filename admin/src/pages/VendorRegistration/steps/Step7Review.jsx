@@ -122,6 +122,7 @@ const Step7Review = ({
           {renderReviewItem('City', formik.values.address?.city)}
           {renderReviewItem('Country & State', `${selectedCountryName} • ${selectedStateName}`)}
           {renderReviewItem('Selected Plan', selectedPlan)}
+          {renderReviewItem('Package Commission', `${formik.values.packageCommission?.rate || 0}${formik.values.packageCommission?.type === 'Flat' ? ' ₹ Flat' : '%'}`)}
         </div>
       </div>
     </div>

@@ -96,6 +96,8 @@ const testimonialValidationSchema = Yup.object().shape({
     isTopPick: Yup.boolean()
 });
 
+import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
+
 const TestimonialManagement = () => {
     const theme = useTheme();
     const navigate = useNavigate();
@@ -104,6 +106,7 @@ const TestimonialManagement = () => {
 
     const [loading, setLoading] = useState(true);
     const [testimonials, setTestimonials] = useState([]);
+    const [subscription, setSubscription] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [ratingFilter, setRatingFilter] = useState('All');
     const [roleFilter, setRoleFilter] = useState('All');
@@ -126,6 +129,39 @@ const TestimonialManagement = () => {
     // Delete Modal
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
+
+    const fetchTestimonials = async () => {
+        try {
+            setLoading(true);
+            try {
+                const profileRes = await api.get('/vendors/profile');
+                const subData = profileRes?.data?.profile?.subscription || profileRes?.data?.subscription || profileRes?.data?.vendor?.subscription;
+                if (subData) {
+                    setSubscription(subData);
+                } else if (profileRes?.success) {
+                    setSubscription({ testimonialEnabled: false, testimonialLimit: 0 });
+                }
+            } catch (err) {
+                console.error('Failed to load profile subscription', err);
+            }
+
+            const response = await api.get('/testimonials');
+            if (response.success) {
+                setTestimonials(response.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch testimonials:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchTestimonials();
+    }, []);
+
+    const testimonialLimit = subscription?.testimonialLimit !== undefined ? subscription.testimonialLimit : -1;
+    const isTestimonialAllowed = subscription ? (subscription?.testimonialEnabled !== false && testimonialLimit !== 0) : true;
 
     const handleErrorMessage = (errorMsg) => {
         const message = typeof errorMsg === 'string' ? errorMsg : errorMsg?.message || 'Something went wrong';
@@ -223,23 +259,7 @@ const TestimonialManagement = () => {
         }
     });
 
-    const fetchTestimonials = async () => {
-        try {
-            setLoading(true);
-            const response = await api.get('/testimonials');
-            if (response.success) {
-                setTestimonials(response.data || []);
-            }
-        } catch (error) {
-            console.error('Failed to fetch testimonials:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
-    useEffect(() => {
-        fetchTestimonials();
-    }, []);
 
     const handleOpenDrawer = (item = null) => {
         setImageFile(null);
@@ -373,6 +393,15 @@ const TestimonialManagement = () => {
     const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
     const surfaceBgColor = isDarkMode ? '#090d16' : '#f8fafc';
     const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0';
+
+    if (!loading && !isTestimonialAllowed) {
+        return (
+            <Box>
+                <SaasHeader title="Customer Testimonials & Reviews" subtitle="Manage client reviews and travel testimonials." />
+                <SubscriptionRestrictedCard featureName="Customer Testimonials" reason={testimonialLimit === 0 ? 'limit' : 'permission'} />
+            </Box>
+        );
+    }
 
     return (
         <Box>

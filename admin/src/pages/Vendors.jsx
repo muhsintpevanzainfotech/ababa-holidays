@@ -253,6 +253,9 @@ const Vendors = () => {
                       </div>
                         <span className="badge badge-primary" style={{ fontSize: '10px' }}>{vendor.role}</span>
                         <span style={{ padding: '0 8px', borderRadius: '12px', fontSize: '10px', background: '#e0f2fe', color: '#0369a1', fontWeight: '600' }}>{vendor.profile?.subscriptionPlan || 'Free'}</span>
+                        <span style={{ padding: '0 8px', borderRadius: '12px', fontSize: '10px', background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', fontWeight: '700' }}>
+                          Comm: {vendor.profile?.packageCommission?.rate !== undefined ? vendor.profile.packageCommission.rate : 0}{vendor.profile?.packageCommission?.type === 'Flat' ? ' ₹' : '%'}
+                        </span>
                         {vendor.profile?.subscription && (
                           <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginLeft: '4px' }}>
                             {vendor.profile.subscription.crmEnabled && <ShieldCheck size={12} title="CRM" color="#22c55e" />}
@@ -381,10 +384,13 @@ const Vendors = () => {
                             </span>
                             {vendor.profile?.subscription && (
                               <>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '8px' }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                   <span>U: {vendor.profile.subscription.userLimit === -1 ? '∞' : vendor.profile.subscription.userLimit}</span>
                                   <span>P: {vendor.profile.subscription.packageLimit === -1 ? '∞' : vendor.profile.subscription.packageLimit}</span>
                                   <span>S: {vendor.profile.subscription.staffLimit === -1 ? '∞' : vendor.profile.subscription.staffLimit}</span>
+                                  <span style={{ color: '#8b5cf6', fontWeight: '700' }}>
+                                    Comm: {vendor.profile?.packageCommission?.rate !== undefined ? vendor.profile.packageCommission.rate : 0}{vendor.profile?.packageCommission?.type === 'Flat' ? ' ₹' : '%'}
+                                  </span>
                                 </div>
                                 <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
                                   {vendor.profile.subscription.crmEnabled && <ShieldCheck size={12} title="CRM" color="#22c55e" />}

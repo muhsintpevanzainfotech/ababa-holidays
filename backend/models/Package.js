@@ -48,10 +48,18 @@ const packageSchema = new mongoose.Schema({
     default: {}
   },
   // Optional standard fields (no strict required constraints to allow Form Setup flexibility)
+  packageName: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Package name cannot be more than 200 characters']
+  },
   title: {
     type: String,
     trim: true,
     maxlength: [200, 'Title cannot be more than 200 characters']
+  },
+  packageDescription: {
+    type: String
   },
   description: {
     type: String
@@ -188,7 +196,23 @@ packageSchema.pre('save', async function () {
     this.customId = `${prefix}${year}${seqString}`;
   }
 
-  // Capitalize title if present
+  // Synchronize packageName <-> title and packageDescription <-> description
+  if (this.packageName && !this.title) {
+    this.title = this.packageName;
+  } else if (this.title && !this.packageName) {
+    this.packageName = this.title;
+  }
+
+  if (this.packageDescription && !this.description) {
+    this.description = this.packageDescription;
+  } else if (this.description && !this.packageDescription) {
+    this.packageDescription = this.description;
+  }
+
+  // Capitalize title and packageName if present
+  if (this.packageName) {
+    this.packageName = this.packageName.trim().charAt(0).toUpperCase() + this.packageName.trim().slice(1);
+  }
   if (this.title) {
     this.title = this.title.trim().charAt(0).toUpperCase() + this.title.trim().slice(1);
   }

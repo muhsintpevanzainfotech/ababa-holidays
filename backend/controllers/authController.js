@@ -291,6 +291,20 @@ const register = asyncHandler(async (req, res, next) => {
       req.body.address = await resolveAddressIds(req.body.address);
     }
 
+    let packageCommissionObj = { rate: 0, type: 'Percentage' };
+    if (req.body.packageCommission) {
+      if (typeof req.body.packageCommission === 'string') {
+        try { packageCommissionObj = JSON.parse(req.body.packageCommission); } catch (e) {}
+      } else {
+        packageCommissionObj = req.body.packageCommission;
+      }
+    } else if (req.body.packageCommissionRate !== undefined) {
+      packageCommissionObj = {
+        rate: Number(req.body.packageCommissionRate) || 0,
+        type: req.body.packageCommissionType || 'Percentage'
+      };
+    }
+
     const profilePayload = {
       user: user._id,
       companyName: companyName || req.body.companyName || 'New Vendor',
@@ -298,6 +312,7 @@ const register = asyncHandler(async (req, res, next) => {
       selectedServices: req.body.selectedServices || [],
       subscription: subscriptionId || null,
       subscriptionPlan: planTitle,
+      packageCommission: packageCommissionObj,
       isApproved: false,
       vendorType: req.body.vendorType || 'Individual',
       address: req.body.address,

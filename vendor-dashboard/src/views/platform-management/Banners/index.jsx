@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // material-ui
 import {
@@ -27,7 +28,13 @@ import {
     ToggleButton,
     ToggleButtonGroup,
     Divider,
-    Avatar
+    Avatar,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Snackbar,
+    Alert
 } from '@mui/material';
 import { useColorScheme, useTheme } from '@mui/material/styles';
 
@@ -67,21 +74,36 @@ import ViewListIcon from '@mui/icons-material/ViewList';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+
+import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
 
 const BannerManagement = () => {
     const theme = useTheme();
+    const navigate = useNavigate();
     const { mode, systemMode } = useColorScheme();
     const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [banners, setBanners] = useState([]);
+    const [subscription, setSubscription] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState('grid');
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedBanner, setSelectedBanner] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
     const [file, setFile] = useState(null);
+
+    // Toast Alert State
+    const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+    // Subscription Plan Modal State
+    const [subPlanModalOpen, setSubPlanModalOpen] = useState(false);
+    // Delete Confirmation Modal State
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
+    const [formError, setFormError] = useState('');
 
     const [formData, setFormData] = useState({
         title: '',
@@ -92,6 +114,18 @@ const BannerManagement = () => {
     const fetchBanners = async () => {
         try {
             setLoading(true);
+            try {
+                const profileRes = await api.get('/vendors/profile');
+                const subData = profileRes?.data?.profile?.subscription || profileRes?.data?.subscription || profileRes?.data?.vendor?.subscription;
+                if (subData) {
+                    setSubscription(subData);
+                } else if (profileRes?.success) {
+                    setSubscription({ bannerEnabled: false, bannerLimit: 0 });
+                }
+            } catch (err) {
+                console.error('Failed to load profile subscription', err);
+            }
+
             let response;
             try {
                 response = await api.get('/banners/my-banners');
@@ -117,18 +151,47 @@ const BannerManagement = () => {
         fetchBanners();
     }, []);
 
+    const bannerLimit = subscription?.bannerLimit !== undefined ? subscription.bannerLimit : -1;
+    const isBannerAllowed = subscription ? (subscription?.bannerEnabled !== false && bannerLimit !== 0) : true;
+    const isBannerLimitReached = bannerLimit !== -1 && banners.length >= bannerLimit;
+
+    if (!loading && !isBannerAllowed) {
+        return (
+            <Box>
+                <SaasHeader title="Marketing Banners" subtitle="Manage homepage slides and promotional banners." />
+                <SubscriptionRestrictedCard featureName="Banner Showcase" reason={bannerLimit === 0 ? 'limit' : 'permission'} />
+            </Box>
+        );
+    }
+
+    const handleOpenDialogCustom = (banner = null) => {
+        if (isBannerLimitReached && !banner) {
+            setSubPlanModalOpen(true);
+            return;
+        }
+        handleOpenDialog(banner);
+    };
+
     const handleSearch = (event) => {
         setSearchTerm(event.target.value);
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this banner?')) {
-            try {
-                await api.delete(`/banners/${id}`);
-                fetchBanners();
-            } catch (error) {
-                alert(error.message || 'Failed to delete banner');
-            }
+    const promptDelete = (id) => {
+        setItemToDelete(id);
+        setDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        try {
+            await api.delete(`/banners/${itemToDelete}`);
+            setToast({ open: true, message: 'Banner deleted successfully!', severity: 'success' });
+            fetchBanners();
+        } catch (error) {
+            setToast({ open: true, message: error.message || 'Failed to delete banner', severity: 'error' });
+        } finally {
+            setDeleteModalOpen(false);
+            setItemToDelete(null);
         }
     };
 
@@ -144,9 +207,10 @@ const BannerManagement = () => {
                     res = await api.patch(`/banners/${id}`, { isActive: !banners.find(b => b._id === id)?.isActive });
                 }
             }
+            setToast({ open: true, message: 'Banner status updated successfully!', severity: 'success' });
             fetchBanners();
         } catch (error) {
-            alert(error.message || 'Failed to update status');
+            setToast({ open: true, message: error.message || 'Failed to update status', severity: 'error' });
         }
     };
 
@@ -165,17 +229,21 @@ const BannerManagement = () => {
             setPreviewImage(null);
         }
         setFile(null);
+        setFormError('');
         setOpenDialog(true);
     };
 
     const handleSubmit = async () => {
+        setFormError('');
         if (!formData.title) {
-            alert('Banner title is required');
+            setFormError('Banner title is required');
+            setToast({ open: true, message: 'Banner title is required', severity: 'warning' });
             return;
         }
 
         if (!selectedBanner && !file) {
-            alert('Please select a banner image to upload');
+            setFormError('Please select a banner image to upload');
+            setToast({ open: true, message: 'Please select a banner image to upload', severity: 'warning' });
             return;
         }
 
@@ -198,10 +266,22 @@ const BannerManagement = () => {
 
             if (response && (response.success || response._id || response.data)) {
                 setOpenDialog(false);
+                setToast({
+                    open: true,
+                    message: selectedBanner ? 'Banner updated successfully!' : 'New banner created successfully!',
+                    severity: 'success'
+                });
                 fetchBanners();
             }
         } catch (error) {
-            alert(error.message || 'Failed to save banner');
+            if (
+                error.message?.toLowerCase().includes('subscription plan') ||
+                error.message?.toLowerCase().includes('limit reached')
+            ) {
+                setSubPlanModalOpen(true);
+            } else {
+                setToast({ open: true, message: error.message || 'Failed to save banner', severity: 'error' });
+            }
         } finally {
             setSubmitting(false);
         }
@@ -215,6 +295,10 @@ const BannerManagement = () => {
     const activeCount = banners.filter(b => b.isActive).length;
     const inactiveCount = banners.length - activeCount;
 
+    const textColor = isDarkMode ? '#ffffff' : '#0f172a';
+    const subTextColor = isDarkMode ? '#cbd5e1' : '#64748b';
+    const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
+
     return (
         <Box>
             <SaasHeader
@@ -222,7 +306,7 @@ const BannerManagement = () => {
                 subtitle="Manage homepage slides, promotional banners, and marketing campaigns."
                 actionLabel="Add New Banner"
                 actionIcon={<AddIcon />}
-                onActionClick={() => handleOpenDialog()}
+                onActionClick={() => handleOpenDialogCustom()}
                 loading={loading}
             />
 
@@ -265,8 +349,8 @@ const BannerManagement = () => {
                         p: 2,
                         borderRadius: '12px',
                         border: '1px solid',
-                        borderColor: 'divider',
-                        bgcolor: 'background.paper',
+                        borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'divider',
+                        bgcolor: cardBgColor,
                         display: 'flex',
                         flexDirection: { xs: 'column', sm: 'row' },
                         alignItems: { sm: 'center' },
@@ -338,8 +422,8 @@ const BannerManagement = () => {
                                     sx={{
                                         borderRadius: '16px',
                                         border: '1px solid',
-                                        borderColor: 'divider',
-                                        bgcolor: 'background.paper',
+                                        borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'divider',
+                                        bgcolor: cardBgColor,
                                         overflow: 'hidden',
                                         height: '100%',
                                         display: 'flex',
@@ -389,11 +473,11 @@ const BannerManagement = () => {
                                     </Box>
 
                                     <CardContent sx={{ p: 2.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <Typography variant="h4" fontWeight="bold" gutterBottom noWrap title={row.title}>
+                                        <Typography variant="h4" fontWeight="bold" gutterBottom noWrap title={row.title} sx={{ color: textColor }}>
                                             {row.title}
                                         </Typography>
 
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, flexGrow: 1, lineClamp: 2 }}>
+                                        <Typography variant="body2" sx={{ color: subTextColor, mb: 2, flexGrow: 1, lineClamp: 2 }}>
                                             {row.description || 'No description provided.'}
                                         </Typography>
 
@@ -409,13 +493,13 @@ const BannerManagement = () => {
 
                                             <Stack direction="row" spacing={1}>
                                                 <Tooltip title="Edit Banner">
-                                                    <IconButton size="small" color="secondary" onClick={() => handleOpenDialog(row)}>
+                                                    <IconButton size="small" color="secondary" onClick={() => handleOpenDialogCustom(row)}>
                                                         <EditIcon fontSize="small" />
                                                     </IconButton>
                                                 </Tooltip>
 
                                                 <Tooltip title="Delete Banner">
-                                                    <IconButton size="small" color="error" onClick={() => handleDelete(row._id)}>
+                                                    <IconButton size="small" color="error" onClick={() => promptDelete(row._id)}>
                                                         <DeleteIcon fontSize="small" />
                                                     </IconButton>
                                                 </Tooltip>
@@ -449,8 +533,8 @@ const BannerManagement = () => {
                                 field: 'title',
                                 render: (row) => (
                                     <Box>
-                                        <Typography variant="subtitle1" fontWeight="600">{row.title}</Typography>
-                                        <Typography variant="caption" color="text.secondary">{row.description}</Typography>
+                                        <Typography variant="subtitle1" fontWeight="600" sx={{ color: textColor }}>{row.title}</Typography>
+                                        <Typography variant="caption" sx={{ color: subTextColor }}>{row.description}</Typography>
                                     </Box>
                                 )
                             },
@@ -466,10 +550,10 @@ const BannerManagement = () => {
                                 align: 'center',
                                 render: (row) => (
                                     <Stack direction="row" spacing={1} justifyContent="center">
-                                        <IconButton size="small" color="secondary" onClick={() => handleOpenDialog(row)}>
+                                        <IconButton size="small" color="secondary" onClick={() => handleOpenDialogCustom(row)}>
                                             <EditIcon fontSize="small" />
                                         </IconButton>
-                                        <IconButton size="small" color="error" onClick={() => handleDelete(row._id)}>
+                                        <IconButton size="small" color="error" onClick={() => promptDelete(row._id)}>
                                             <DeleteIcon fontSize="small" />
                                         </IconButton>
                                     </Stack>
@@ -490,12 +574,14 @@ const BannerManagement = () => {
                 PaperProps={{
                     sx: {
                         width: { xs: '100%', sm: 460 },
-                        p: 3
+                        p: 3,
+                        bgcolor: cardBgColor,
+                        color: textColor
                     }
                 }}
             >
                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                    <Typography variant="h3">{selectedBanner ? 'Edit Banner' : 'Add New Banner'}</Typography>
+                    <Typography variant="h3" sx={{ color: textColor }}>{selectedBanner ? 'Edit Banner' : 'Add New Banner'}</Typography>
                     <IconButton onClick={() => setOpenDialog(false)}>
                         <CloseIcon />
                     </IconButton>
@@ -528,10 +614,16 @@ const BannerManagement = () => {
                         onChange={(e) => setFormData({ ...formData, link: e.target.value })}
                     />
 
-                    <Typography variant="subtitle2">Banner Image (16:9 ratio recommended)</Typography>
+                    <Typography variant="subtitle2" sx={{ color: textColor }}>Banner Image (16:9 ratio recommended)</Typography>
+
+                    {formError && (
+                        <Alert severity="warning" variant="filled" sx={{ borderRadius: '12px', fontWeight: 700 }}>
+                            {formError}
+                        </Alert>
+                    )}
 
                     <FileUpload
-                        onFileSelect={(f) => setFile(f)}
+                        onFileSelect={(f) => { setFile(f); setFormError(''); }}
                         previewUrl={previewImage}
                     />
 
@@ -546,6 +638,119 @@ const BannerManagement = () => {
                     </Button>
                 </Stack>
             </Drawer>
+
+            {/* Delete Confirmation Modal */}
+            <Dialog
+                open={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: '20px',
+                        p: 1,
+                        bgcolor: cardBgColor,
+                        color: textColor,
+                        maxWidth: 440
+                    }
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 800, color: textColor, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <WarningAmberIcon color="error" sx={{ fontSize: 32 }} />
+                    Delete Banner
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body1" sx={{ color: subTextColor, fontWeight: 500 }}>
+                        Are you sure you want to delete this marketing banner? This action cannot be undone.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setDeleteModalOpen(false)} color="inherit" sx={{ fontWeight: 700 }}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={confirmDelete}
+                        variant="contained"
+                        color="error"
+                        sx={{ borderRadius: '10px', fontWeight: 800, px: 3 }}
+                    >
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Subscription Limit Upgrade Warning Modal */}
+            <Dialog
+                open={subPlanModalOpen}
+                onClose={() => setSubPlanModalOpen(false)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: '24px',
+                        p: 1.5,
+                        bgcolor: cardBgColor,
+                        color: textColor,
+                        maxWidth: 500
+                    }
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 800, color: textColor, display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+                    <WorkspacePremiumIcon sx={{ color: '#ffb74d', fontSize: 36 }} />
+                    Subscription Upgrade Required
+                </DialogTitle>
+                <DialogContent sx={{ pt: 1 }}>
+                    <Alert severity="warning" variant="filled" sx={{ borderRadius: '14px', mb: 2.5, fontWeight: 700 }}>
+                        Resource Limit Reached: Your current plan allows up to {bannerLimit === -1 ? 'unlimited' : bannerLimit} banner(s).
+                    </Alert>
+                    <Typography variant="body1" sx={{ color: subTextColor, lineHeight: 1.6, fontWeight: 500 }}>
+                        You have reached the maximum allowed banner quota under your active subscription plan. Upgrade your vendor membership tier to unlock higher limits and showcase more marketing banners.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ p: 2.5, pt: 1 }}>
+                    <Button onClick={() => setSubPlanModalOpen(false)} color="inherit" sx={{ fontWeight: 700, borderRadius: '10px' }}>
+                        Dismiss
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="warning"
+                        onClick={() => {
+                            setSubPlanModalOpen(false);
+                            navigate('/system/settings/subscription');
+                        }}
+                        startIcon={<WorkspacePremiumIcon />}
+                        sx={{
+                            borderRadius: '12px',
+                            fontWeight: 800,
+                            px: 3,
+                            py: 1.2,
+                            bgcolor: '#ff9800',
+                            color: '#ffffff',
+                            '&:hover': { bgcolor: '#f57c00' }
+                        }}
+                    >
+                        Upgrade Plan Now
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Toast Notification Snackbar */}
+            <Snackbar
+                open={toast.open}
+                autoHideDuration={5000}
+                onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert
+                    onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+                    severity={toast.severity}
+                    variant="filled"
+                    sx={{
+                        width: '100%',
+                        fontWeight: 700,
+                        borderRadius: '12px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.25)'
+                    }}
+                >
+                    {toast.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

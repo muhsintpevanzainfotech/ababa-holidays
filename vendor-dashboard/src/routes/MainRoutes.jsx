@@ -30,6 +30,7 @@ const VendorSettings = Loadable(lazy(() => import('views/pages/settings')));
 const SecuritySettings = Loadable(lazy(() => import('views/pages/settings/Security')));
 const NotificationSettings = Loadable(lazy(() => import('views/pages/settings/Notifications')));
 const VendorSubscriptionSettings = Loadable(lazy(() => import('views/pages/settings/Subscription')));
+const ApiDocumentation = Loadable(lazy(() => import('views/platform-management/ApiDocumentation')));
 
 // pages routing
 const VendorPolicyView = Loadable(lazy(() => import('views/pages/policies/VendorPolicyView')));
@@ -158,6 +159,10 @@ const MainRoutes = {
         {
           path: 'contact-us',
           element: <WebContactUs />
+        },
+        {
+          path: 'api-docs',
+          element: <ApiDocumentation />
         }
       ]
     },
@@ -183,6 +188,10 @@ const MainRoutes = {
         {
           path: 'settings/subscription',
           element: <VendorSubscriptionSettings />
+        },
+        {
+          path: 'settings/api-docs',
+          element: <ApiDocumentation />
         }
       ]
     },

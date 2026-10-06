@@ -31,7 +31,7 @@ function MenuList() {
     }
   })();
 
-  const isVendorStaff = user && (user.role === 'Vendor-Staff' || user.role === 'vendor-staff');
+  const isVendorStaff = Boolean(user && (user.role === 'Vendor-Staff' || user.role === 'vendor-staff' || user.role === 'Staff' || user.role === 'staff' || user.managedBy));
 
   useEffect(() => {
     Promise.all([
@@ -86,7 +86,17 @@ function MenuList() {
 
   const isItemAllowed = (item, isVendorStaff, userPermissions) => {
     if (!isVendorStaff) return true;
-    if (item.id === 'vendors' || item.id === 'subscription-settings') return false;
+    const itemId = (item?.id || '').toLowerCase();
+    const itemUrl = (item?.url || '').toLowerCase();
+
+    if (
+      itemId === 'vendors' ||
+      itemId === 'subscription-settings' ||
+      itemId === 'subscription' ||
+      itemUrl.includes('subscription')
+    ) {
+      return false;
+    }
 
     const requiredPerm = itemPermissionMap[item.id];
     if (!requiredPerm) return true;

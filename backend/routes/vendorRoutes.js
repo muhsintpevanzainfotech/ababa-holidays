@@ -14,7 +14,10 @@ const {
   updateVendorStaff,
   deleteVendorStaff,
   getVendorWallet,
-  requestVendorPayout
+  requestVendorPayout,
+  getVendorApiKey,
+  generateVendorApiKey,
+  revokeVendorApiKey
 } = require('../controllers/vendorController');
 const { register, login } = require('../controllers/authController');
 
@@ -53,6 +56,11 @@ router.post('/login', upload.none(), login);
 // Profile routes (Vendor or Vendor-Staff)
 router.get('/profile', protect, authorize('Vendor', 'Vendor-Staff', 'Staff'), getVendorProfile);
 router.put('/profile', protect, authorize('Vendor', 'Vendor-Staff', 'Staff'), upload.fields(vendorUploadFields), updateVendorProfile);
+
+// Vendor API Key Management routes
+router.get('/api-key', protect, authorize('Vendor', 'Vendor-Staff', 'Staff', 'Admin'), getVendorApiKey);
+router.post('/api-key/generate', protect, authorize('Vendor', 'Admin'), generateVendorApiKey);
+router.delete('/api-key', protect, authorize('Vendor', 'Admin'), revokeVendorApiKey);
 
 // Wallet & Financial Payout routes
 router.get('/wallet', protect, authorize('Vendor', 'Vendor-Staff', 'Staff', 'Admin'), getVendorWallet);

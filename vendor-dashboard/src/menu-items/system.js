@@ -3,7 +3,8 @@ import {
   IconUserCheck,
   IconShieldLock,
   IconBellRinging,
-  IconAward
+  IconAward,
+  IconKey
 } from '@tabler/icons-react';
 
 const icons = {
@@ -11,7 +12,8 @@ const icons = {
   IconUserCheck,
   IconShieldLock,
   IconBellRinging,
-  IconAward
+  IconAward,
+  IconKey
 };
 
 const system = {
@@ -49,6 +51,14 @@ const system = {
       type: 'item',
       url: '/system/settings/subscription',
       icon: icons.IconAward,
+      breadcrumbs: true
+    },
+    {
+      id: 'api-documentation',
+      title: 'API & Integration Docs 🔑',
+      type: 'item',
+      url: '/platform/api-docs',
+      icon: icons.IconKey,
       breadcrumbs: true
     }
   ]

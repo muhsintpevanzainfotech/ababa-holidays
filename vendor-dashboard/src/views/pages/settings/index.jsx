@@ -493,7 +493,18 @@ const VendorSettings = () => {
   // Initiate Profile Update with Security OTP Modal
   const generateRandomOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
+  const isStaffMember = Boolean(user?.managedBy || ['vendor-staff', 'staff'].includes((user?.role || '').toLowerCase()));
+
   const handleInitiateProfileSave = async () => {
+    if (isStaffMember) {
+      setToast({
+        open: true,
+        message: '🔒 View Only: Vendor Staff accounts are not authorized to modify main agency profile details.',
+        severity: 'warning'
+      });
+      return;
+    }
+
     const code = generateRandomOtp();
     setOtpModal({ open: true, otpInput: '', generatedOtp: code, error: '' });
     try {
@@ -728,38 +739,48 @@ const VendorSettings = () => {
                   <Stack direction="row" spacing={1} justifyContent={{ xs: 'center', sm: 'flex-start' }} flexWrap="wrap" gap={0.5}>
                     <Chip label={businessType || 'Travel Agency'} color="secondary" size="small" sx={{ borderRadius: '8px', fontWeight: 700 }} />
                     <Chip label="2-Step Verification Active" color="success" variant="outlined" size="small" sx={{ borderRadius: '8px', fontWeight: 700 }} />
-                    <Chip
-                      label="Subscription & Plan ⚡"
-                      color="primary"
-                      size="small"
-                      onClick={() => navigate('/system/settings/subscription')}
-                      sx={{ borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}
-                    />
+                    {!isStaffMember && (
+                      <Chip
+                        label="Subscription & Plan ⚡"
+                        color="primary"
+                        size="small"
+                        onClick={() => navigate('/system/settings/subscription')}
+                        sx={{ borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}
+                      />
+                    )}
                   </Stack>
                 </Box>
               </Stack>
 
-              <Stack direction="row" spacing={1.5}>
-                <Button
-                  variant="outlined"
-                  color="secondary"
-                  onClick={() => navigate('/system/settings/subscription')}
-                  sx={{ borderRadius: '12px', px: 2.5, py: 1.2, fontWeight: 700 }}
-                >
-                  Subscription Plan
-                </Button>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  startIcon={saving || otpVerifying ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
-                  onClick={handleInitiateProfileSave}
-                  disabled={saving || otpVerifying}
-                  sx={{ borderRadius: '12px', px: 3, py: 1.2, fontWeight: 700, boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
-                >
-                  {saving || otpVerifying ? 'Saving...' : 'Save All Details'}
-                </Button>
-              </Stack>
+              {!isStaffMember && (
+                <Stack direction="row" spacing={1.5}>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={() => navigate('/system/settings/subscription')}
+                    sx={{ borderRadius: '12px', px: 2.5, py: 1.2, fontWeight: 700 }}
+                  >
+                    Subscription Plan
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={saving || otpVerifying ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
+                    onClick={handleInitiateProfileSave}
+                    disabled={saving || otpVerifying}
+                    sx={{ borderRadius: '12px', px: 3, py: 1.2, fontWeight: 700, boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
+                  >
+                    {saving || otpVerifying ? 'Saving...' : 'Save All Details'}
+                  </Button>
+                </Stack>
+              )}
             </Stack>
+
+            {isStaffMember && (
+              <Alert severity="warning" sx={{ mt: 2, borderRadius: '12px', fontWeight: 700 }}>
+                🔒 View Only Mode: You are logged in as Vendor Staff. Profile modifications and subscription plan changes are restricted to the Primary Vendor Account Owner.
+              </Alert>
+            )}
           </Box>
         </MainCard>
       </Grid>
@@ -1204,6 +1225,67 @@ const VendorSettings = () => {
       <Grid size={{ md: 4, xs: 12 }}>
         <Stack spacing={gridSpacing}>
 
+          {/* Vendor Staff Account Details Card (Visible on Right Side for Staff Members Only) */}
+          {isStaffMember && (
+            <MainCard
+              title="Vendor Staff Account Details"
+              icon={<BadgeIcon color="primary" />}
+              sx={{
+                border: '1.5px solid',
+                borderColor: 'primary.light',
+                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(30, 58, 138, 0.25)' : '#eff6ff'),
+                boxShadow: '0 4px 16px rgba(37, 99, 235, 0.1)'
+              }}
+            >
+              <Stack spacing={2}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                  <Typography variant="subtitle1" fontWeight={800} color="primary.main">
+                    Staff Member Profile
+                  </Typography>
+                  <Chip
+                    label="Vendor Staff Member"
+                    color="primary"
+                    size="small"
+                    sx={{ fontWeight: 800, borderRadius: '8px' }}
+                  />
+                </Box>
+
+                <Divider sx={{ opacity: 0.6 }} />
+
+                <Box sx={{ p: 1.5, borderRadius: '10px', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
+                    STAFF MEMBER NAME
+                  </Typography>
+                  <Typography variant="subtitle1" fontWeight={800} sx={{ mt: 0.25 }}>
+                    {user?.name || spocName || 'Staff Member'}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ p: 1.5, borderRadius: '10px', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
+                    STAFF REGISTERED EMAIL
+                  </Typography>
+                  <Typography variant="subtitle2" fontWeight={800} sx={{ mt: 0.25 }}>
+                    {user?.email || primaryEmail || ''}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ p: 1.5, borderRadius: '10px', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
+                    PARENT AGENCY / MAIN VENDOR
+                  </Typography>
+                  <Typography variant="subtitle2" fontWeight={800} color="secondary.main" sx={{ mt: 0.25 }}>
+                    🏢 {companyName || 'Main Vendor Account'}
+                  </Typography>
+                </Box>
+
+                <Alert severity="warning" sx={{ borderRadius: '10px', '& .MuiAlert-message': { fontSize: '0.78rem', fontWeight: 600 } }}>
+                  🔒 Staff Restricted Mode: Vendor Staff accounts are authorized for operational tasks. Profile edits, bank account changes, and subscription management are restricted to the Primary Vendor Owner.
+                </Alert>
+              </Stack>
+            </MainCard>
+          )}
+
           {/* Official System Contact & Support Numbers */}
           <MainCard title="Official System Contact & Support Numbers" icon={<ContactPhoneIcon />}>
             <Stack spacing={2}>
@@ -1440,17 +1522,19 @@ const VendorSettings = () => {
                 </Stack>
               </Box>
 
-              <Button
-                variant="contained"
-                color="secondary"
-                startIcon={saving || otpVerifying ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
-                onClick={handleInitiateProfileSave}
-                disabled={saving || otpVerifying}
-                fullWidth
-                sx={{ borderRadius: '10px', py: 1.2, fontWeight: 700 }}
-              >
-                {saving || otpVerifying ? 'Saving...' : 'Save All Details'}
-              </Button>
+              {!isStaffMember && (
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  startIcon={saving || otpVerifying ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
+                  onClick={handleInitiateProfileSave}
+                  disabled={saving || otpVerifying}
+                  fullWidth
+                  sx={{ borderRadius: '10px', py: 1.2, fontWeight: 700 }}
+                >
+                  {saving || otpVerifying ? 'Saving...' : 'Save All Details'}
+                </Button>
+              )}
             </Stack>
           </MainCard>
 

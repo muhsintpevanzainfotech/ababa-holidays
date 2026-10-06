@@ -51,6 +51,7 @@ import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
 import MailIcon from '@mui/icons-material/Mail';
 import SendIcon from '@mui/icons-material/Send';
+import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
 
 const ContactUsManagement = () => {
     const theme = useTheme();
@@ -60,6 +61,7 @@ const ContactUsManagement = () => {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [messages, setMessages] = useState([]);
+    const [subscription, setSubscription] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [openDrawer, setOpenDrawer] = useState(false);
@@ -77,6 +79,18 @@ const ContactUsManagement = () => {
     const fetchMessages = async () => {
         try {
             setLoading(true);
+            try {
+                const profileRes = await api.get('/vendors/profile');
+                const subData = profileRes?.data?.profile?.subscription || profileRes?.data?.subscription || profileRes?.data?.vendor?.subscription;
+                if (subData) {
+                    setSubscription(subData);
+                } else if (profileRes?.success) {
+                    setSubscription({ contactUsEnabled: false, contactUsLimit: 0 });
+                }
+            } catch (err) {
+                console.error('Failed to load profile subscription', err);
+            }
+
             const response = await api.get('/contact-us');
             if (response.success) {
                 setMessages(response.data || []);
@@ -91,6 +105,9 @@ const ContactUsManagement = () => {
     useEffect(() => {
         fetchMessages();
     }, []);
+
+    const contactUsLimit = subscription?.contactUsLimit !== undefined ? subscription.contactUsLimit : -1;
+    const isContactAllowed = subscription ? (subscription?.contactUsEnabled !== false && contactUsLimit !== 0) : true;
 
     const confirmDelete = async () => {
         if (!itemToDelete) return;
@@ -151,6 +168,15 @@ const ContactUsManagement = () => {
     const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
     const surfaceBgColor = isDarkMode ? '#090d16' : '#f8fafc';
     const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0';
+
+    if (!loading && !isContactAllowed) {
+        return (
+            <Box>
+                <SaasHeader title="Contact Us Messages" subtitle="Manage customer support emails and inbox." />
+                <SubscriptionRestrictedCard featureName="Contact Us Inbox" reason={contactUsLimit === 0 ? 'limit' : 'permission'} />
+            </Box>
+        );
+    }
 
     return (
         <Box>

@@ -125,6 +125,17 @@ const vendorProfileSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Subscription'
   },
+  packageCommission: {
+    rate: {
+      type: Number,
+      default: 0
+    },
+    type: {
+      type: String,
+      enum: ['Percentage', 'Flat'],
+      default: 'Percentage'
+    }
+  },
   paymentDetails: {
     type: String
   },
@@ -136,12 +147,19 @@ const vendorProfileSchema = new mongoose.Schema({
   selectedServices: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Service'
-  }]
+  }],
+  apiKey: {
+    type: String
+  },
+  apiKeyCreatedAt: {
+    type: Date
+  }
 }, {
   timestamps: true
 });
 
 // Index for faster lookups
 vendorProfileSchema.index({ user: 1 });
+vendorProfileSchema.index({ apiKey: 1 });
 
 module.exports = mongoose.model('VendorProfile', vendorProfileSchema);

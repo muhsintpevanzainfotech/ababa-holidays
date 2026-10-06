@@ -78,6 +78,9 @@ app.use('/api/package-fields', require('./routes/packageFieldRoutes'));
 app.use('/api/coupons', require('./routes/couponRoutes'));
 app.use('/api/roles', require('./routes/roleRoutes'));
 
+// External Public API for Vendor Website Integration
+app.use('/api/v1/external', require('./routes/externalApiRoutes'));
+
 // Global Error Handler Middleware
 const { errorHandler } = require('./middleware/errorMiddleware');
 app.use(errorHandler);

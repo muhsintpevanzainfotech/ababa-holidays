@@ -32,7 +32,7 @@ import api from 'utils/api';
 
 // assets
 import User1 from 'assets/images/users/avatar-user.jpg';
-import { IconLogout, IconSearch, IconSettings, IconUser } from '@tabler/icons-react';
+import { IconLogout, IconSearch, IconSettings, IconUser, IconShieldLock } from '@tabler/icons-react';
 
 // helper for full image url
 const getFullImageUrl = (path) => {
@@ -97,11 +97,19 @@ export default function ProfileSection() {
 
   const isDark = mode === 'dark' || theme.palette.mode === 'dark';
 
+  const isStaffMember = Boolean(
+    user?.managedBy ||
+    vendorProfile?.isStaffLogin ||
+    ['vendor-staff', 'staff', 'vendor_staff'].includes((user?.role || '').toLowerCase()) ||
+    ['vendor-staff', 'staff', 'vendor_staff'].includes((vendorProfile?.role || '').toLowerCase())
+  );
+
   const userAvatar = vendorProfile?.avatar || vendorProfile?.profile?.avatar || user?.avatar || user?.profileImage || user?.image || user?.avatarUrl;
   const hasAvatar = Boolean(userAvatar);
   const avatarSrc = hasAvatar ? getFullImageUrl(userAvatar) : '/logo.png';
   const displayName = vendorProfile?.profile?.companyName || vendorProfile?.name || user?.name || user?.companyName || 'Waterways';
   const displayRole = vendorProfile?.role || user?.role || 'Vendor';
+  const staffName = vendorProfile?.staffDetails?.name || (isStaffMember ? user?.name : '');
 
   return (
     <>
@@ -192,31 +200,68 @@ export default function ProfileSection() {
                           }}
                         />
                         <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                          <Typography
-                            variant="subtitle1"
-                            noWrap
-                            sx={{
-                              color: isDark ? '#ffffff !important' : '#0f172a',
-                              fontWeight: 700,
-                              fontSize: '0.98rem',
-                              lineHeight: 1.2
-                            }}
-                          >
-                            {displayName}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            noWrap
-                            sx={{
-                              color: isDark ? '#9ca3af !important' : '#64748b',
-                              fontWeight: 500,
-                              fontSize: '0.78rem',
-                              display: 'block',
-                              mt: 0.25
-                            }}
-                          >
-                            {displayRole}
-                          </Typography>
+                          {isStaffMember ? (
+                            <>
+                              <Typography
+                                variant="subtitle1"
+                                noWrap
+                                sx={{
+                                  color: isDark ? '#ffffff !important' : '#0f172a',
+                                  fontWeight: 800,
+                                  fontSize: '0.95rem',
+                                  lineHeight: 1.2
+                                }}
+                              >
+                                {staffName || displayName}
+                              </Typography>
+                              <Chip
+                                label="Vendor Staff Member"
+                                size="small"
+                                color="info"
+                                sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800, my: 0.3, bgcolor: '#2563eb', color: '#ffffff' }}
+                              />
+                              <Typography
+                                variant="caption"
+                                noWrap
+                                sx={{
+                                  color: isDark ? '#9ca3af !important' : '#64748b',
+                                  fontWeight: 600,
+                                  fontSize: '0.75rem',
+                                  display: 'block'
+                                }}
+                              >
+                                🏢 {vendorProfile?.mainVendorDetails?.companyName || vendorProfile?.profile?.companyName || 'Main Vendor Account'}
+                              </Typography>
+                            </>
+                          ) : (
+                            <>
+                              <Typography
+                                variant="subtitle1"
+                                noWrap
+                                sx={{
+                                  color: isDark ? '#ffffff !important' : '#0f172a',
+                                  fontWeight: 700,
+                                  fontSize: '0.98rem',
+                                  lineHeight: 1.2
+                                }}
+                              >
+                                {displayName}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                noWrap
+                                sx={{
+                                  color: isDark ? '#9ca3af !important' : '#64748b',
+                                  fontWeight: 500,
+                                  fontSize: '0.78rem',
+                                  display: 'block',
+                                  mt: 0.25
+                                }}
+                              >
+                                {displayRole}
+                              </Typography>
+                            </>
+                          )}
                         </Box>
                       </Stack>
                     </Box>

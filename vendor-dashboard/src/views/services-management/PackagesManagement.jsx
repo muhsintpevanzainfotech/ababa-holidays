@@ -10,7 +10,7 @@ import {
   Snackbar, Alert, ToggleButton, ToggleButtonGroup, Radio, RadioGroup,
   FormControlLabel, FormControl, FormLabel, Autocomplete
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, useColorScheme } from '@mui/material/styles';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -20,6 +20,7 @@ import DataTable from 'ui-component/extended/DataTable';
 import { gridSpacing } from 'store/constant';
 import api from 'utils/api';
 import DynamicPackageForm from './DynamicPackageForm';
+import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
 
 // assets / icons
 import AddIcon from '@mui/icons-material/Add';
@@ -63,6 +64,8 @@ const getFullImageUrl = (path) => {
 
 const PackagesManagement = () => {
   const theme = useTheme();
+  const { mode, systemMode } = useColorScheme();
+  const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
   const { user } = useSelector((state) => state.auth);
   const isAdminUser = ['Admin', 'Sub-Admin', 'Staff'].includes(user?.role);
   const isSystemAdmin = ['Admin', 'Sub-Admin'].includes(user?.role);
@@ -372,24 +375,28 @@ const PackagesManagement = () => {
     const initialDynamic = pkg
       ? {
         ...(pkg.customData || {}),
-        title: pkg.title || '',
+        packageName: pkg.packageName || pkg.title || '',
+        title: pkg.title || pkg.packageName || '',
         price: pkg.price || '',
         originalPrice: pkg.originalPrice || '',
         discountPrice: pkg.discountPrice || '',
         priceType: pkg.priceType || '',
         duration: pkg.duration || '',
         location: pkg.location || '',
-        description: pkg.description || '',
+        packageDescription: pkg.packageDescription || pkg.description || '',
+        description: pkg.description || pkg.packageDescription || '',
         inclusions: Array.isArray(pkg.inclusions) ? pkg.inclusions.join(', ') : pkg.inclusions || '',
         exclusions: Array.isArray(pkg.exclusions) ? pkg.exclusions.join(', ') : pkg.exclusions || '',
         status: pkg.status || 'Active'
       }
       : {
+        packageName: '',
         title: '',
         price: '',
         priceType: '',
         duration: '',
         location: '',
+        packageDescription: '',
         description: '',
         inclusions: '',
         exclusions: '',
@@ -410,7 +417,8 @@ const PackagesManagement = () => {
     }
 
     setFormData({
-      title: pkg?.title || '',
+      packageName: pkg?.packageName || pkg?.title || '',
+      title: pkg?.title || pkg?.packageName || '',
       serviceCategory: activeSvcId,
       selectionMode: isMultiMode ? 'multiple' : 'single',
       subService: pkg?.subService?._id || pkg?.subService || (subSvcSelected[0] || ''),
@@ -427,7 +435,8 @@ const PackagesManagement = () => {
       priceNotes: pkg?.priceNotes || '',
       duration: pkg?.duration || '',
       location: pkg?.location || '',
-      description: pkg?.description || '',
+      packageDescription: pkg?.packageDescription || pkg?.description || '',
+      description: pkg?.description || pkg?.packageDescription || '',
       inclusions: Array.isArray(pkg?.inclusions) ? pkg.inclusions.join(', ') : pkg?.inclusions || '',
       exclusions: Array.isArray(pkg?.exclusions) ? pkg.exclusions.join(', ') : pkg?.exclusions || '',
       status: pkg?.status || 'Active',
@@ -512,12 +521,23 @@ const PackagesManagement = () => {
     setSubmitting(true);
     try {
       const titleVal =
+        dynamicValues.packageName ||
+        dynamicValues.package_name ||
         dynamicValues.title ||
         dynamicValues.name ||
         dynamicValues.package_title ||
         dynamicValues.title_name ||
+        formData.packageName ||
         formData.title ||
         'Package Listing';
+
+      const descVal =
+        dynamicValues.packageDescription ||
+        dynamicValues.package_description ||
+        dynamicValues.description ||
+        formData.packageDescription ||
+        formData.description ||
+        '';
 
       const priceVal = Number(
         dynamicValues.price || dynamicValues.rate || dynamicValues.amount || formData.price || 0
@@ -540,6 +560,7 @@ const PackagesManagement = () => {
 
       if (hasFiles) {
         const fd = new FormData();
+        fd.append('packageName', titleVal);
         fd.append('title', titleVal);
         fd.append('serviceCategory', formData.serviceCategory);
         fd.append('service', formData.serviceCategory);
@@ -552,7 +573,8 @@ const PackagesManagement = () => {
         if (formData.priceNotes) fd.append('priceNotes', formData.priceNotes);
         fd.append('duration', dynamicValues.duration || formData.duration || '');
         fd.append('location', dynamicValues.location || formData.location || '');
-        fd.append('description', dynamicValues.description || formData.description || '');
+        fd.append('packageDescription', descVal);
+        fd.append('description', descVal);
         fd.append('selectionMode', formData.selectionMode || 'single');
         if (formData.selectionMode === 'multiple' && Array.isArray(formData.subServices)) {
           formData.subServices.forEach((subId) => fd.append('subServices', subId));
@@ -586,6 +608,7 @@ const PackagesManagement = () => {
         }
       } else {
         const payload = {
+          packageName: titleVal,
           title: titleVal,
           serviceCategory: formData.serviceCategory,
           service: formData.serviceCategory,
@@ -604,7 +627,8 @@ const PackagesManagement = () => {
           priceNotes: formData.priceNotes || '',
           duration: dynamicValues.duration || formData.duration || '',
           location: dynamicValues.location || formData.location || '',
-          description: dynamicValues.description || formData.description || '',
+          packageDescription: descVal,
+          description: descVal,
           status: formData.status || dynamicValues.status || 'Active',
           inclusions: inclusionsArr,
           exclusions: exclusionsArr,
@@ -662,6 +686,19 @@ const PackagesManagement = () => {
     });
 
   const selectedServiceObj = handledServices.find((s) => s._id === selectedServiceId) || services.find((s) => s._id === selectedServiceId);
+
+  const packageLimit = vendorProfile?.subscription?.packageLimit !== undefined ? vendorProfile.subscription.packageLimit : -1;
+  const isPackagesAllowed = vendorProfile?.subscription?.packagesEnabled !== false && packageLimit !== 0;
+  const isPackageLimitReached = packageLimit !== -1 && packages.length >= packageLimit;
+
+  if (!loading && !isPackagesAllowed) {
+    return (
+      <Box>
+        <SaasHeader title="Packages & Catalog" subtitle="Manage your travel packages and listings." />
+        <SubscriptionRestrictedCard featureName="Packages Catalog" reason={packageLimit === 0 ? 'limit' : 'permission'} />
+      </Box>
+    );
+  }
 
   if (!hasPackagePermission) {
     return (
@@ -781,6 +818,41 @@ const PackagesManagement = () => {
                       </InputAdornment>
                     )
                   }}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 8 }}>
+                <TextField
+                  fullWidth
+                  label="Package Name *"
+                  value={formData.packageName || formData.title || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData((prev) => ({ ...prev, packageName: val, title: val }));
+                    handleDynamicValueChange('packageName', val);
+                    handleDynamicValueChange('title', val);
+                  }}
+                  placeholder="e.g. 5 Days Kerala Luxury Tour Package"
+                  required
+                  helperText="Primary title/name of the package"
+                />
+              </Grid>
+
+              <Grid size={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Package Description"
+                  value={formData.packageDescription || formData.description || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData((prev) => ({ ...prev, packageDescription: val, description: val }));
+                    handleDynamicValueChange('packageDescription', val);
+                    handleDynamicValueChange('description', val);
+                  }}
+                  placeholder="Detailed overview, highlights and summary of this package offering..."
+                  helperText="Main description and overview of the package"
                 />
               </Grid>
 
@@ -1128,11 +1200,12 @@ const PackagesManagement = () => {
                   sx={{
                     p: 2.5,
                     borderRadius: '16px',
-                    background: theme.palette.mode === 'dark'
+                    background: isDarkMode
                       ? 'linear-gradient(135deg, #090d16 0%, #1e1b4b 100%)'
                       : 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)',
                     border: '1.5px solid',
-                    borderColor: 'secondary.main'
+                    borderColor: isDarkMode ? 'rgba(124,58,237,0.4)' : 'secondary.main',
+                    boxShadow: isDarkMode ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 18px rgba(0,0,0,0.03)'
                   }}
                 >
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
@@ -1143,57 +1216,157 @@ const PackagesManagement = () => {
                       size="small"
                       sx={{ fontWeight: 800 }}
                     />
-                    <Typography variant="caption" color="text.secondary" fontWeight={800} letterSpacing={1}>
+                    <Typography variant="caption" sx={{ color: isDarkMode ? '#a78bfa' : 'text.secondary' }} fontWeight={800} letterSpacing={1}>
                       LIVE PREVIEW
                     </Typography>
                   </Stack>
-                  <Divider sx={{ mb: 2 }} />
+                  <Divider sx={{ mb: 2, borderColor: isDarkMode ? 'rgba(255,255,255,0.12)' : 'divider' }} />
 
                   <Stack direction="row" alignItems="baseline" spacing={1.5} flexWrap="wrap">
-                    <Typography variant="h1" fontWeight="900" color="secondary.main">
+                    <Typography variant="h1" fontWeight="900" sx={{ color: isDarkMode ? '#ffffff' : 'secondary.main', textShadow: isDarkMode ? '0 0 12px rgba(167,139,250,0.3)' : 'none' }}>
                       ₹{Number(formData.discountPrice || formData.price || 0).toLocaleString('en-IN')}
                     </Typography>
 
                     {formData.originalPrice && Number(formData.originalPrice) > Number(formData.discountPrice || formData.price || 0) && (
-                      <Typography variant="h3" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                      <Typography variant="h3" sx={{ color: isDarkMode ? '#94a3b8' : 'text.secondary', textDecoration: 'line-through' }}>
                         ₹{Number(formData.originalPrice).toLocaleString('en-IN')}
                       </Typography>
                     )}
 
-                    <Typography variant="h4" fontWeight="700" color="text.secondary">
+                    <Typography variant="h4" fontWeight="700" sx={{ color: isDarkMode ? '#cbd5e1' : 'text.secondary' }}>
                       {formData.priceType ? `/ ${formData.priceType}` : ''}
                     </Typography>
                   </Stack>
 
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5 }} flexWrap="wrap">
-                    <Chip
-                      label={formData.taxPolicy === 'inclusive' ? `Incl. ${formData.taxRate || 0}% GST` : `+ ${formData.taxRate || 0}% GST Excl.`}
-                      size="small"
-                      color={formData.taxPolicy === 'inclusive' ? 'success' : 'info'}
-                      sx={{ fontWeight: 800, borderRadius: '6px' }}
-                    />
+                  {/* LIVE PRICE CALCULATOR & GST DETAILS */}
+                  {(() => {
+                    const basePriceNum = Number(formData.discountPrice || formData.price || 0);
+                    const taxRateNum = Number(formData.taxRate || 0);
+                    let taxAmount = 0;
+                    let finalCalculatedPrice = basePriceNum;
 
-                    {formData.discountPrice && formData.price && Number(formData.price) > Number(formData.discountPrice) && (
-                      <Chip
-                        label={`Save ₹${(Number(formData.price) - Number(formData.discountPrice)).toLocaleString('en-IN')}`}
-                        size="small"
-                        color="warning"
-                        sx={{ fontWeight: 800, borderRadius: '6px' }}
-                      />
-                    )}
+                    if (basePriceNum > 0 && taxRateNum > 0) {
+                      if (formData.taxPolicy === 'exclusive') {
+                        taxAmount = Math.round((basePriceNum * taxRateNum) / 100);
+                        finalCalculatedPrice = basePriceNum + taxAmount;
+                      } else {
+                        taxAmount = Math.round(basePriceNum - (basePriceNum / (1 + taxRateNum / 100)));
+                        finalCalculatedPrice = basePriceNum;
+                      }
+                    }
 
-                    {formData.originalPrice && Number(formData.originalPrice) > Number(formData.discountPrice || formData.price || 0) && (
-                      <Chip
-                        label={`${Math.round(((Number(formData.originalPrice) - Number(formData.discountPrice || formData.price || 0)) / Number(formData.originalPrice)) * 100)}% OFF`}
-                        size="small"
-                        color="error"
-                        sx={{ fontWeight: 800, borderRadius: '6px' }}
-                      />
-                    )}
-                  </Stack>
+                    return (
+                      <>
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.8 }} flexWrap="wrap">
+                          <Chip
+                            label={formData.taxPolicy === 'inclusive' ? `Incl. ${formData.taxRate || 0}% GST` : `+ ${formData.taxRate || 0}% GST Excl.`}
+                            size="small"
+                            sx={{
+                              fontWeight: 800,
+                              borderRadius: '8px',
+                              py: 0.3,
+                              px: 0.5,
+                              fontSize: '0.75rem',
+                              bgcolor: formData.taxPolicy === 'inclusive'
+                                ? (isDarkMode ? 'rgba(34, 197, 94, 0.16)' : '#f0fdf4')
+                                : (isDarkMode ? 'rgba(56, 189, 248, 0.16)' : '#f0f9ff'),
+                              color: formData.taxPolicy === 'inclusive'
+                                ? (isDarkMode ? '#4ade80' : '#15803d')
+                                : (isDarkMode ? '#38bdf8' : '#0284c7'),
+                              border: '1px solid',
+                              borderColor: formData.taxPolicy === 'inclusive'
+                                ? (isDarkMode ? 'rgba(34, 197, 94, 0.4)' : '#bbf7d0')
+                                : (isDarkMode ? 'rgba(56, 189, 248, 0.4)' : '#bae6fd')
+                            }}
+                          />
+
+                          {formData.discountPrice && formData.price && Number(formData.price) > Number(formData.discountPrice) && (
+                            <Chip
+                              label={`Save ₹${(Number(formData.price) - Number(formData.discountPrice)).toLocaleString('en-IN')}`}
+                              size="small"
+                              sx={{
+                                fontWeight: 800,
+                                borderRadius: '8px',
+                                fontSize: '0.75rem',
+                                bgcolor: isDarkMode ? 'rgba(234, 179, 8, 0.16)' : '#fefce8',
+                                color: isDarkMode ? '#facc15' : '#a16207',
+                                border: '1px solid',
+                                borderColor: isDarkMode ? 'rgba(234, 179, 8, 0.4)' : '#fef08a'
+                              }}
+                            />
+                          )}
+
+                          {formData.originalPrice && Number(formData.originalPrice) > Number(formData.discountPrice || formData.price || 0) && (
+                            <Chip
+                              label={`${Math.round(((Number(formData.originalPrice) - Number(formData.discountPrice || formData.price || 0)) / Number(formData.originalPrice)) * 100)}% OFF`}
+                              size="small"
+                              sx={{
+                                fontWeight: 800,
+                                borderRadius: '8px',
+                                fontSize: '0.75rem',
+                                bgcolor: isDarkMode ? 'rgba(239, 68, 68, 0.16)' : '#fef2f2',
+                                color: isDarkMode ? '#f87171' : '#b91c1c',
+                                border: '1px solid',
+                                borderColor: isDarkMode ? 'rgba(239, 68, 68, 0.4)' : '#fecaca'
+                              }}
+                            />
+                          )}
+                        </Stack>
+
+                        {/* PRICE CALCULATOR BREAKDOWN BOX */}
+                        {basePriceNum > 0 && taxRateNum > 0 && (
+                          <Paper
+                            elevation={0}
+                            sx={{
+                              mt: 2,
+                              p: 1.8,
+                              borderRadius: '12px',
+                              bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.04)' : '#f8fafc',
+                              border: '1px dashed',
+                              borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : '#cbd5e1'
+                            }}
+                          >
+                            <Typography variant="caption" fontWeight={800} letterSpacing={0.5} sx={{ color: isDarkMode ? '#a78bfa' : 'secondary.main', display: 'block', mb: 1, textTransform: 'uppercase', fontSize: '0.7rem' }}>
+                              🧮 Live Price Calculator Breakdown
+                            </Typography>
+                            <Stack spacing={0.6}>
+                              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                <Typography variant="caption" sx={{ color: isDarkMode ? '#94a3b8' : 'text.secondary' }}>
+                                  Base Package Rate:
+                                </Typography>
+                                <Typography variant="caption" fontWeight={700} sx={{ color: isDarkMode ? '#f1f5f9' : '#0f172a' }}>
+                                  ₹{basePriceNum.toLocaleString('en-IN')}
+                                </Typography>
+                              </Stack>
+
+                              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                <Typography variant="caption" sx={{ color: isDarkMode ? '#94a3b8' : 'text.secondary' }}>
+                                  {formData.taxPolicy === 'exclusive' ? `+ ${taxRateNum}% GST Amount:` : `Incl. ${taxRateNum}% GST Portion:`}
+                                </Typography>
+                                <Typography variant="caption" fontWeight={700} sx={{ color: isDarkMode ? '#38bdf8' : '#0284c7' }}>
+                                  ₹{taxAmount.toLocaleString('en-IN')}
+                                </Typography>
+                              </Stack>
+
+                              <Divider sx={{ my: 0.5, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'divider' }} />
+
+                              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                <Typography variant="subtitle2" fontWeight={800} sx={{ color: isDarkMode ? '#ffffff' : '#0f172a' }}>
+                                  Total Final Customer Price:
+                                </Typography>
+                                <Typography variant="subtitle1" fontWeight={900} sx={{ color: isDarkMode ? '#4ade80' : '#16a34a', fontSize: '0.95rem' }}>
+                                  ₹{finalCalculatedPrice.toLocaleString('en-IN')}
+                                </Typography>
+                              </Stack>
+                            </Stack>
+                          </Paper>
+                        )}
+                      </>
+                    );
+                  })()}
 
                   {formData.priceNotes && (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5, fontStyle: 'italic' }}>
+                    <Typography variant="caption" sx={{ display: 'block', mt: 1.5, fontStyle: 'italic', color: isDarkMode ? '#94a3b8' : 'text.secondary' }}>
                       Deposit / Terms: {formData.priceNotes}
                     </Typography>
                   )}
@@ -1558,9 +1731,14 @@ const PackagesManagement = () => {
                             );
                           })()}
                         </Stack>
-                        <Typography variant="h3" fontWeight="800" sx={{ mb: 1, lineHeight: 1.3 }}>
-                          {pkg.title}
+                        <Typography variant="h3" fontWeight="800" sx={{ mb: 0.5, lineHeight: 1.3 }}>
+                          {pkg.packageName || pkg.title}
                         </Typography>
+                        {(pkg.packageDescription || pkg.description) && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontSize: '0.8rem' }}>
+                            {pkg.packageDescription || pkg.description}
+                          </Typography>
+                        )}
 
                         <Stack spacing={0.8} sx={{ mb: 2 }}>
                           {pkg.duration && (
@@ -1629,15 +1807,17 @@ const PackagesManagement = () => {
           <DataTable
             columns={[
               {
-                headerName: 'Package Info & Photos',
-                field: 'title',
+                headerName: 'Package Name & Details',
+                field: 'packageName',
                 render: (pkg) => {
                   const pkgImages = Array.isArray(pkg.images) ? pkg.images : [];
                   const thumbUrl = pkgImages.length > 0 ? getFullImageUrl(pkgImages[0]) : '/public/defaults/default_travel.png';
+                  const pkgName = pkg.packageName || pkg.title || 'Untitled Package';
+                  const pkgDesc = pkg.packageDescription || pkg.description || '';
 
                   return (
                     <Stack direction="row" spacing={1.5} alignItems="center">
-                      <Box sx={{ position: 'relative' }}>
+                      <Box sx={{ position: 'relative', flexShrink: 0 }}>
                         <Avatar
                           src={thumbUrl}
                           variant="rounded"
@@ -1661,9 +1841,14 @@ const PackagesManagement = () => {
                           />
                         )}
                       </Box>
-                      <Box>
-                        <Typography variant="subtitle1" fontWeight="800">{pkg.title}</Typography>
-                        <Typography variant="caption" color="text.secondary">
+                      <Box sx={{ minWidth: 0, maxWidth: 280 }}>
+                        <Typography variant="subtitle1" fontWeight="800" noWrap>{pkgName}</Typography>
+                        {pkgDesc && (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {pkgDesc}
+                          </Typography>
+                        )}
+                        <Typography variant="caption" color="text.secondary" display="block">
                           {pkg.customId || 'ID'} • {pkgImages.length} Photo{pkgImages.length !== 1 ? 's' : ''}
                         </Typography>
                       </Box>

@@ -87,6 +87,8 @@ const blogValidationSchema = Yup.object().shape({
         .min(10, 'Content must be at least 10 characters')
 });
 
+import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
+
 const BlogManagement = () => {
     const theme = useTheme();
     const navigate = useNavigate();
@@ -95,6 +97,7 @@ const BlogManagement = () => {
 
     const [loading, setLoading] = useState(true);
     const [blogs, setBlogs] = useState([]);
+    const [subscription, setSubscription] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [viewMode, setViewMode] = useState('grid');
@@ -116,6 +119,50 @@ const BlogManagement = () => {
     const [blogToDelete, setBlogToDelete] = useState(null);
     const [previewModalOpen, setPreviewModalOpen] = useState(false);
     const [blogToPreview, setBlogToPreview] = useState(null);
+
+    const fetchBlogs = async () => {
+        try {
+            setLoading(true);
+            try {
+                const profileRes = await api.get('/vendors/profile');
+                const subData = profileRes?.data?.profile?.subscription || profileRes?.data?.subscription || profileRes?.data?.vendor?.subscription;
+                if (subData) {
+                    setSubscription(subData);
+                } else if (profileRes?.success) {
+                    setSubscription({ blogsNewsEnabled: false, blogLimit: 0 });
+                }
+            } catch (err) {
+                console.error('Failed to load profile subscription', err);
+            }
+
+            let response;
+            try {
+                response = await api.get('/blogs/my-blogs');
+            } catch (err) {
+                response = await api.get('/blogs');
+            }
+
+            if (response && response.success) {
+                setBlogs(response.data || response.blogs || []);
+            } else if (Array.isArray(response)) {
+                setBlogs(response);
+            } else if (response && Array.isArray(response.data)) {
+                setBlogs(response.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch blogs:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchBlogs();
+    }, []);
+
+    const blogLimit = subscription?.blogLimit !== undefined ? subscription.blogLimit : -1;
+    const isBlogAllowed = subscription ? (subscription?.blogsNewsEnabled !== false && blogLimit !== 0) : true;
+    const isBlogLimitReached = blogLimit !== -1 && blogs.length >= blogLimit;
 
     const handleErrorMessage = (errorMsg) => {
         const message = typeof errorMsg === 'string' ? errorMsg : errorMsg?.message || 'Something went wrong';
@@ -181,33 +228,7 @@ const BlogManagement = () => {
         }
     });
 
-    const fetchBlogs = async () => {
-        try {
-            setLoading(true);
-            let response;
-            try {
-                response = await api.get('/blogs/my-blogs');
-            } catch (err) {
-                response = await api.get('/blogs');
-            }
 
-            if (response && response.success) {
-                setBlogs(response.data || response.blogs || []);
-            } else if (Array.isArray(response)) {
-                setBlogs(response);
-            } else if (response && Array.isArray(response.data)) {
-                setBlogs(response.data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch blogs:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchBlogs();
-    }, []);
 
     const handleOpenDialog = (blog = null) => {
         setFile(null);
@@ -268,6 +289,15 @@ const BlogManagement = () => {
     const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
     const surfaceBgColor = isDarkMode ? '#090d16' : '#f8fafc';
     const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0';
+
+    if (!loading && !isBlogAllowed) {
+        return (
+            <Box>
+                <SaasHeader title="Platform Blogs & News" subtitle="Publish and manage travel stories, news, and guides." />
+                <SubscriptionRestrictedCard featureName="Blogs & News" reason={blogLimit === 0 ? 'limit' : 'permission'} />
+            </Box>
+        );
+    }
 
     return (
         <Box>

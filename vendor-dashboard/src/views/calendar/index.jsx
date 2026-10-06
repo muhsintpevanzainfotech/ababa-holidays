@@ -38,6 +38,8 @@ import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import BlockIcon from '@mui/icons-material/Block';
 import CloseIcon from '@mui/icons-material/Close';
 
+import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
+
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function CalendarPage() {
@@ -48,6 +50,7 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filterType, setFilterType] = useState('all');
   const [events, setEvents] = useState([]);
+  const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Event Modal State
@@ -65,6 +68,14 @@ export default function CalendarPage() {
     const fetchCalendarData = async () => {
       try {
         setLoading(true);
+        try {
+          const profileRes = await api.get('/vendors/profile');
+          if (profileRes?.success && profileRes?.data?.profile?.subscription) {
+            setSubscription(profileRes.data.profile.subscription);
+          }
+        } catch (err) {
+          console.error('Failed to load profile subscription', err);
+        }
         const [bookingsRes, packagesRes] = await Promise.all([
           api.get('/bookings').catch(() => ({ success: false, data: [] })),
           api.get('/packages').catch(() => ({ success: false, data: [] }))
@@ -205,6 +216,18 @@ export default function CalendarPage() {
         return '#36669c'; // Blue
     }
   };
+
+  const availabilityLimit = subscription?.availabilityLimit !== undefined ? subscription.availabilityLimit : -1;
+  const isAvailabilityAllowed = subscription?.availabilityEnabled !== false && availabilityLimit !== 0;
+
+  if (!loading && !isAvailabilityAllowed) {
+    return (
+      <Box>
+        <SaasHeader title="Calendar & Tour Schedule" subtitle="Manage tour departures and availability schedules." />
+        <SubscriptionRestrictedCard featureName="Availability Calendar" reason={availabilityLimit === 0 ? 'limit' : 'permission'} />
+      </Box>
+    );
+  }
 
   return (
     <Box>
