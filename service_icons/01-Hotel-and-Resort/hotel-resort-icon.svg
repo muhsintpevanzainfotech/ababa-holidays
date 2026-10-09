@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="hotelBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <linearGradient id="glassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.05"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#1E3A8A" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background Circle with Soft Shadow -->
+  <rect x="24" y="24" width="464" height="464" rx="116" fill="url(#hotelBg)" filter="url(#shadow)"/>
+  
+  <!-- Subtle Background Pattern / Wave -->
+  <circle cx="256" cy="256" r="190" fill="none" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="2"/>
+  <path d="M 60 380 Q 256 340 452 380" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="3"/>
+
+  <!-- Stars at the top -->
+  <g fill="url(#goldGrad)" transform="translate(0, -10)">
+    <!-- Star 1 -->
+    <path d="M 196 110 L 201 122 L 214 123 L 204 132 L 207 145 L 196 138 L 185 145 L 188 132 L 178 123 L 191 122 Z"/>
+    <!-- Star 2 (Center - Bigger) -->
+    <path d="M 256 94 L 263 110 L 280 112 L 267 124 L 271 141 L 256 132 L 241 141 L 245 124 L 232 112 L 249 110 Z"/>
+    <!-- Star 3 -->
+    <path d="M 316 110 L 321 122 L 334 123 L 324 132 L 327 145 L 316 138 L 305 145 L 308 132 L 298 123 L 311 122 Z"/>
+  </g>
+
+  <!-- Main Hotel Building Structure -->
+  <g transform="translate(0, 5)">
+    <!-- Left Wing -->
+    <rect x="110" y="210" width="70" height="180" rx="8" fill="#F8FAFC" opacity="0.9"/>
+    <!-- Right Wing -->
+    <rect x="332" y="210" width="70" height="180" rx="8" fill="#F8FAFC" opacity="0.9"/>
+    
+    <!-- Central Tower -->
+    <rect x="160" y="160" width="192" height="230" rx="12" fill="#FFFFFF"/>
+    <path d="M 160 172 Q 256 130 352 172 Z" fill="#DBEAFE"/>
+
+    <!-- Roof Dome / Crown Accent -->
+    <path d="M 230 160 C 230 135 282 135 282 160 Z" fill="url(#goldGrad)"/>
+    <line x1="256" y1="135" x2="256" y2="120" stroke="#F59E0B" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="256" cy="116" r="5" fill="#F59E0B"/>
+
+    <!-- Central Windows Grid -->
+    <g fill="#3B82F6" opacity="0.85">
+      <rect x="185" y="190" width="22" height="26" rx="4"/>
+      <rect x="220" y="190" width="22" height="26" rx="4"/>
+      <rect x="270" y="190" width="22" height="26" rx="4"/>
+      <rect x="305" y="190" width="22" height="26" rx="4"/>
+
+      <rect x="185" y="232" width="22" height="26" rx="4"/>
+      <rect x="220" y="232" width="22" height="26" rx="4"/>
+      <rect x="270" y="232" width="22" height="26" rx="4"/>
+      <rect x="305" y="232" width="22" height="26" rx="4"/>
+
+      <rect x="185" y="274" width="22" height="26" rx="4"/>
+      <rect x="220" y="274" width="22" height="26" rx="4"/>
+      <rect x="270" y="274" width="22" height="26" rx="4"/>
+      <rect x="305" y="274" width="22" height="26" rx="4"/>
+    </g>
+
+    <!-- Wing Windows -->
+    <g fill="#60A5FA" opacity="0.75">
+      <rect x="125" y="230" width="18" height="22" rx="3"/>
+      <rect x="150" y="230" width="18" height="22" rx="3"/>
+      <rect x="125" y="268" width="18" height="22" rx="3"/>
+      <rect x="150" y="268" width="18" height="22" rx="3"/>
+      <rect x="125" y="306" width="18" height="22" rx="3"/>
+      <rect x="150" y="306" width="18" height="22" rx="3"/>
+
+      <rect x="344" y="230" width="18" height="22" rx="3"/>
+      <rect x="369" y="230" width="18" height="22" rx="3"/>
+      <rect x="344" y="268" width="18" height="22" rx="3"/>
+      <rect x="369" y="268" width="18" height="22" rx="3"/>
+      <rect x="344" y="306" width="18" height="22" rx="3"/>
+      <rect x="369" y="306" width="18" height="22" rx="3"/>
+    </g>
+
+    <!-- Grand Resort Canopy & Entrance Door -->
+    <path d="M 205 390 L 205 345 Q 256 325 307 345 L 307 390 Z" fill="#1E293B"/>
+    <path d="M 195 345 L 317 345 L 307 335 L 205 335 Z" fill="url(#goldGrad)"/>
+    <rect x="238" y="352" width="36" height="38" rx="4" fill="url(#goldGrad)"/>
+    <line x1="256" y1="352" x2="256" y2="390" stroke="#B45309" stroke-width="2"/>
+
+    <!-- Tropical Palm Trees (Resort Element) -->
+    <!-- Left Palm -->
+    <path d="M 95 390 Q 90 320 65 300 Q 75 320 85 390 Z" fill="#92400E"/>
+    <path d="M 65 300 Q 30 290 20 315 Q 45 305 65 300" fill="#22C55E"/>
+    <path d="M 65 300 Q 50 260 30 265 Q 50 275 65 300" fill="#16A34A"/>
+    <path d="M 65 300 Q 85 260 105 275 Q 85 285 65 300" fill="#15803D"/>
+    <path d="M 65 300 Q 100 295 110 320 Q 85 310 65 300" fill="#22C55E"/>
+
+    <!-- Right Palm -->
+    <path d="M 425 390 Q 430 320 450 300 Q 440 320 435 390 Z" fill="#92400E"/>
+    <path d="M 450 300 Q 480 290 490 315 Q 465 305 450 300" fill="#22C55E"/>
+    <path d="M 450 300 Q 465 260 485 265 Q 465 275 450 300" fill="#16A34A"/>
+    <path d="M 450 300 Q 430 260 410 275 Q 430 285 450 300" fill="#15803D"/>
+    <path d="M 450 300 Q 415 295 405 320 Q 430 310 450 300" fill="#22C55E"/>
+    
+    <!-- Resort Base Ground -->
+    <rect x="70" y="388" width="372" height="12" rx="6" fill="#F8FAFC" opacity="0.95"/>
+  </g>
+</svg>

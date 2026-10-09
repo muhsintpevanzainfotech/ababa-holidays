@@ -204,11 +204,27 @@ const validateCoupon = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Get public active coupons
+// @route   GET /api/coupons/public
+// @access  Public
+const getPublicCoupons = asyncHandler(async (req, res, next) => {
+  const coupons = await Coupon.find({ isActive: true })
+    .populate('package', 'title customId price images')
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    count: coupons.length,
+    data: coupons
+  });
+});
+
 module.exports = {
   getCoupons,
   getCouponById,
   createCoupon,
   updateCoupon,
   deleteCoupon,
-  validateCoupon
+  validateCoupon,
+  getPublicCoupons
 };

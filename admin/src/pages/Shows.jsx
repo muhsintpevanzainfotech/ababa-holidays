@@ -67,6 +67,8 @@ const Shows = ({ userRole = 'Admin' }) => {
   };
 
   const [videoPreview, setVideoPreview] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState('');
 
   useEffect(() => {
     dispatch(fetchReelsRequest(userRole));
@@ -75,6 +77,7 @@ const Shows = ({ userRole = 'Admin' }) => {
 
   const handleOpenModal = (type, reel = null) => {
     setModalType(type);
+    setIsDragging(false);
     if (type === 'edit' && reel) {
       setCurrentReel(reel);
       setFormData({
@@ -87,6 +90,7 @@ const Shows = ({ userRole = 'Admin' }) => {
         video: null
       });
       setVideoPreview(reel.video ? getImageUrl(reel.video) : null);
+      setSelectedFileName(reel.video ? reel.video.split(/[/\\]/).pop() : '');
     } else {
       setFormData({
         title: '',
@@ -98,18 +102,53 @@ const Shows = ({ userRole = 'Admin' }) => {
         video: null
       });
       setVideoPreview(null);
+      setSelectedFileName('');
     }
     setShowModal(true);
+  };
+
+  const processSelectedFile = (file) => {
+    if (!file) return;
+    setFormData((prev) => ({ ...prev, video: file }));
+    setSelectedFileName(file.name);
+    const reader = new FileReader();
+    reader.onloadend = () => setVideoPreview(reader.result);
+    reader.readAsDataURL(file);
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setFormData({ ...formData, video: file });
-      const reader = new FileReader();
-      reader.onloadend = () => setVideoPreview(reader.result);
-      reader.readAsDataURL(file);
+      processSelectedFile(file);
     }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processSelectedFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleRemoveFile = (e) => {
+    e.stopPropagation();
+    setFormData((prev) => ({ ...prev, video: null }));
+    setVideoPreview(null);
+    setSelectedFileName('');
   };
 
   const handleSubmit = (e) => {
@@ -383,23 +422,164 @@ const Shows = ({ userRole = 'Admin' }) => {
           </div>
 
           <div className="form-group">
-            <label>Or Upload Video File</label>
-            <div 
-              style={{ 
-                border: '2px dashed var(--border)', borderRadius: '12px', padding: '24px', 
-                textAlign: 'center', cursor: 'pointer', background: 'var(--bg-main)'
+            <label style={{ fontWeight: '700', marginBottom: '8px', display: 'block' }}>
+              Upload Video or Image File
+            </label>
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById('reel-file-input').click()}
+              style={{
+                border: isDragging
+                  ? '2px dashed #3b82f6'
+                  : videoPreview
+                  ? '2px solid rgba(59, 130, 246, 0.4)'
+                  : '2px dashed var(--border)',
+                borderRadius: '16px',
+                padding: videoPreview ? '16px' : '28px 20px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: isDragging
+                  ? 'rgba(59, 130, 246, 0.08)'
+                  : 'var(--bg-main)',
+                transition: 'all 0.25s ease-in-out',
+                position: 'relative',
+                boxShadow: isDragging ? '0 0 20px rgba(59, 130, 246, 0.25)' : 'none',
+                transform: isDragging ? 'scale(1.01)' : 'scale(1)',
               }}
-              onClick={() => document.getElementById('reel-video').click()}
             >
-              <input type="file" id="reel-video" hidden accept="video/*" onChange={handleFileChange} />
+              <input
+                type="file"
+                id="reel-file-input"
+                hidden
+                accept="video/*,image/*"
+                onChange={handleFileChange}
+              />
+
               {videoPreview ? (
-                <div style={{ fontSize: '14px', color: 'var(--primary)', fontWeight: '700' }}>
-                   Video Selected / Uploaded
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      width: '100%',
+                      maxHeight: '220px',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      background: '#000',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    {isVideoMedia(videoPreview) ? (
+                      <video
+                        src={videoPreview}
+                        controls
+                        muted
+                        style={{ width: '100%', maxHeight: '220px', objectFit: 'contain' }}
+                      />
+                    ) : (
+                      <img
+                        src={videoPreview}
+                        alt="Media Preview"
+                        style={{ width: '100%', maxHeight: '220px', objectFit: 'contain' }}
+                      />
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textAlign: 'left', flex: 1 }}>
+                      <div
+                        style={{
+                          background: 'rgba(59, 130, 246, 0.15)',
+                          color: '#3b82f6',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '10px',
+                          fontWeight: '800',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {isVideoMedia(videoPreview) ? 'VIDEO' : 'IMAGE'}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: 'var(--text-main)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {selectedFileName || 'Media Uploaded'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleRemoveFile}
+                      className="btn btn-sm"
+                      style={{
+                        background: 'rgba(220, 38, 38, 0.1)',
+                        color: '#dc2626',
+                        border: '1px solid rgba(220, 38, 38, 0.2)',
+                        borderRadius: '8px',
+                        padding: '4px 10px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <Trash2 size={13} /> Remove
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div style={{ color: 'var(--text-muted)' }}>
-                  <Upload size={32} style={{ marginBottom: '8px', margin: 'auto' }} />
-                  <p>Click to upload video</p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                  <div
+                    style={{
+                      width: '50px',
+                      height: '50px',
+                      borderRadius: '50%',
+                      background: isDragging ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)',
+                      color: '#3b82f6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '2px',
+                      transition: 'transform 0.2s ease',
+                      transform: isDragging ? 'scale(1.15)' : 'scale(1)',
+                    }}
+                  >
+                    <Upload size={24} />
+                  </div>
+
+                  <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
+                    {isDragging ? 'Drop video or image file here' : 'Drag & Drop Video or Image File Here'}
+                  </p>
+
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
+                    or <span style={{ color: '#3b82f6', fontWeight: '700', textDecoration: 'underline' }}>click to browse</span> from your device
+                  </p>
+
+                  <div
+                    style={{
+                      marginTop: '6px',
+                      fontSize: '10px',
+                      fontWeight: '600',
+                      color: 'var(--text-muted)',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      padding: '3px 10px',
+                      borderRadius: '16px',
+                    }}
+                  >
+                    Supports MP4, WEBM, MOV, JPG, PNG, WEBP
+                  </div>
                 </div>
               )}
             </div>

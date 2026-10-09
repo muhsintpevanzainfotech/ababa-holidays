@@ -1,5 +1,6 @@
 const Complaint = require('../models/Complaint');
 const User = require('../models/User');
+const { notifyAdmin, notifyVendor, notifyCustomer } = require('../utils/notificationHelper');
 
 // @desc    Create new complaint
 // @route   POST /api/complaints
@@ -28,6 +29,28 @@ exports.createComplaint = async (req, res) => {
     }
 
     const complaint = await Complaint.create(complaintData);
+
+    // Notify Admin
+    await notifyAdmin({
+      title: 'New Support Request / Complaint Filed',
+      message: `${req.user.name || 'A user'} filed a complaint regarding "${subject}": "${(description || '').slice(0, 70)}"`,
+      category: 'request',
+      type: 'warning',
+      link: '/complaints',
+      metadata: { complaintId: complaint._id, complainantId: req.user.id, defendantId: defendant }
+    });
+
+    // Notify Defendant
+    if (defendantExists.role === 'Vendor' || defendantExists.role === 'Vendor-Staff') {
+      await notifyVendor(defendant, {
+        title: 'New Customer Dispute / Request',
+        message: `A dispute has been submitted: "${subject}". Please review.`,
+        category: 'request',
+        type: 'warning',
+        link: '/platform/enquiries',
+        metadata: { complaintId: complaint._id }
+      });
+    }
 
     res.status(201).json({ success: true, data: complaint });
   } catch (error) {

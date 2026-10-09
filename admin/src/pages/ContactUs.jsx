@@ -64,17 +64,19 @@ const ContactUs = () => {
     showToast(`Status updated to ${status}`, 'success');
   };
 
-  const filteredMessages = messages.filter((item) => {
-    const matchesSearch = 
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.message.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredMessages = messages
+    .filter((item) => {
+      const matchesSearch = 
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.message.toLowerCase().includes(searchTerm.toLowerCase());
+        
+      const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
       
-    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  }).reverse();
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
   const totalItems = filteredMessages.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);

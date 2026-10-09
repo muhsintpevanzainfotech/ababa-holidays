@@ -1,6 +1,7 @@
 const Review = require('../models/Review');
 const Package = require('../models/Package');
 const Booking = require('../models/Booking');
+const { notifyAdmin, notifyVendor } = require('../utils/notificationHelper');
 
 // @desc    Add review
 // @route   POST /api/reviews
@@ -33,6 +34,28 @@ const addReview = async (req, res, next) => {
       rating,
       comment
     });
+
+    // Notify Admin
+    await notifyAdmin({
+      title: `New Review for "${pkg.title}"`,
+      message: `${req.user.name || 'A customer'} left a ${rating}★ review: "${(comment || '').slice(0, 60)}"`,
+      category: 'review',
+      type: 'info',
+      link: '/website/testimonials',
+      metadata: { reviewId: review._id, packageId: pkg._id, rating }
+    });
+
+    // Notify Vendor
+    if (pkg.vendor) {
+      await notifyVendor(pkg.vendor, {
+        title: `New Customer Review (${rating}★)`,
+        message: `${req.user.name || 'A customer'} reviewed your package "${pkg.title}".`,
+        category: 'review',
+        type: 'info',
+        link: '/platform/testimonials',
+        metadata: { reviewId: review._id, packageId: pkg._id, rating }
+      });
+    }
 
     res.status(201).json({
       success: true,

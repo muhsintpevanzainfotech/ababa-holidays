@@ -4,7 +4,7 @@ import { renderUploadPreview, getInputFieldStyle, getFieldError } from '../compo
 
 const Step1Account = ({ 
   formik, imagePreview, showPassword, setShowPassword, 
-  isViewMode, isDragging, setIsDragging, handleNestedFileChange, id 
+  isViewMode, isDragging, setIsDragging, handleNestedFileChange, handleDrop, id 
 }) => {
   return (
     <div className="fade-in">
@@ -23,6 +23,7 @@ const Step1Account = ({
             isViewMode,
             isDragging,
             setIsDragging,
+            handleDrop,
             handleNestedFileChange
           })}
           <input id="vendorAvatarAdd" type="file" style={{ display: 'none' }} accept="image/*" onChange={(e) => handleNestedFileChange(e, 'avatar', 'avatar')} />

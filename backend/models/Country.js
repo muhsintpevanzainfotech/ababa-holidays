@@ -61,7 +61,7 @@ const countrySchema = new mongoose.Schema({
 });
 
 // Pre-save hook to ensure slug, dialCode & image field backward compatibility
-countrySchema.pre('save', function(next) {
+countrySchema.pre('save', function() {
   if (this.name && !this.slug) {
     this.slug = this.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
   }
@@ -75,7 +75,6 @@ countrySchema.pre('save', function(next) {
   } else if (this.image && (!this.coverImage || this.coverImage === 'default-country.jpg')) {
     this.coverImage = this.image;
   }
-  next();
 });
 
 module.exports = mongoose.model('Country', countrySchema);

@@ -1,4 +1,5 @@
 const Enquiry = require('../models/Enquiry');
+const { notifyAdmin, notifyVendor } = require('../utils/notificationHelper');
 
 exports.createEnquiry = async (req, res) => {
   try {
@@ -7,6 +8,29 @@ exports.createEnquiry = async (req, res) => {
       payload.file = req.file.path;
     }
     const enquiry = await Enquiry.create(payload);
+
+    // Dispatch System Notification for Admin
+    await notifyAdmin({
+      title: `New Enquiry: ${payload.serviceOfInterest || 'Travel Request'}`,
+      message: `${payload.name || 'A customer'} (${payload.phone || payload.email || 'No contact'}): "${(payload.message || '').slice(0, 75)}"`,
+      category: 'enquiry',
+      type: 'info',
+      link: '/website/enquiries',
+      metadata: { enquiryId: enquiry._id, name: payload.name, email: payload.email, phone: payload.phone, service: payload.serviceOfInterest }
+    });
+
+    // If enquiry is vendor-specific, notify the vendor
+    if (payload.vendor) {
+      await notifyVendor(payload.vendor, {
+        title: `New Package Enquiry: ${payload.serviceOfInterest || 'General'}`,
+        message: `${payload.name || 'A customer'} sent an inquiry: "${(payload.message || '').slice(0, 75)}"`,
+        category: 'enquiry',
+        type: 'info',
+        link: '/platform/enquiries',
+        metadata: { enquiryId: enquiry._id, name: payload.name, email: payload.email, phone: payload.phone }
+      });
+    }
+
     res.status(201).json({ success: true, data: enquiry });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

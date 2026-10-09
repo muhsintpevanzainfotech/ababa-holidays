@@ -29,13 +29,14 @@ exports.createSubService = async (req, res, next) => {
 exports.getSubServices = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
+    const limit = parseInt(req.query.limit, 10) || 100;
     const skip = (page - 1) * limit;
 
     // Filter Build
     const filter = {};
-    if (req.query.service && req.query.service !== 'all' && req.query.service !== '') {
-      filter.service = req.query.service;
+    const serviceFilter = req.query.service || req.query.serviceId;
+    if (serviceFilter && serviceFilter !== 'all' && serviceFilter !== '') {
+      filter.service = serviceFilter;
     }
     if (req.query.status && req.query.status !== 'all') {
       filter.isActive = req.query.status === 'active';

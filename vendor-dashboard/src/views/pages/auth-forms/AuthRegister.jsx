@@ -43,6 +43,7 @@ import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import CloseIcon from '@mui/icons-material/Close';
 
 const steps = ['Account', 'Business', 'Location', 'Modules', 'Verify'];
 
@@ -156,6 +157,13 @@ export default function AuthRegister() {
     }
   };
 
+  const handleRemoveFile = (fieldName) => {
+    setFiles(prev => ({ ...prev, [fieldName]: null }));
+    if (fieldName === 'avatar') {
+      setImagePreview(null);
+    }
+  };
+
   const toggleService = (id) => {
     const next = formData.selectedServices.includes(id)
       ? formData.selectedServices.filter(sid => sid !== id)
@@ -259,17 +267,24 @@ export default function AuthRegister() {
                <Typography variant="caption" display="block">Profile / Business Head Photo</Typography>
             </Grid>
             <Grid size={12}>
-               <Button
-                 variant="outlined"
-                 component="label"
-                 fullWidth
-                 startIcon={<CloudUploadIcon />}
-                 color={files.idCard ? 'success' : 'primary'}
-                 sx={{ py: 1.5, borderStyle: 'dashed' }}
-               >
-                 {files.idCard ? `ID Card: ${files.idCard.name}` : 'Upload National ID Card (Aadhar/PAN)'}
-                 <input type="file" name="idCard" hidden onChange={handleFileChange} accept="application/pdf,image/*" />
-               </Button>
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                 <Button
+                   variant="outlined"
+                   component="label"
+                   fullWidth
+                   startIcon={<CloudUploadIcon />}
+                   color={files.idCard ? 'success' : 'primary'}
+                   sx={{ py: 1.5, borderStyle: 'dashed' }}
+                 >
+                   {files.idCard ? `ID Card: ${files.idCard.name}` : 'Upload National ID Card (Aadhar/PAN)'}
+                   <input type="file" name="idCard" hidden onChange={handleFileChange} accept="image/*,application/pdf" />
+                 </Button>
+                 {files.idCard && (
+                   <IconButton color="error" size="small" onClick={() => handleRemoveFile('idCard')} title="Remove file">
+                     <CloseIcon fontSize="small" />
+                   </IconButton>
+                 )}
+               </Box>
             </Grid>
             <Grid size={12}>
               <TextField 
@@ -369,21 +384,28 @@ export default function AuthRegister() {
                 <TextField fullWidth multiline rows={2} label="About Your Business" name="description" value={formData.description} onChange={handleInputChange} required />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <Button
-                variant="outlined"
-                component="label"
-                fullWidth
-                size="small"
-                startIcon={<CloudUploadIcon />}
-                color={files.tinUpload ? 'success' : 'primary'}
-                sx={{ borderStyle: 'dashed' }}
-              >
-                {files.tinUpload ? 'TIN Card Uploaded' : 'Upload TIN'}
-                <input type="file" name="tinUpload" hidden onChange={handleFileChange} />
-              </Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  fullWidth
+                  size="small"
+                  startIcon={<CloudUploadIcon />}
+                  color={files.tinUpload ? 'success' : 'primary'}
+                  sx={{ borderStyle: 'dashed' }}
+                >
+                  {files.tinUpload ? `TIN: ${files.tinUpload.name}` : 'Upload TIN / PAN'}
+                  <input type="file" name="tinUpload" hidden onChange={handleFileChange} accept="image/*,application/pdf" />
+                </Button>
+                {files.tinUpload && (
+                  <IconButton color="error" size="small" onClick={() => handleRemoveFile('tinUpload')} title="Remove TIN file">
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
               <TextField 
                 fullWidth 
-                label="TIN Number" 
+                label="TIN / PAN Number" 
                 size="small" 
                 name="tin.number" 
                 value={formData.tin.number} 
@@ -392,18 +414,25 @@ export default function AuthRegister() {
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <Button
-                variant="outlined"
-                component="label"
-                fullWidth
-                size="small"
-                startIcon={<CloudUploadIcon />}
-                color={files.gstUpload ? 'success' : 'primary'}
-                sx={{ borderStyle: 'dashed' }}
-              >
-                {files.gstUpload ? 'GST Cert Uploaded' : 'Upload GST'}
-                <input type="file" name="gstUpload" hidden onChange={handleFileChange} />
-              </Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  fullWidth
+                  size="small"
+                  startIcon={<CloudUploadIcon />}
+                  color={files.gstUpload ? 'success' : 'primary'}
+                  sx={{ borderStyle: 'dashed' }}
+                >
+                  {files.gstUpload ? `GST: ${files.gstUpload.name}` : 'Upload GST Cert'}
+                  <input type="file" name="gstUpload" hidden onChange={handleFileChange} accept="image/*,application/pdf" />
+                </Button>
+                {files.gstUpload && (
+                  <IconButton color="error" size="small" onClick={() => handleRemoveFile('gstUpload')} title="Remove GST file">
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
               <TextField 
                 fullWidth 
                 label="GST Number" 
@@ -430,7 +459,7 @@ export default function AuthRegister() {
             </Grid>
             <Grid size={12}>
               <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>Financial Credentials:</Typography>
-              <Stack direction="row" spacing={2} sx={{ mb: 1.5 }}>
+              <Stack direction="row" spacing={1} sx={{ mb: 1.5, alignItems: 'center' }}>
                 <TextField fullWidth label="Bank Name" size="small" name="bankDetails.bankName" value={formData.bankDetails.bankName} onChange={handleInputChange} />
                 <Button
                   variant="outlined"
@@ -440,9 +469,14 @@ export default function AuthRegister() {
                   color={files.bankUpload ? 'success' : 'primary'}
                   sx={{ borderStyle: 'dashed', minWidth: 150 }}
                 >
-                  {files.bankUpload ? 'Bank Doc' : 'Upload Passbook'}
-                  <input type="file" name="bankUpload" hidden onChange={handleFileChange} />
+                  {files.bankUpload ? `Bank: ${files.bankUpload.name}` : 'Upload Passbook / Cheque'}
+                  <input type="file" name="bankUpload" hidden onChange={handleFileChange} accept="image/*,application/pdf" />
                 </Button>
+                {files.bankUpload && (
+                  <IconButton color="error" size="small" onClick={() => handleRemoveFile('bankUpload')} title="Remove bank document">
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                )}
               </Stack>
               <Grid container spacing={2} sx={{ mb: 1.5 }}>
                 <Grid size={{ xs: 12, sm: 6 }}>

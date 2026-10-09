@@ -102,6 +102,25 @@ const packageSchema = new mongoose.Schema({
   location: {
     type: String
   },
+  destination: {
+    type: String
+  },
+  isFeatured: {
+    type: Boolean,
+    default: true
+  },
+  isTopPick: {
+    type: Boolean,
+    default: false
+  },
+  topRated: {
+    type: Boolean,
+    default: true
+  },
+  badge: {
+    type: String,
+    default: ''
+  },
   images: {
     type: [String],
     default: ['/public/defaults/default_travel.png']

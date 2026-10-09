@@ -95,16 +95,19 @@ const Enquiries = () => {
     showToast('Follow-up added', 'success');
   };
 
-  const filteredEnquiries = enquiries.filter((item) => {
-    const matchesSearch = 
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.message.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredEnquiries = enquiries
+    .filter((item) => {
+      const matchesSearch = 
+        item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.phone && item.phone.includes(searchTerm));
+        
+      const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
       
-    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  }).reverse();
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
   const totalItems = filteredEnquiries.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);

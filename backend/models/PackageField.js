@@ -120,7 +120,7 @@ const packageFieldSchema = new mongoose.Schema({
 });
 
 // Pre-save hook to auto-generate setId if setTitle is provided but setId is missing
-packageFieldSchema.pre('save', function (next) {
+packageFieldSchema.pre('save', function () {
   if (this.setTitle && !this.setId) {
     const slug = this.setTitle
       .toLowerCase()
@@ -128,7 +128,6 @@ packageFieldSchema.pre('save', function (next) {
       .replace(/(^_|_$)/g, '');
     this.setId = `set_${slug || 'group'}_${Date.now().toString(36)}`;
   }
-  next();
 });
 
 // Unique fieldName per service

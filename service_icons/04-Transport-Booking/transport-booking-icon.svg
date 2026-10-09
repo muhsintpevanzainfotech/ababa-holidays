@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="transBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#0369A1"/>
+    </linearGradient>
+    <linearGradient id="carBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E2E8F0"/>
+    </linearGradient>
+    <linearGradient id="yellowCab" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#EAB308"/>
+    </linearGradient>
+    <linearGradient id="glassWind" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0C4A6E" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background Card -->
+  <rect x="24" y="24" width="464" height="464" rx="116" fill="url(#transBg)" filter="url(#shadow)"/>
+
+  <!-- GPS Map Navigation Pin Grid Background -->
+  <circle cx="256" cy="256" r="190" fill="none" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="2"/>
+  <path d="M 60 256 Q 256 160 452 256" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="3"/>
+
+  <!-- Floating Pin / Location Icon in Background -->
+  <g transform="translate(370, 95)">
+    <path d="M 0 0 C -18 0 -32 14 -32 32 C -32 55 0 85 0 85 C 0 85 32 55 32 32 C 32 14 18 0 0 0 Z" fill="#F43F5E"/>
+    <circle cx="0" cy="32" r="12" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Modern Luxury Sedan / Cab / Transport Vehicle Group -->
+  <g transform="translate(0, 30)">
+    <!-- Speed Motion Trails -->
+    <path d="M 50 310 L 110 310" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+    <path d="M 70 330 L 120 330" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+    <path d="M 40 285 L 95 285" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+
+    <!-- Road Base -->
+    <path d="M 70 365 L 442 365" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" opacity="0.8"/>
+    <path d="M 130 385 L 382 385" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-dasharray="14 14" opacity="0.4"/>
+
+    <!-- Taxi Roof Light / Executive Beacon -->
+    <path d="M 235 155 L 277 155 L 285 170 L 227 170 Z" fill="url(#yellowCab)"/>
+    <rect x="242" y="159" width="28" height="6" rx="2" fill="#1E293B"/>
+
+    <!-- Car Body -->
+    <path d="M 95 305 L 105 260 C 110 240 130 235 160 235 L 205 235 L 245 175 C 255 165 270 165 315 165 L 365 170 C 390 172 405 190 415 220 L 435 255 C 445 270 445 295 440 315 L 430 325 C 420 330 405 330 395 330 L 125 330 C 110 330 100 320 95 305 Z" fill="url(#carBody)"/>
+
+    <!-- Sleek Front Windshield & Windows -->
+    <!-- Front Windshield -->
+    <path d="M 320 178 L 360 182 C 375 185 385 195 395 220 L 405 240 L 320 240 Z" fill="url(#glassWind)"/>
+    <!-- Rear / Side Passenger Windows -->
+    <path d="M 248 180 L 310 180 L 310 240 L 210 240 Z" fill="url(#glassWind)"/>
+    
+    <!-- Window Pillar Dividers -->
+    <rect x="310" y="176" width="10" height="65" fill="#1E293B"/>
+
+    <!-- Luxury Side Stripe / Accent -->
+    <path d="M 100 280 Q 256 260 435 275 L 438 290 Q 256 275 97 295 Z" fill="url(#yellowCab)"/>
+
+    <!-- Headlight (Bright Beam) -->
+    <path d="M 425 265 L 440 270 L 435 290 L 418 285 Z" fill="#FEF08A"/>
+    <polygon points="440,270 485,250 485,310 435,290" fill="#FEF08A" fill-opacity="0.25"/>
+
+    <!-- Tail Light -->
+    <path d="M 98 268 L 110 270 L 106 292 L 95 288 Z" fill="#EF4444"/>
+
+    <!-- Side Door Handles -->
+    <rect x="235" y="255" width="22" height="6" rx="3" fill="#64748B"/>
+    <rect x="330" y="255" width="22" height="6" rx="3" fill="#64748B"/>
+
+    <!-- Side Mirror -->
+    <path d="M 390 225 Q 405 225 408 238 L 398 240 Z" fill="#1E293B"/>
+
+    <!-- Front Wheel -->
+    <circle cx="360" cy="325" r="34" fill="#1E293B"/>
+    <circle cx="360" cy="325" r="22" fill="#94A3B8"/>
+    <circle cx="360" cy="325" r="12" fill="#F8FAFC"/>
+    <circle cx="360" cy="325" r="6" fill="#0284C7"/>
+
+    <!-- Rear Wheel -->
+    <circle cx="165" cy="325" r="34" fill="#1E293B"/>
+    <circle cx="165" cy="325" r="22" fill="#94A3B8"/>
+    <circle cx="165" cy="325" r="12" fill="#F8FAFC"/>
+    <circle cx="165" cy="325" r="6" fill="#0284C7"/>
+  </g>
+</svg>

@@ -3,7 +3,7 @@ import { CreditCard, Landmark, FileText, ShieldAlert } from 'lucide-react';
 import { renderUploadPreview, getInputFieldStyle, getFieldError } from '../components/SharedUI';
 
 const Step4Compliance = ({ 
-  formik, isViewMode, isDragging, setIsDragging, handleNestedFileChange 
+  formik, isViewMode, isDragging, setIsDragging, handleNestedFileChange, handleDrop 
 }) => {
   return (
     <div className="fade-in">
@@ -26,21 +26,30 @@ const Step4Compliance = ({
               disabled={isViewMode}
               placeholder="22AAAAA0000A1Z5"
               {...formik.getFieldProps('gst.number')}
+              style={getInputFieldStyle(formik, 'gst.number')}
             />
+            {getFieldError(formik, 'gst.number')}
             <div style={{ marginTop: '10px' }}>
-              <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>GST Certificate Upload</label>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>GST Certificate Upload (PDF / Image)</label>
               {renderUploadPreview({
                 preview: formik.values.gstPreview,
                 fileInputId: 'gstFile',
                 fileKey: 'gst.file',
                 previewKey: 'gstPreview',
-                customStyle: { height: '75px' },
+                customStyle: { height: '80px' },
                 isViewMode,
                 isDragging,
                 setIsDragging,
+                handleDrop,
                 handleNestedFileChange
               })}
-              <input id="gstFile" type="file" style={{ display: 'none' }} onChange={(e) => handleNestedFileChange(e, 'gst.file', 'gstPreview')} />
+              <input 
+                id="gstFile" 
+                type="file" 
+                style={{ display: 'none' }} 
+                accept="image/*,application/pdf,.doc,.docx"
+                onChange={(e) => handleNestedFileChange(e, 'gst.file', 'gstPreview')} 
+              />
             </div>
           </div>
 
@@ -52,21 +61,30 @@ const Step4Compliance = ({
               disabled={isViewMode}
               placeholder="ABCDE1234F"
               {...formik.getFieldProps('tin.number')}
+              style={getInputFieldStyle(formik, 'tin.number')}
             />
+            {getFieldError(formik, 'tin.number')}
             <div style={{ marginTop: '10px' }}>
-              <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>TIN / PAN Proof Upload</label>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>TIN / PAN Proof Upload (PDF / Image)</label>
               {renderUploadPreview({
                 preview: formik.values.tinPreview,
                 fileInputId: 'tinFile',
                 fileKey: 'tin.file',
                 previewKey: 'tinPreview',
-                customStyle: { height: '75px' },
+                customStyle: { height: '80px' },
                 isViewMode,
                 isDragging,
                 setIsDragging,
+                handleDrop,
                 handleNestedFileChange
               })}
-              <input id="tinFile" type="file" style={{ display: 'none' }} onChange={(e) => handleNestedFileChange(e, 'tin.file', 'tinPreview')} />
+              <input 
+                id="tinFile" 
+                type="file" 
+                style={{ display: 'none' }} 
+                accept="image/*,application/pdf,.doc,.docx"
+                onChange={(e) => handleNestedFileChange(e, 'tin.file', 'tinPreview')} 
+              />
             </div>
           </div>
 
@@ -81,9 +99,16 @@ const Step4Compliance = ({
               isViewMode,
               isDragging,
               setIsDragging,
+              handleDrop,
               handleNestedFileChange
             })}
-            <input id="idCardFileAdd" type="file" style={{ display: 'none' }} onChange={(e) => handleNestedFileChange(e, 'idCardFile', 'idCardPreview')} />
+            <input 
+              id="idCardFileAdd" 
+              type="file" 
+              style={{ display: 'none' }} 
+              accept="image/*,application/pdf,.doc,.docx"
+              onChange={(e) => handleNestedFileChange(e, 'idCardFile', 'idCardPreview')} 
+            />
           </div>
         </div>
 
@@ -101,7 +126,9 @@ const Step4Compliance = ({
               disabled={isViewMode}
               placeholder="e.g. State Bank of India / HDFC Bank"
               {...formik.getFieldProps('bankDetails.bankName')}
+              style={getInputFieldStyle(formik, 'bankDetails.bankName')}
             />
+            {getFieldError(formik, 'bankDetails.bankName')}
           </div>
 
           <div className="form-group">
@@ -112,7 +139,9 @@ const Step4Compliance = ({
               disabled={isViewMode}
               placeholder="Name as printed in bank passbook"
               {...formik.getFieldProps('bankDetails.accountName')}
+              style={getInputFieldStyle(formik, 'bankDetails.accountName')}
             />
+            {getFieldError(formik, 'bankDetails.accountName')}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -124,7 +153,9 @@ const Step4Compliance = ({
                 disabled={isViewMode}
                 placeholder="987654321012"
                 {...formik.getFieldProps('bankDetails.accountNumber')}
+                style={getInputFieldStyle(formik, 'bankDetails.accountNumber')}
               />
+              {getFieldError(formik, 'bankDetails.accountNumber')}
             </div>
 
             <div className="form-group">
@@ -135,7 +166,9 @@ const Step4Compliance = ({
                 disabled={isViewMode}
                 placeholder="SBIN0001234"
                 {...formik.getFieldProps('bankDetails.ifscCode')}
+                style={getInputFieldStyle(formik, 'bankDetails.ifscCode')}
               />
+              {getFieldError(formik, 'bankDetails.ifscCode')}
             </div>
           </div>
 
@@ -147,7 +180,9 @@ const Step4Compliance = ({
               disabled={isViewMode}
               placeholder="e.g. Main Branch, Fort Mumbai"
               {...formik.getFieldProps('bankDetails.branch')}
+              style={getInputFieldStyle(formik, 'bankDetails.branch')}
             />
+            {getFieldError(formik, 'bankDetails.branch')}
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
@@ -161,9 +196,16 @@ const Step4Compliance = ({
               isViewMode,
               isDragging,
               setIsDragging,
+              handleDrop,
               handleNestedFileChange
             })}
-            <input id="bankFileAdd" type="file" style={{ display: 'none' }} onChange={(e) => handleNestedFileChange(e, 'bankFile', 'bankPreview')} />
+            <input 
+              id="bankFileAdd" 
+              type="file" 
+              style={{ display: 'none' }} 
+              accept="image/*,application/pdf,.doc,.docx"
+              onChange={(e) => handleNestedFileChange(e, 'bankFile', 'bankPreview')} 
+            />
           </div>
         </div>
       </div>

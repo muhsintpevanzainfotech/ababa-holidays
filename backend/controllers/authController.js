@@ -187,21 +187,30 @@ const register = asyncHandler(async (req, res, next) => {
 
       // Handle files for vendor profile
       if (req.files) {
-        if (req.files.idCard) {
+        if (req.files.idCard || req.files.idCardFile) {
+            const file = (req.files.idCard || req.files.idCardFile)[0];
             if (profile?.idCard) deleteFile(profile.idCard);
-            profilePayload.idCard = req.files.idCard[0].path;
+            profilePayload.idCard = file.path;
         }
-        if (req.files.tinUpload) {
+        if (req.files.tinUpload || req.files.tinFile || req.files.panUpload || req.files.panFile) {
+            const file = (req.files.tinUpload || req.files.tinFile || req.files.panUpload || req.files.panFile)[0];
             if (profile?.tin?.upload) deleteFile(profile.tin.upload);
-            profilePayload.tin = { ...(profilePayload.tin || {}), upload: req.files.tinUpload[0].path };
+            profilePayload.tin = { ...(profilePayload.tin || {}), upload: file.path };
         }
-        if (req.files.gstUpload) {
+        if (req.files.gstUpload || req.files.gstFile) {
+            const file = (req.files.gstUpload || req.files.gstFile)[0];
             if (profile?.gst?.upload) deleteFile(profile.gst.upload);
-            profilePayload.gst = { ...(profilePayload.gst || {}), upload: req.files.gstUpload[0].path };
+            profilePayload.gst = { ...(profilePayload.gst || {}), upload: file.path };
         }
-        if (req.files.bankUpload) {
+        if (req.files.bankUpload || req.files.bankFile || req.files.passbookUpload || req.files.passbookFile) {
+            const file = (req.files.bankUpload || req.files.bankFile || req.files.passbookUpload || req.files.passbookFile)[0];
             if (profile?.bankDetails?.upload) deleteFile(profile.bankDetails.upload);
-            profilePayload.bankDetails = { ...(profilePayload.bankDetails || {}), upload: req.files.bankUpload[0].path };
+            profilePayload.bankDetails = { ...(profilePayload.bankDetails || {}), upload: file.path };
+        }
+        if (req.files.tradeLicenseUpload || req.files.tradeLicenseFile) {
+            const file = (req.files.tradeLicenseUpload || req.files.tradeLicenseFile)[0];
+            if (profile?.tradeLicenseDoc) deleteFile(profile.tradeLicenseDoc);
+            profilePayload.tradeLicenseDoc = file.path;
         }
         
         if (req.files.logoS || req.files.logoM || req.files.logoL) {
@@ -331,10 +340,26 @@ const register = asyncHandler(async (req, res, next) => {
 
     // Handle files for vendor profile
     if (req.files) {
-      if (req.files.idCard) profilePayload.idCard = req.files.idCard[0].path;
-      if (req.files.tinUpload) profilePayload.tin = { ...(profilePayload.tin || {}), upload: req.files.tinUpload[0].path };
-      if (req.files.gstUpload) profilePayload.gst = { ...(profilePayload.gst || {}), upload: req.files.gstUpload[0].path };
-      if (req.files.bankUpload) profilePayload.bankDetails = { ...(profilePayload.bankDetails || {}), upload: req.files.bankUpload[0].path };
+      if (req.files.idCard || req.files.idCardFile) {
+        const file = (req.files.idCard || req.files.idCardFile)[0];
+        profilePayload.idCard = file.path;
+      }
+      if (req.files.tinUpload || req.files.tinFile || req.files.panUpload || req.files.panFile) {
+        const file = (req.files.tinUpload || req.files.tinFile || req.files.panUpload || req.files.panFile)[0];
+        profilePayload.tin = { ...(profilePayload.tin || {}), upload: file.path };
+      }
+      if (req.files.gstUpload || req.files.gstFile) {
+        const file = (req.files.gstUpload || req.files.gstFile)[0];
+        profilePayload.gst = { ...(profilePayload.gst || {}), upload: file.path };
+      }
+      if (req.files.bankUpload || req.files.bankFile || req.files.passbookUpload || req.files.passbookFile) {
+        const file = (req.files.bankUpload || req.files.bankFile || req.files.passbookUpload || req.files.passbookFile)[0];
+        profilePayload.bankDetails = { ...(profilePayload.bankDetails || {}), upload: file.path };
+      }
+      if (req.files.tradeLicenseUpload || req.files.tradeLicenseFile) {
+        const file = (req.files.tradeLicenseUpload || req.files.tradeLicenseFile)[0];
+        profilePayload.tradeLicenseDoc = file.path;
+      }
       
       if (req.files.logoS || req.files.logoM || req.files.logoL) {
         profilePayload.companylogos = {
@@ -455,7 +480,15 @@ const verifyOTP = asyncHandler(async (req, res, next) => {
     lastActive: user.lastActive,
     isOnline: user.isOnline,
     accessToken,
-    refreshToken
+    refreshToken,
+    user: {
+      _id: user._id,
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role
+    }
   });
 });
 
@@ -499,9 +532,15 @@ const login = asyncHandler(async (req, res, next) => {
       console.log(`Vendor portal access denied for ${email} (Role: ${user.role})`);
       return next(new ErrorResponse('Access denied. Vendor portal is for Vendors and Vendor Staff only.', 401));
     }
+  } else if (appType === 'user' || appType === 'website') {
+    // Website / User portal access
+    if (!['User', 'Admin', 'Sub-Admin', 'Staff', 'Vendor'].includes(user.role)) {
+      console.log(`Website portal access denied for ${email} (Role: ${user.role})`);
+      return next(new ErrorResponse('Access denied. Unauthorized role.', 401));
+    }
   } else {
     // Default fallback or shared login (if any)
-    if (user.role !== 'Admin' && user.role !== 'Sub-Admin' && user.role !== 'Staff' && user.role !== 'Vendor' && user.role !== 'Vendor-Staff') {
+    if (!['User', 'Admin', 'Sub-Admin', 'Staff', 'Vendor', 'Vendor-Staff'].includes(user.role)) {
       console.log(`Unauthorized role access attempt for ${email} (Role: ${user.role})`);
       return next(new ErrorResponse('Access denied. Unauthorized role.', 401));
     }
@@ -583,7 +622,15 @@ const login = asyncHandler(async (req, res, next) => {
     lastActive: user.lastActive,
     isOnline: user.isOnline,
     accessToken,
-    refreshToken
+    refreshToken,
+    user: {
+      _id: user._id,
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role
+    }
   });
 });
 

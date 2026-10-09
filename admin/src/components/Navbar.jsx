@@ -211,7 +211,11 @@ const Navbar = ({ onToggleSidebar, isCollapsed }) => {
               </span>
             )}
           </button>
-          <NotificationDropdown isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+          <NotificationDropdown 
+            isOpen={showNotifications} 
+            onClose={() => setShowNotifications(false)} 
+            onUpdateCount={(count) => setUnreadCount(count)} 
+          />
         </div>
 
         {/* TOPBAR USER PROFILE CARD: SMALL ROUND AVATAR & STACKED TEXT (NAME TOP, ROLE DOWN) */}

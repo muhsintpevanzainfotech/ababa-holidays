@@ -1,6 +1,7 @@
 const Booking = require('../models/Booking');
 const Package = require('../models/Package');
 const sendEmail = require('../services/emailService');
+const { notifyAdmin, notifyVendor, notifyCustomer } = require('../utils/notificationHelper');
 
 // @desc    Create new booking
 // @route   POST /api/bookings
@@ -42,8 +43,37 @@ const createBooking = async (req, res, next) => {
       console.error('Email not sent', err);
     }
 
-    // Send notification to vendor
-    // (In a real app, fetch vendor email and send a similar notification)
+    // 1. Notify Admin
+    await notifyAdmin({
+      title: 'New Booking Placed',
+      message: `${req.user.name || 'A customer'} booked "${pkg.title}" for ${new Date(travelDate).toLocaleDateString()}. Total: ₹${totalPrice || pkg.price}`,
+      category: 'booking',
+      type: 'success',
+      link: '/bookings',
+      metadata: { bookingId: booking._id, packageId: pkg._id, packageTitle: pkg.title, totalPrice }
+    });
+
+    // 2. Notify Vendor (if package belongs to a vendor)
+    if (pkg.vendor) {
+      await notifyVendor(pkg.vendor, {
+        title: 'New Customer Booking Order',
+        message: `${req.user.name || 'A customer'} placed a booking for "${pkg.title}".`,
+        category: 'booking',
+        type: 'success',
+        link: '/bookings',
+        metadata: { bookingId: booking._id, packageId: pkg._id }
+      });
+    }
+
+    // 3. Notify Customer
+    await notifyCustomer(req.user.id, {
+      title: 'Booking Order Received',
+      message: `Your booking for "${pkg.title}" has been placed successfully. Awaiting confirmation.`,
+      category: 'booking',
+      type: 'success',
+      link: '/dashboard',
+      metadata: { bookingId: booking._id, packageId: pkg._id }
+    });
 
     res.status(201).json({
       success: true,
@@ -88,7 +118,7 @@ const getBookings = async (req, res, next) => {
 const updateBookingStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
-    let booking = await Booking.findById(req.params.id);
+    let booking = await Booking.findById(req.params.id).populate('package', 'title');
 
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
@@ -102,6 +132,17 @@ const updateBookingStatus = async (req, res, next) => {
 
     booking.bookingStatus = status;
     await booking.save();
+
+    // Notify Customer about status change
+    const pkgTitle = booking.package?.title || 'your trip';
+    await notifyCustomer(booking.user, {
+      title: `Booking Status: ${status}`,
+      message: `Your booking for "${pkgTitle}" is now ${status}.`,
+      category: 'booking',
+      type: status === 'Confirmed' ? 'success' : (status === 'Cancelled' ? 'error' : 'info'),
+      link: '/dashboard',
+      metadata: { bookingId: booking._id, status }
+    });
 
     res.status(200).json({ success: true, data: booking });
   } catch (error) {

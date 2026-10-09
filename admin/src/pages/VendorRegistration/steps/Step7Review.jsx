@@ -90,10 +90,21 @@ const Step7Review = ({
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '12px' }}>
             <div style={{ background: 'var(--bg-main)', padding: '10px', borderRadius: '10px' }}>
-              <p style={{ fontSize: '9px', fontWeight: '800', margin: '0 0 6px', color: 'var(--text-muted)' }}>GST PROOF</p>
+              <p style={{ fontSize: '9px', fontWeight: '800', margin: '0 0 6px', color: 'var(--text-muted)' }}>GST CERTIFICATE</p>
               {formik.values.gstPreview ? (
                 <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '11px', gap: '4px', width: '100%' }} onClick={() => setLightbox(formik.values.gstPreview)}>
                   <Eye size={12} /> View GST
+                </button>
+              ) : (
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Not Uploaded</span>
+              )}
+            </div>
+
+            <div style={{ background: 'var(--bg-main)', padding: '10px', borderRadius: '10px' }}>
+              <p style={{ fontSize: '9px', fontWeight: '800', margin: '0 0 6px', color: 'var(--text-muted)' }}>TIN / PAN PROOF</p>
+              {formik.values.tinPreview ? (
+                <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '11px', gap: '4px', width: '100%' }} onClick={() => setLightbox(formik.values.tinPreview)}>
+                  <Eye size={12} /> View TIN/PAN
                 </button>
               ) : (
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Not Uploaded</span>
@@ -105,6 +116,17 @@ const Step7Review = ({
               {formik.values.bankPreview ? (
                 <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '11px', gap: '4px', width: '100%' }} onClick={() => setLightbox(formik.values.bankPreview)}>
                   <Eye size={12} /> View Proof
+                </button>
+              ) : (
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Not Uploaded</span>
+              )}
+            </div>
+
+            <div style={{ background: 'var(--bg-main)', padding: '10px', borderRadius: '10px' }}>
+              <p style={{ fontSize: '9px', fontWeight: '800', margin: '0 0 6px', color: 'var(--text-muted)' }}>ID CARD PROOF</p>
+              {formik.values.idCardPreview ? (
+                <button type="button" className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '11px', gap: '4px', width: '100%' }} onClick={() => setLightbox(formik.values.idCardPreview)}>
+                  <Eye size={12} /> View ID
                 </button>
               ) : (
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Not Uploaded</span>

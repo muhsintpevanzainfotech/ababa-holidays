@@ -49,9 +49,41 @@ const vendorUploadFields = [
   { name: 'logoL', maxCount: 1 }
 ];
 
-// Public routes to register and login vendor
+const asyncHandler = require('../utils/asyncHandler');
+const User = require('../models/User');
+const VendorProfile = require('../models/VendorProfile');
+
+// Public routes for vendor
 router.post('/register', upload.fields(vendorUploadFields), register);
 router.post('/login', upload.none(), login);
+
+// Public route to fetch approved vendors for website display
+router.get('/public', asyncHandler(async (req, res) => {
+  const vendors = await User.find({ role: 'Vendor' }).select('-password');
+  const data = await Promise.all(
+    vendors.map(async (v) => {
+      const profile = await VendorProfile.findOne({ user: v._id })
+        .populate('selectedServices', 'title description image');
+      return {
+        id: v._id,
+        _id: v._id,
+        name: profile?.companyName || v.name,
+        email: v.email,
+        phone: v.phone,
+        avatar: v.avatar,
+        coverImage: profile?.coverBanner || v.avatar,
+        rating: profile?.rating || 4.9,
+        sold: profile?.totalTours || 120,
+        priceLevel: profile?.priceLevel || "$$",
+        location: profile?.address?.city ? `${profile.address.city}, ${profile.address.state || ''}` : "South India",
+        verified: v.isVerified ?? true,
+        category: profile?.businessType || "Travel Partner",
+        description: profile?.description || "Verified travel partner",
+      };
+    })
+  );
+  res.json({ success: true, count: data.length, data });
+}));
 
 // Profile routes (Vendor or Vendor-Staff)
 router.get('/profile', protect, authorize('Vendor', 'Vendor-Staff', 'Staff'), getVendorProfile);

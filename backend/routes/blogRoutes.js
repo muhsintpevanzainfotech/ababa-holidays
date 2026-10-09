@@ -21,6 +21,7 @@ router.get('/my-blogs', protect, getMyBlogs);
 router.get('/admin', getAdminBlogs);
 router.get('/vendor', getVendorBlogs);
 router.get('/vendor/:id', getVendorBlogs);
+router.get('/slug/:id', getBlog);
 router.get('/:id', getBlog);
 
 // Protected routes (Admin/Sub-Admin/Vendor/Vendor-Staff)

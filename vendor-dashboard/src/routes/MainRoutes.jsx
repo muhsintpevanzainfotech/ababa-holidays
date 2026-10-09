@@ -102,6 +102,22 @@ const MainRoutes = {
       element: <PlatformWallet />
     },
     {
+      path: 'enquiries',
+      element: <WebEnquiries />
+    },
+    {
+      path: 'contact-us',
+      element: <WebContactUs />
+    },
+    {
+      path: 'testimonials',
+      element: <PlatformTestimonials />
+    },
+    {
+      path: 'reviews',
+      element: <PlatformTestimonials />
+    },
+    {
       path: 'platform',
       children: [
         {

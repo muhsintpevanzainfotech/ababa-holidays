@@ -65,12 +65,15 @@ const Bookings = () => {
     setShowDetails(true);
   };
 
-  const filteredBookings = bookings.filter(b => {
-    const matchesSearch = b.package?.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         b.user?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || b.bookingStatus === statusFilter;
-    return matchesSearch && matchesStatus;
-  }).reverse();
+  const filteredBookings = bookings
+    .filter((b) => {
+      const matchesSearch =
+        b.package?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.user?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || b.bookingStatus === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => new Date(b.createdAt || b.travelDate || 0) - new Date(a.createdAt || a.travelDate || 0));
 
   const getStatusStyle = (status) => {
     switch (status) {

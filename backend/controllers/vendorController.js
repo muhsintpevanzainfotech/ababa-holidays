@@ -445,10 +445,26 @@ const createVendor = asyncHandler(async (req, res, next) => {
 
   // Handle files for new profile
   if (req.files) {
-    if (req.files.idCard) profilePayload.idCard = req.files.idCard[0].path;
-    if (req.files.tinUpload) profilePayload.tin = { ...(profilePayload.tin || {}), upload: req.files.tinUpload[0].path };
-    if (req.files.gstUpload) profilePayload.gst = { ...(profilePayload.gst || {}), upload: req.files.gstUpload[0].path };
-    if (req.files.bankUpload) profilePayload.bankDetails = { ...(profilePayload.bankDetails || {}), upload: req.files.bankUpload[0].path };
+    if (req.files.idCard || req.files.idCardFile) {
+      const file = (req.files.idCard || req.files.idCardFile)[0];
+      profilePayload.idCard = file.path;
+    }
+    if (req.files.tinUpload || req.files.tinFile || req.files.panUpload || req.files.panFile) {
+      const file = (req.files.tinUpload || req.files.tinFile || req.files.panUpload || req.files.panFile)[0];
+      profilePayload.tin = { ...(profilePayload.tin || {}), upload: file.path };
+    }
+    if (req.files.gstUpload || req.files.gstFile) {
+      const file = (req.files.gstUpload || req.files.gstFile)[0];
+      profilePayload.gst = { ...(profilePayload.gst || {}), upload: file.path };
+    }
+    if (req.files.bankUpload || req.files.bankFile || req.files.passbookUpload || req.files.passbookFile) {
+      const file = (req.files.bankUpload || req.files.bankFile || req.files.passbookUpload || req.files.passbookFile)[0];
+      profilePayload.bankDetails = { ...(profilePayload.bankDetails || {}), upload: file.path };
+    }
+    if (req.files.tradeLicenseUpload || req.files.tradeLicenseFile) {
+      const file = (req.files.tradeLicenseUpload || req.files.tradeLicenseFile)[0];
+      profilePayload.tradeLicenseDoc = file.path;
+    }
     if (req.files.logoS || req.files.logoM || req.files.logoL) {
       profilePayload.companylogos = {
         small: req.files.logoS ? req.files.logoS[0].path : undefined,
@@ -606,20 +622,24 @@ const updateVendor = asyncHandler(async (req, res, next) => {
       const file = req.files.idCard ? req.files.idCard[0] : req.files.idCardFile[0];
       profileUpdates.idCard = file.path;
     }
-    if (req.files.tinUpload || req.files.tinFile) {
-      const file = req.files.tinUpload ? req.files.tinUpload[0] : req.files.tinFile[0];
+    if (req.files.tinUpload || req.files.tinFile || req.files.panUpload || req.files.panFile) {
+      const file = (req.files.tinUpload || req.files.tinFile || req.files.panUpload || req.files.panFile)[0];
       const existingTin = profileUpdates.tin || profile.tin || {};
       profileUpdates.tin = { ...existingTin, upload: file.path };
     }
     if (req.files.gstUpload || req.files.gstFile) {
-      const file = req.files.gstUpload ? req.files.gstUpload[0] : req.files.gstFile[0];
+      const file = (req.files.gstUpload || req.files.gstFile)[0];
       const existingGst = profileUpdates.gst || profile.gst || {};
       profileUpdates.gst = { ...existingGst, upload: file.path };
     }
-    if (req.files.bankUpload || req.files.bankFile) {
-      const file = req.files.bankUpload ? req.files.bankUpload[0] : req.files.bankFile[0];
+    if (req.files.bankUpload || req.files.bankFile || req.files.passbookUpload || req.files.passbookFile) {
+      const file = (req.files.bankUpload || req.files.bankFile || req.files.passbookUpload || req.files.passbookFile)[0];
       const existingBank = profileUpdates.bankDetails || profile.bankDetails || {};
       profileUpdates.bankDetails = { ...existingBank, upload: file.path };
+    }
+    if (req.files.tradeLicenseUpload || req.files.tradeLicenseFile) {
+      const file = (req.files.tradeLicenseUpload || req.files.tradeLicenseFile)[0];
+      profileUpdates.tradeLicenseDoc = file.path;
     }
     if (req.files.logoS || req.files.logoM || req.files.logoL) {
       const existingLogos = profileUpdates.companylogos || profile.companylogos || {};
@@ -645,10 +665,13 @@ const updateVendor = asyncHandler(async (req, res, next) => {
 // @route   GET /api/vendors/staff
 // @access  Private (Vendor or Admin)
 const getVendorStaff = asyncHandler(async (req, res, next) => {
-  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  let targetVendorId = req.user.effectiveVendorId || req.user.id;
+  if ((req.user.role === 'Admin' || req.user.role === 'Sub-Admin') && (req.query.vendorId || req.query.vendor)) {
+    targetVendorId = req.query.vendorId || req.query.vendor;
+  }
   const staff = await User.find({
     managedBy: targetVendorId,
-    role: { $in: ['Vendor-Staff', 'Staff'] }
+    role: { $in: ['Vendor-Staff', 'Staff', 'vendor-staff', 'staff'] }
   }).select('-password').sort('-createdAt');
 
   res.status(200).json({

@@ -3,7 +3,7 @@ import { Briefcase, Building, UserCheck, Compass, Car, FileCheck } from 'lucide-
 import { renderUploadPreview, getInputFieldStyle, getFieldError } from '../components/SharedUI';
 
 const Step2Business = ({ 
-  formik, isViewMode, isDragging, setIsDragging, handleNestedFileChange 
+  formik, isViewMode, isDragging, setIsDragging, handleNestedFileChange, handleDrop 
 }) => {
   const vendorTypes = [
     { val: 'Travel Agent', desc: 'Agency / Outbound', icon: <Briefcase size={16} /> },
@@ -113,6 +113,7 @@ const Step2Business = ({
                     isViewMode,
                     isDragging,
                     setIsDragging,
+                    handleDrop,
                     handleNestedFileChange
                   })}
                   <input id={key} type="file" style={{ display: 'none' }} accept="image/*" onChange={(e) => handleNestedFileChange(e, key, `${key}Preview`)} />

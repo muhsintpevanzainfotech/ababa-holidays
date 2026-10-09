@@ -152,17 +152,19 @@ const EnquiryManagement = () => {
         }
     };
 
-    const filteredEnquiries = enquiries.filter(e => {
-        const matchesSearch =
-            e.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            e.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            e.phone?.includes(searchTerm) ||
-            e.message?.toLowerCase().includes(searchTerm.toLowerCase());
+    const filteredEnquiries = enquiries
+        .filter(e => {
+            const matchesSearch =
+                e.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                e.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                e.phone?.includes(searchTerm) ||
+                e.message?.toLowerCase().includes(searchTerm.toLowerCase());
 
-        const matchesStatus = statusFilter === 'All' || e.status === statusFilter;
+            const matchesStatus = statusFilter === 'All' || e.status === statusFilter;
 
-        return matchesSearch && matchesStatus;
-    });
+            return matchesSearch && matchesStatus;
+        })
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
     const newCount = enquiries.filter(e => e.status === 'New').length;
     const inProgressCount = enquiries.filter(e => e.status === 'In Progress').length;

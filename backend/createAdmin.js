@@ -1,52 +1,48 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const path = require('path');
-const bcrypt = require('bcryptjs');
+const User = require('./models/User');
 
-// Load env from current folder
 dotenv.config();
 
-const UserSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, default: 'Admin' },
-  name: { type: String, default: 'Muhsin Admin' },
-  isVerified: { type: Boolean, default: true }
-}, { timestamps: true });
-
-// Pre-save hook for password hashing (simplified for script)
-UserSchema.pre('save', async function() {
-  if (!this.isModified('password')) return;
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-});
-
-const User = mongoose.model('User', UserSchema);
-
 async function createAdmin() {
+  const uri = process.env.MONGO_URI;
+  if (!uri) {
+    console.error('MONGO_URI is missing in .env');
+    process.exit(1);
+  }
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('Connected to MongoDB');
+    const conn = await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 20000,
+    });
+    console.log(`Connected to MongoDB: ${conn.connection.host}`);
 
     const email = 'muhsinadmin@gmail.com';
     const password = 'Admin@123';
 
-    // Delete existing if any to ensure fresh password
     await User.deleteOne({ email });
 
     const admin = new User({
+      name: 'Muhsin Admin',
       email,
       password,
       role: 'Admin',
-      name: 'Muhsin Admin',
-      isVerified: true
+      phone: '+919876543210',
+      isVerified: true,
+      isSuspended: false
     });
 
     await admin.save();
-    console.log('Admin user created successfully');
-    process.exit();
+    console.log('====================================');
+    console.log('Admin account created successfully!');
+    console.log(`Email:    ${email}`);
+    console.log(`Password: ${password}`);
+    console.log(`Role:     Admin`);
+    console.log(`CustomId: ${admin.customId}`);
+    console.log('====================================');
+
+    process.exit(0);
   } catch (err) {
-    console.error(err);
+    console.error('Failed to create admin user:', err.message);
     process.exit(1);
   }
 }

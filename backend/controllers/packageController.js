@@ -36,6 +36,35 @@ const getPackages = asyncHandler(async (req, res, next) => {
     }
   });
 
+  // Handle search parameter
+  let searchCondition = null;
+  if (reqQuery.search && reqQuery.search.trim()) {
+    const searchRegex = { $regex: reqQuery.search.trim(), $options: 'i' };
+    searchCondition = {
+      $or: [
+        { packageName: searchRegex },
+        { title: searchRegex },
+        { description: searchRegex },
+        { packageDescription: searchRegex },
+        { destination: searchRegex },
+        { location: searchRegex }
+      ]
+    };
+    delete reqQuery.search;
+  }
+
+  // Handle featured aliases & booleans
+  if (reqQuery.featured !== undefined) {
+    reqQuery.isFeatured = reqQuery.featured === 'true' || reqQuery.featured === true;
+    delete reqQuery.featured;
+  }
+  if (reqQuery.isFeatured !== undefined) {
+    reqQuery.isFeatured = reqQuery.isFeatured === 'true' || reqQuery.isFeatured === true;
+  }
+  if (reqQuery.isActive !== undefined) {
+    reqQuery.isActive = reqQuery.isActive === 'true' || reqQuery.isActive === true;
+  }
+
   // Create query string
   let queryStr = JSON.stringify(reqQuery);
 
@@ -44,12 +73,21 @@ const getPackages = asyncHandler(async (req, res, next) => {
 
   // Finding resource
   let parsedQuery = JSON.parse(queryStr);
+
+  // Merge search condition if present
+  if (searchCondition) {
+    parsedQuery = { $and: [parsedQuery, searchCondition] };
+  }
+
   if (req.user && req.user.role !== 'Admin' && req.user.role !== 'Sub-Admin') {
     const targetVendorId = (req.user.effectiveVendorId || req.user.id).toString();
-    parsedQuery.$or = [
-      { createdBy: req.user.id },
-      { vendor: targetVendorId }
-    ];
+    const vendorCondition = {
+      $or: [
+        { createdBy: req.user.id },
+        { vendor: targetVendorId }
+      ]
+    };
+    parsedQuery = parsedQuery.$and ? { $and: [...parsedQuery.$and, vendorCondition] } : { ...parsedQuery, ...vendorCondition };
   }
 
   query = Package.find(parsedQuery)

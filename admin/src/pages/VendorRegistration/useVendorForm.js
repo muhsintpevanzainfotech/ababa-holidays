@@ -136,10 +136,22 @@ export const useVendorForm = (isPublic = false) => {
         if (values.logoS instanceof File) formData.append('logoS', values.logoS);
         if (values.logoM instanceof File) formData.append('logoM', values.logoM);
         if (values.logoL instanceof File) formData.append('logoL', values.logoL);
-        if (values.gst?.file instanceof File) formData.append('gstFile', values.gst.file);
-        if (values.tin?.file instanceof File) formData.append('tinFile', values.tin.file);
-        if (values.bankFile instanceof File) formData.append('bankFile', values.bankFile);
-        if (values.idCardFile instanceof File) formData.append('idCardFile', values.idCardFile);
+        if (values.gst?.file instanceof File) {
+          formData.append('gstFile', values.gst.file);
+          formData.append('gstUpload', values.gst.file);
+        }
+        if (values.tin?.file instanceof File) {
+          formData.append('tinFile', values.tin.file);
+          formData.append('tinUpload', values.tin.file);
+        }
+        if (values.bankFile instanceof File) {
+          formData.append('bankFile', values.bankFile);
+          formData.append('bankUpload', values.bankFile);
+        }
+        if (values.idCardFile instanceof File) {
+          formData.append('idCardFile', values.idCardFile);
+          formData.append('idCard', values.idCardFile);
+        }
 
         if (id) {
           await api.put(`/vendors/${id}`, formData);
@@ -309,6 +321,41 @@ export const useVendorForm = (isPublic = false) => {
         }
       };
       reader.readAsDataURL(file);
+    } else {
+      // Clear file and preview
+      formik.setFieldValue(previewKey, null);
+      if (fileKey.includes('.')) {
+        const [parent, child] = fileKey.split('.');
+        formik.setFieldValue(parent, { ...formik.values[parent], [child]: null });
+      } else {
+        formik.setFieldValue(fileKey, null);
+      }
+      if (fileKey === 'avatar') {
+        setImagePreview(null);
+      }
+    }
+  };
+
+  const handleDrop = (e, fileKey, previewKey, callback) => {
+    e.preventDefault();
+    setIsDragging(null);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        formik.setFieldValue(previewKey, reader.result);
+        if (fileKey.includes('.')) {
+          const [parent, child] = fileKey.split('.');
+          formik.setFieldValue(parent, { ...formik.values[parent], [child]: file });
+        } else {
+          formik.setFieldValue(fileKey, file);
+        }
+        if (fileKey === 'avatar') {
+          setImagePreview(reader.result);
+        }
+        if (callback) callback(file, reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -327,6 +374,6 @@ export const useVendorForm = (isPublic = false) => {
     isSearchingCity, setIsSearchingCity, showPassword, setShowPassword,
     loadingVendorData, isViewMode, navigate, id, vendors, vendorsLoading,
     services, servicesLoading, subscriptions, subsLoading,
-    brands, countries, states, handleNestedFileChange, handleArrayToggle
+    brands, countries, states, handleNestedFileChange, handleDrop, handleArrayToggle
   };
 };

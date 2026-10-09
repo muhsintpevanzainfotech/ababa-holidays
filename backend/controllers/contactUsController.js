@@ -1,4 +1,5 @@
 const ContactUs = require('../models/ContactUs');
+const { notifyAdmin, notifyVendor } = require('../utils/notificationHelper');
 
 exports.createContactMessage = async (req, res) => {
   try {
@@ -7,6 +8,29 @@ exports.createContactMessage = async (req, res) => {
       payload.file = req.file.path;
     }
     const contactMessage = await ContactUs.create(payload);
+
+    // Dispatch System Notification for Admin
+    await notifyAdmin({
+      title: 'New Contact Message',
+      message: `${payload.name || 'A customer'} (${payload.email || 'No email'}) sent a message: "${(payload.subject || payload.message || '').slice(0, 70)}"`,
+      category: 'contact',
+      type: 'info',
+      link: '/website/contact-us',
+      metadata: { contactId: contactMessage._id, name: payload.name, email: payload.email, phone: payload.phone }
+    });
+
+    // If message is vendor-specific, notify the vendor
+    if (payload.vendor) {
+      await notifyVendor(payload.vendor, {
+        title: 'New Customer Inquiry',
+        message: `${payload.name || 'A customer'} sent an inquiry: "${(payload.subject || payload.message || '').slice(0, 70)}"`,
+        category: 'contact',
+        type: 'info',
+        link: '/platform/contact-us',
+        metadata: { contactId: contactMessage._id, name: payload.name, email: payload.email, phone: payload.phone }
+      });
+    }
+
     res.status(201).json({ success: true, data: contactMessage });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

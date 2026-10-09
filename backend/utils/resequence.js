@@ -7,7 +7,11 @@ require('dotenv').config();
 
 const resequence = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/ababa_travels');
+    if (!process.env.MONGO_URI) {
+      console.error('MONGO_URI is missing in .env');
+      process.exit(1);
+    }
+    await mongoose.connect(process.env.MONGO_URI);
     console.log('Connected to Database...');
 
     const year = new Date().getFullYear();

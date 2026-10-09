@@ -12,6 +12,9 @@ const testimonialUpload = createUpload('testimonials');
 
 const router = express.Router();
 
+// Public route for fetching testimonials on website
+router.get('/public', getTestimonials);
+
 // Public route for customers to submit testimonials
 router.post('/submit', testimonialUpload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]), createTestimonial);
 

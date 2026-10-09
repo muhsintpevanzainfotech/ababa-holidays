@@ -5,12 +5,14 @@ const {
   createCoupon,
   updateCoupon,
   deleteCoupon,
-  validateCoupon
+  validateCoupon,
+  getPublicCoupons
 } = require('../controllers/couponController');
 
 const router = express.Router();
 const { protect, authorize } = require('../middleware/authMiddleware');
 
+router.get('/public', getPublicCoupons);
 router.post('/validate', validateCoupon);
 
 router.use(protect);

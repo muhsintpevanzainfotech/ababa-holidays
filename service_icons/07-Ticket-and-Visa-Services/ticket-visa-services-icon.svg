@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="visaBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <linearGradient id="passportCover" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="100%" stop-color="#172554"/>
+    </linearGradient>
+    <linearGradient id="goldPassport" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="50%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <linearGradient id="ticketWhite" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F8FAFC"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#78350F" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background Card -->
+  <rect x="24" y="24" width="464" height="464" rx="116" fill="url(#visaBg)" filter="url(#shadow)"/>
+
+  <!-- Compass / Global Flight Lines Background -->
+  <circle cx="256" cy="256" r="190" fill="none" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="2"/>
+  <path d="M 60 256 Q 256 120 452 256" fill="none" stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="3"/>
+
+  <!-- Ticket & Visa Elements Group -->
+  <g transform="translate(0, 15)">
+
+    <!-- Background Passport Booklet (Tilted Left) -->
+    <g transform="translate(195, 230) rotate(-12)">
+      <!-- Passport Spine & Pages -->
+      <rect x="-85" y="-120" width="170" height="235" rx="16" fill="#F1F5F9"/>
+      <!-- Passport Cover -->
+      <rect x="-82" y="-120" width="164" height="235" rx="14" fill="url(#passportCover)" filter="drop-shadow(0 10px 18px rgba(0,0,0,0.3))"/>
+      
+      <!-- Gold Passport Inscriptions -->
+      <g transform="translate(0, -65)" fill="url(#goldPassport)">
+        <!-- PASSPORT Header -->
+        <rect x="-40" y="0" width="80" height="6" rx="3"/>
+        <rect x="-25" y="12" width="50" height="4" rx="2"/>
+      </g>
+
+      <!-- Gold Emblem / Seal in Center of Passport -->
+      <circle cx="0" cy="5" r="32" fill="none" stroke="url(#goldPassport)" stroke-width="4"/>
+      <circle cx="0" cy="5" r="22" fill="none" stroke="url(#goldPassport)" stroke-width="2" stroke-dasharray="4 3"/>
+      <!-- Globe Icon inside Emblem -->
+      <ellipse cx="0" cy="5" rx="14" ry="22" fill="none" stroke="url(#goldPassport)" stroke-width="2"/>
+      <line x1="-22" y1="5" x2="22" y2="5" stroke="url(#goldPassport)" stroke-width="2"/>
+
+      <!-- Biometric Chip Symbol at Bottom -->
+      <g transform="translate(0, 75)" fill="url(#goldPassport)">
+        <rect x="-18" y="-10" width="36" height="20" rx="4" fill="none" stroke="url(#goldPassport)" stroke-width="3"/>
+        <circle cx="0" cy="0" r="5" fill="none" stroke="url(#goldPassport)" stroke-width="3"/>
+        <line x1="-18" y1="0" x2="-5" y2="0" stroke="url(#goldPassport)" stroke-width="3"/>
+        <line x1="5" y1="0" x2="18" y2="0" stroke="url(#goldPassport)" stroke-width="3"/>
+      </g>
+    </g>
+
+    <!-- Flight Boarding Pass / Ticket (Tilted Right Over Passport) -->
+    <g transform="translate(305, 260) rotate(14)">
+      <!-- Boarding Pass Card Body -->
+      <rect x="-105" y="-130" width="210" height="250" rx="20" fill="url(#ticketWhite)" filter="drop-shadow(0 14px 22px rgba(0,0,0,0.25))"/>
+      
+      <!-- Top Color Banner of Ticket -->
+      <path d="M -105 -110 C -105 -121 -96 -130 -85 -130 L 85 -130 C 96 -130 105 -121 105 -110 L 105 -65 L -105 -65 Z" fill="#0284C7"/>
+      
+      <!-- Airplane Icon on Ticket Header -->
+      <g transform="translate(0, -98)">
+        <path d="M 0 -12 L 4 -4 L 18 0 L 4 4 L 3 14 L 0 11 L -2 14 L -2 4 L -14 2 L -4 -2 Z" fill="#FFFFFF"/>
+      </g>
+
+      <!-- Ticket Notch Perforations (Left & Right Cutouts) -->
+      <circle cx="-105" cy="20" r="14" fill="#D97706"/>
+      <circle cx="105" cy="20" r="14" fill="#D97706"/>
+      <!-- Perforation Dotted Line -->
+      <line x1="-85" y1="20" x2="85" y2="20" stroke="#CBD5E1" stroke-width="3" stroke-dasharray="6 6"/>
+
+      <!-- Boarding Flight Info (Origin -> Destination) -->
+      <g transform="translate(0, -35)">
+        <text x="-70" y="0" font-family="Arial, sans-serif" font-weight="bold" font-size="18" fill="#1E293B">DXB</text>
+        <path d="M -20 -6 L 0 -6 L -3 -10 M 0 -6 L -3 -2" stroke="#0284C7" stroke-width="3" stroke-linecap="round" fill="none"/>
+        <circle cx="0" cy="-6" r="3" fill="#0284C7"/>
+        <text x="35" y="0" font-family="Arial, sans-serif" font-weight="bold" font-size="18" fill="#1E293B">COK</text>
+        
+        <rect x="-70" y="10" width="40" height="6" rx="3" fill="#94A3B8" opacity="0.6"/>
+        <rect x="35" y="10" width="40" height="6" rx="3" fill="#94A3B8" opacity="0.6"/>
+      </g>
+
+      <!-- Barcode at Bottom -->
+      <g transform="translate(-70, 50)" fill="#1E293B">
+        <rect x="0" y="0" width="4" height="40"/>
+        <rect x="8" y="0" width="2" height="40"/>
+        <rect x="14" y="0" width="6" height="40"/>
+        <rect x="24" y="0" width="3" height="40"/>
+        <rect x="31" y="0" width="5" height="40"/>
+        <rect x="40" y="0" width="2" height="40"/>
+        <rect x="46" y="0" width="7" height="40"/>
+        <rect x="57" y="0" width="4" height="40"/>
+        <rect x="65" y="0" width="2" height="40"/>
+        <rect x="71" y="0" width="5" height="40"/>
+        <rect x="80" y="0" width="8" height="40"/>
+        <rect x="92" y="0" width="3" height="40"/>
+        <rect x="99" y="0" width="6" height="40"/>
+        <rect x="109" y="0" width="3" height="40"/>
+        <rect x="116" y="0" width="7" height="40"/>
+        <rect x="127" y="0" width="4" height="40"/>
+        <rect x="135" y="0" width="5" height="40"/>
+      </g>
+
+      <!-- Approved Visa Green Stamp Seal -->
+      <g transform="translate(45, 60) rotate(-15)">
+        <rect x="-35" y="-16" width="70" height="32" rx="6" fill="none" stroke="#16A34A" stroke-width="4" opacity="0.85"/>
+        <text x="0" y="5" font-family="Arial, sans-serif" font-weight="900" font-size="11" fill="#16A34A" text-anchor="middle" letter-spacing="1">VISA OK</text>
+      </g>
+    </g>
+  </g>
+</svg>

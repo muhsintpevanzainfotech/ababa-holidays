@@ -297,14 +297,31 @@ const Services = () => {
         </div>
       ) : view === 'grid' ? (
         <div className="cards-grid mobile-slider">
-          {displayServices.map((service) => (
+          {displayServices.map((service) => {
+            const imgSrc = service.image?.startsWith('http') ? service.image : (service.image ? getImageUrl(service.image) : null);
+            const iconSrc = service.icon?.startsWith('http') ? service.icon : (service.icon ? getImageUrl(service.icon) : null);
+            return (
             <div key={service._id} className="card" style={{ padding: '0', overflow: 'hidden' }}>
               <div style={{ height: '160px', background: '#f8fafc', position: 'relative' }}>
                 <img
-                  src={service.image?.startsWith('http') ? service.image : getImageUrl(service.image)}
+                  src={imgSrc || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828'}
                   alt={service.title}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
+                {/* Floating Service Icon */}
+                <div style={{
+                  position: 'absolute', bottom: '-20px', left: '16px',
+                  width: '46px', height: '46px', borderRadius: '12px',
+                  background: 'var(--bg-card)', border: '2px solid var(--border)',
+                  padding: iconSrc ? '6px' : '0', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: 'var(--shadow-md)', zIndex: 2
+                }}>
+                  {iconSrc ? (
+                    <img src={iconSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  ) : (
+                    <Briefcase size={20} color="var(--primary)" />
+                  )}
+                </div>
                 <div style={{
                   position: 'absolute', top: '12px', right: '12px',
                   background: service.isActive ? '#22c55e' : '#ef4444',
@@ -315,7 +332,7 @@ const Services = () => {
                   {service.isActive ? 'ACTIVE' : 'INACTIVE'}
                 </div>
               </div>
-              <div style={{ padding: '20px' }}>
+              <div style={{ padding: '28px 20px 20px' }}>
                 <h3 style={{ fontSize: '17px', fontWeight: '700', marginBottom: '8px' }}>{service.title}</h3>
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '20px', minHeight: '38px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                   {service.description}
@@ -350,7 +367,8 @@ const Services = () => {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
@@ -358,40 +376,64 @@ const Services = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', width: '50px' }}>#</th>
-                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Service</th>
-                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Custom ID</th>
-                  <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</th>
-                  <th style={{ padding: '16px 24px', textAlign: 'right' }}>Actions</th>
+                  <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', width: '50px' }}>#</th>
+                  <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', width: '70px' }}>Icon</th>
+                  <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Service Details</th>
+                  <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', width: '100px' }}>Cover</th>
+                  <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Custom ID</th>
+                  <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</th>
+                  <th style={{ padding: '16px 20px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {displayServices.map((service, index) => (
+                {displayServices.map((service, index) => {
+                  const imgSrc = service.image?.startsWith('http') ? service.image : (service.image ? getImageUrl(service.image) : null);
+                  const iconSrc = service.icon?.startsWith('http') ? service.icon : (service.icon ? getImageUrl(service.icon) : null);
+                  return (
                   <tr key={service._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                    <td style={{ padding: '16px 20px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
                       {((currentPage - 1) * limit) + index + 1}
                     </td>
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--bg-main)', overflow: 'hidden', border: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {service.image ? (
-                            <img src={service.image?.startsWith('http') ? service.image : getImageUrl(service.image)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <Briefcase size={20} color="var(--primary)" opacity={0.6} />
-                          )}
-                        </div>
-                        <div>
-                          <p style={{ margin: 0, fontWeight: '700', fontSize: '14px', color: 'var(--text-main)' }}>{service.title}</p>
-                          {service.description && (
-                            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '240px' }}>
-                              {service.description}
-                            </p>
-                          )}
-                        </div>
+                    {/* Service Icon Column */}
+                    <td style={{ padding: '16px 20px' }}>
+                      <div style={{
+                        width: '42px', height: '42px', borderRadius: '10px',
+                        background: 'var(--bg-main)', border: '1px solid var(--border)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        overflow: 'hidden', padding: iconSrc ? '6px' : '0'
+                      }}>
+                        {iconSrc ? (
+                          <img src={iconSrc} alt={service.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        ) : (
+                          <Briefcase size={18} color="var(--primary)" opacity={0.6} />
+                        )}
                       </div>
                     </td>
-                    <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>{service.customId}</td>
-                    <td style={{ padding: '16px 24px' }}>
+                    {/* Service Title & Description */}
+                    <td style={{ padding: '16px 20px' }}>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: '700', fontSize: '14px', color: 'var(--text-main)' }}>{service.title}</p>
+                        {service.description && (
+                          <p style={{ margin: '3px 0 0', fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' }}>
+                            {service.description}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                    {/* Cover Image Column */}
+                    <td style={{ padding: '16px 20px' }}>
+                      <div style={{ width: '60px', height: '40px', borderRadius: '8px', background: 'var(--bg-main)', overflow: 'hidden', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {imgSrc ? (
+                          <img src={imgSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>No cover</span>
+                        )}
+                      </div>
+                    </td>
+                    {/* Custom ID */}
+                    <td style={{ padding: '16px 20px', fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>{service.customId}</td>
+                    {/* Status */}
+                    <td style={{ padding: '16px 20px' }}>
                       <span style={{
                         padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800',
                         background: service.isActive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
@@ -401,7 +443,8 @@ const Services = () => {
                         {service.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                    {/* Actions */}
+                    <td style={{ padding: '16px 20px', textAlign: 'right' }}>
                       <div className="action-group">
                         <button className="action-btn" title="View Details" onClick={() => handleOpenModal('view', service)}>
                           <Info size={16} />
@@ -429,7 +472,8 @@ const Services = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

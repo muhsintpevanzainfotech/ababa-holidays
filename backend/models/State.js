@@ -45,7 +45,7 @@ const stateSchema = new mongoose.Schema({
 });
 
 // Pre-save hook to generate slug and ensure field backward compatibility
-stateSchema.pre('save', function(next) {
+stateSchema.pre('save', function() {
   if (this.name && !this.slug) {
     this.slug = this.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
   }
@@ -59,7 +59,6 @@ stateSchema.pre('save', function(next) {
   } else if (this.image && (!this.coverImage || this.coverImage === 'default-state.jpg')) {
     this.coverImage = this.image;
   }
-  next();
 });
 
 // Avoid duplicate state names in the same country

@@ -115,7 +115,7 @@ const destinationSchema = new mongoose.Schema({
 });
 
 // Pre-save hook to generate slug and sync fields for backward compatibility
-destinationSchema.pre('save', function(next) {
+destinationSchema.pre('save', function() {
   if (this.name && !this.slug) {
     this.slug = this.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
   }
@@ -139,7 +139,6 @@ destinationSchema.pre('save', function(next) {
   } else if (this.category) {
     this.categories = [this.category];
   }
-  next();
 });
 
 // Avoid duplicate destination names in the same state

@@ -147,11 +147,18 @@ function App() {
                   <PermissionsSettings />
                 </RoleRoute>
               } />
-              <Route path="change-password" element={<SecuritySettings />} />
               <Route path="bookings" element={<Bookings />} />
               <Route path="payments" element={<Payments />} />
               <Route path="complaints" element={<Complaints />} />
               <Route path="policies" element={<Policies />} />
+
+              {/* Convenience route aliases */}
+              <Route path="enquiries" element={<Navigate to="/website/enquiries" replace />} />
+              <Route path="contact" element={<Navigate to="/website/contact-us" replace />} />
+              <Route path="contacts" element={<Navigate to="/website/contact-us" replace />} />
+              <Route path="contact-us" element={<Navigate to="/website/contact-us" replace />} />
+              <Route path="testimonials" element={<Navigate to="/website/testimonials" replace />} />
+              <Route path="reviews" element={<Navigate to="/website/testimonials" replace />} />
 
               {/* Website Management (Staff) */}
               <Route path="website">
