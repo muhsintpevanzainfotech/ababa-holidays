@@ -14,6 +14,12 @@ import {
   CheckCircle2,
   MessageCircle,
   Clock,
+  ChevronRight,
+  ChevronLeft,
+  Minimize2,
+  Maximize2,
+  HelpCircle,
+  Headphones
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { submitPackageInquiryApi } from "@/api/endpoints";
@@ -33,6 +39,7 @@ const servicesList = [
 const FloatingActionWidgets = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -49,7 +56,7 @@ const FloatingActionWidgets = () => {
   // Track window scroll to reveal Back to Top button
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 280) {
+      if (window.scrollY > 260) {
         setShowScrollTop(true);
       } else {
         setShowScrollTop(false);
@@ -123,9 +130,10 @@ const FloatingActionWidgets = () => {
 
   return (
     <>
-      {/* FLOATING ACTIONS BUTTONS CONTAINER (BOTTOM RIGHT) */}
-      <div className="fixed bottom-6 right-5 sm:right-7 z-50 flex flex-col items-end gap-3 pointer-events-none select-none">
-        {/* 1. SCROLL TO TOP (ARROW TOP) BUTTON */}
+      {/* FLOATING ACTION SIDEBAR WIDGETS (DOCKED ON RIGHT EDGE) */}
+      <div className="fixed bottom-6 right-3 sm:right-6 z-50 flex flex-col items-end gap-3 pointer-events-none select-none">
+        
+        {/* 1. SCROLL TO TOP BUTTON (FLOATS ABOVE BAR) */}
         <AnimatePresence>
           {showScrollTop && (
             <motion.button
@@ -136,39 +144,108 @@ const FloatingActionWidgets = () => {
               exit={{ opacity: 0, scale: 0.6, y: 15 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               aria-label="Scroll to top of page"
-              className="pointer-events-auto flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-slate-900/95 hover:bg-accent border border-slate-700/80 hover:border-accent text-slate-200 hover:text-accent-foreground shadow-2xl backdrop-blur-xl transition-all duration-200 hover:scale-110 active:scale-95 group focus:outline-none focus:ring-2 focus:ring-accent"
+              className="pointer-events-auto flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-slate-900/90 hover:bg-accent border border-slate-700/80 hover:border-accent text-slate-200 hover:text-accent-foreground shadow-2xl backdrop-blur-xl transition-all duration-200 hover:scale-110 active:scale-95 group focus:outline-none focus:ring-2 focus:ring-accent"
+              title="Back to top"
             >
-              <ArrowUp className="h-5 w-5 transition-transform duration-200 group-hover:-translate-y-0.5" />
+              <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-200 group-hover:-translate-y-0.5" />
             </motion.button>
           )}
         </AnimatePresence>
 
-        {/* 2. ADD ENQUIRY FLOATING CTA PILL BUTTON */}
-        <motion.button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          initial={{ opacity: 0, scale: 0.8, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
-          aria-label="Add Travel Enquiry"
-          className="pointer-events-auto relative flex items-center gap-2.5 rounded-full gradient-accent px-4 sm:px-5 py-3 text-accent-foreground font-bold shadow-2xl hover:shadow-accent/40 border border-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-accent"
+        {/* 2. SIDE FLOATING BAR (EXPANDABLE / COLLAPSIBLE TO SMALL ICON) */}
+        <motion.div
+          layout
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          className="pointer-events-auto relative flex items-center rounded-full bg-slate-950/90 border border-slate-700/80 shadow-2xl backdrop-blur-2xl p-1.5 transition-all duration-300"
         >
-          {/* Animated Pulsing Ring */}
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-white" />
-          </span>
+          {/* A. COLLAPSED COMPACT MODE (SMALL WIDTH ICON VIEW) */}
+          {isCollapsed ? (
+            <div className="flex items-center gap-1.5">
+              {/* Expand Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setIsCollapsed(false)}
+                title="Expand Floating Bar"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white transition-all active:scale-90"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
 
-          <MessageSquarePlus className="h-4 w-4 shrink-0" />
-          <span className="font-display text-xs sm:text-sm tracking-wide">Add Enquiry</span>
+              {/* Single Compact Enquiry Icon Button */}
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                title="Open Quick Enquiry"
+                className="relative flex h-10 w-10 items-center justify-center rounded-full gradient-accent text-accent-foreground font-bold shadow-lg hover:scale-105 active:scale-95 transition-all group"
+              >
+                {/* Pulsing indicator dot */}
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-accent ring-2 ring-slate-950" />
+                </span>
 
-          <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-slate-950/20 px-2 py-0.5 text-[10px] font-semibold">
-            <Clock className="h-3 w-3" />
-            15m reply
-          </span>
-        </motion.button>
+                <MessageSquarePlus className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
+              </button>
+            </div>
+          ) : (
+            /* B. EXPANDED FULL FLOATING BAR */
+            <div className="flex items-center gap-2 pr-1">
+              {/* Collapse to Small Icon Button */}
+              <button
+                type="button"
+                onClick={() => setIsCollapsed(true)}
+                title="Minimize / Collapse width to small icon"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white transition-all active:scale-90"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+
+              {/* WhatsApp Quick CTA */}
+              <a
+                href="https://wa.me/919895100000"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Chat on WhatsApp"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-all hover:scale-105 active:scale-95 shadow-sm"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </a>
+
+              {/* Phone Helpline CTA */}
+              <a
+                href="tel:+914711234567"
+                title="Call 24/7 Helpline"
+                className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-400 hover:bg-sky-500 hover:text-slate-950 transition-all hover:scale-105 active:scale-95 shadow-sm"
+              >
+                <Phone className="h-3.5 w-3.5" />
+              </a>
+
+              {/* PRIMARY 'ADD ENQUIRY' BUTTON */}
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                aria-label="Add Travel Enquiry"
+                className="relative flex items-center gap-2 rounded-full gradient-accent px-3.5 sm:px-4 py-2 text-accent-foreground font-bold text-xs sm:text-sm shadow-xl hover:shadow-accent/40 border border-white/20 transition-all hover:scale-[1.02] active:scale-95 focus:outline-none"
+              >
+                {/* Pulsing Alert Dot */}
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                </span>
+
+                <MessageSquarePlus className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                <span className="font-display tracking-wide font-bold">Enquiry</span>
+
+                <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-slate-950/20 px-1.5 py-0.5 text-[9px] font-bold">
+                  <Clock className="h-2.5 w-2.5" />
+                  15m reply
+                </span>
+              </button>
+            </div>
+          )}
+        </motion.div>
       </div>
 
       {/* QUICK ENQUIRY MODAL / DIALOG */}

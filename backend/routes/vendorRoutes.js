@@ -30,6 +30,9 @@ const router = express.Router();
 const vendorUploadFields = [
   { name: 'avatar', maxCount: 1 },
   { name: 'coverBanner', maxCount: 1 },
+  { name: 'coverBannerFile', maxCount: 1 },
+  { name: 'coverImage', maxCount: 1 },
+  { name: 'banner', maxCount: 1 },
   { name: 'idCard', maxCount: 1 },
   { name: 'idCardFile', maxCount: 1 },
   { name: 'tinUpload', maxCount: 1 },
@@ -44,6 +47,9 @@ const vendorUploadFields = [
   { name: 'passbookFile', maxCount: 1 },
   { name: 'tradeLicenseUpload', maxCount: 1 },
   { name: 'tradeLicenseFile', maxCount: 1 },
+  { name: 'logo', maxCount: 1 },
+  { name: 'logoFile', maxCount: 1 },
+  { name: 'companyLogo', maxCount: 1 },
   { name: 'logoS', maxCount: 1 },
   { name: 'logoM', maxCount: 1 },
   { name: 'logoL', maxCount: 1 }
@@ -59,30 +65,181 @@ router.post('/login', upload.none(), login);
 
 // Public route to fetch approved vendors for website display
 router.get('/public', asyncHandler(async (req, res) => {
+  const sanitizeField = (val) => {
+    if (!val) return '';
+    if (typeof val === 'object' && val !== null) return val.name || val.title || '';
+    const str = String(val).trim();
+    if (/^[0-9a-fA-F]{24}$/.test(str)) return '';
+    return str;
+  };
+
   const vendors = await User.find({ role: 'Vendor' }).select('-password');
   const data = await Promise.all(
     vendors.map(async (v) => {
       const profile = await VendorProfile.findOne({ user: v._id })
-        .populate('selectedServices', 'title description image');
+        .populate('selectedServices', 'title description image icon');
+      const services = (profile?.selectedServices || []).map(s => typeof s === 'object' ? s.title : s);
+      const isVerified = Boolean(v.isVerified);
+      const isSuspended = Boolean(v.isSuspended);
+      const isApproved = Boolean(profile?.isApproved);
+
+      const city = sanitizeField(profile?.address?.city);
+      const state = sanitizeField(profile?.address?.state);
+      const country = sanitizeField(profile?.address?.country) || "India";
+      const fullAddress = sanitizeField(profile?.address?.fullAddress);
+      const location = city && state ? `${city}, ${state}` : (city || state || "South India");
+
+      const rawDesc = profile?.description?.trim() || "";
+      const description = rawDesc.length >= 15 && !/^(text|test|asdf|qwerty)/i.test(rawDesc)
+        ? rawDesc
+        : "Authorized verified travel partner offering customized tour packages, hotel reservations, and curated travel experiences.";
+
       return {
         id: v._id,
         _id: v._id,
         name: profile?.companyName || v.name,
+        companyName: profile?.companyName || v.name,
+        contactName: v.name,
         email: v.email,
         phone: v.phone,
         avatar: v.avatar,
-        coverImage: profile?.coverBanner || v.avatar,
+        logo: profile?.companylogos?.large || profile?.companylogos?.medium || profile?.companylogos?.small || (v.avatar && !v.avatar.includes('ui-avatars') ? v.avatar : null),
+        coverImage: profile?.coverBanner || (profile?.banner && !profile?.banner.includes('ui-avatars') ? profile.banner : null),
         rating: profile?.rating || 4.9,
         sold: profile?.totalTours || 120,
         priceLevel: profile?.priceLevel || "$$",
-        location: profile?.address?.city ? `${profile.address.city}, ${profile.address.state || ''}` : "South India",
-        verified: v.isVerified ?? true,
-        category: profile?.businessType || "Travel Partner",
-        description: profile?.description || "Verified travel partner",
+        location: location,
+        city: city,
+        state: state,
+        country: country,
+        fullAddress: fullAddress,
+        verified: isVerified,
+        isVerified: isVerified,
+        isSuspended: isSuspended,
+        isApproved: isApproved,
+        category: profile?.vendorType || profile?.businessType || "Tour Operator",
+        vendorType: profile?.vendorType || "Tour Operator",
+        description: description,
+        services: services,
+        selectedServices: profile?.selectedServices || [],
+        specialties: services.length > 0 ? services : ['Tour Packages', 'Custom Itineraries', 'Local Guides'],
+        socialMedia: profile?.socialMedia || [],
+        createdAt: v.createdAt
       };
     })
   );
   res.json({ success: true, count: data.length, data });
+}));
+
+// Public route to fetch single vendor by ID or Slug for website storefront
+router.get('/public/:id', asyncHandler(async (req, res) => {
+  const sanitizeField = (val) => {
+    if (!val) return '';
+    if (typeof val === 'object' && val !== null) return val.name || val.title || '';
+    const str = String(val).trim();
+    if (/^[0-9a-fA-F]{24}$/.test(str)) return '';
+    return str;
+  };
+
+  const mongoose = require('mongoose');
+  let vendor = null;
+  let profile = null;
+  const param = String(req.params.id || '').trim();
+
+  // 1. Try ObjectId match on User._id
+  if (param && mongoose.Types.ObjectId.isValid(param)) {
+    vendor = await User.findOne({ _id: param, role: 'Vendor' }).select('-password');
+  }
+
+  // 2. Try ObjectId match on VendorProfile._id
+  if (!vendor && param && mongoose.Types.ObjectId.isValid(param)) {
+    profile = await VendorProfile.findById(param)
+      .populate('selectedServices', 'title description image icon');
+    if (profile && profile.user) {
+      vendor = await User.findById(profile.user).select('-password');
+    }
+  }
+
+  // 3. Try Slug / Company Name / User Name match
+  if (!vendor && param) {
+    const rawParam = decodeURIComponent(param).trim();
+    const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const slugPattern = escapeRegex(rawParam).replace(/[-_]+/g, '[ -_]?');
+    const slugRegex = new RegExp('^' + slugPattern + '$', 'i');
+
+    // Find VendorProfile by companyName
+    profile = await VendorProfile.findOne({ companyName: slugRegex })
+      .populate('selectedServices', 'title description image icon');
+
+    if (profile && profile.user) {
+      vendor = await User.findById(profile.user).select('-password');
+    }
+
+    // If still not found, search User by name
+    if (!vendor) {
+      vendor = await User.findOne({ name: slugRegex, role: 'Vendor' }).select('-password');
+      if (vendor && !profile) {
+        profile = await VendorProfile.findOne({ user: vendor._id })
+          .populate('selectedServices', 'title description image icon');
+      }
+    }
+  }
+
+  if (!vendor) {
+    return res.status(404).json({ success: false, message: 'Vendor not found' });
+  }
+
+  if (!profile) {
+    profile = await VendorProfile.findOne({ user: vendor._id })
+      .populate('selectedServices', 'title description image icon');
+  }
+
+  const services = (profile?.selectedServices || []).map(s => typeof s === 'object' ? s.title : s);
+  const isVerified = Boolean(vendor.isVerified);
+
+  const city = sanitizeField(profile?.address?.city);
+  const state = sanitizeField(profile?.address?.state);
+  const country = sanitizeField(profile?.address?.country) || "India";
+  const fullAddress = sanitizeField(profile?.address?.fullAddress);
+  const location = city && state ? `${city}, ${state}` : (city || state || "South India");
+
+  const rawDesc = profile?.description?.trim() || "";
+  const description = rawDesc.length >= 15 && !/^(text|test|asdf|qwerty)/i.test(rawDesc)
+    ? rawDesc
+    : "Authorized verified travel partner offering customized tour packages, hotel reservations, and curated travel experiences.";
+
+  const data = {
+    id: vendor._id,
+    _id: vendor._id,
+    name: profile?.companyName || vendor.name,
+    companyName: profile?.companyName || vendor.name,
+    contactName: vendor.name,
+    email: vendor.email,
+    phone: vendor.phone,
+    avatar: vendor.avatar,
+    logo: profile?.companylogos?.large || profile?.companylogos?.medium || profile?.companylogos?.small || (vendor.avatar && !vendor.avatar.includes('ui-avatars') ? vendor.avatar : null),
+    coverImage: profile?.coverBanner || (profile?.banner && !profile?.banner.includes('ui-avatars') ? profile.banner : null),
+    rating: profile?.rating || 4.9,
+    sold: profile?.totalTours || 120,
+    priceLevel: profile?.priceLevel || "$$",
+    location: location,
+    city: city,
+    state: state,
+    country: country,
+    fullAddress: fullAddress,
+    verified: isVerified,
+    isVerified: isVerified,
+    category: profile?.vendorType || "Tour Operator",
+    vendorType: profile?.vendorType || "Tour Operator",
+    description: description,
+    about: description,
+    services: services,
+    selectedServices: profile?.selectedServices || [],
+    specialties: services.length > 0 ? services : ['Tour Packages', 'Custom Itineraries', 'Local Guides'],
+    createdAt: vendor.createdAt
+  };
+
+  res.json({ success: true, data });
 }));
 
 // Profile routes (Vendor or Vendor-Staff)

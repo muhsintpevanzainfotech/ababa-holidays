@@ -19,7 +19,7 @@ export default function ModernAuthLayout({ children, title, subtitle }) {
       width: '100vw',
       maxHeight: '100vh', 
       display: 'flex', 
-      bgcolor: isDark ? '#0b0f19' : '#ffffff', 
+      bgcolor: isDark ? '#0e0d1d' : '#ffffff', 
       overflow: 'hidden' 
     }}>
       <Grid container sx={{ height: '100vh', width: '100%', m: 0 }}>
@@ -146,7 +146,7 @@ export default function ModernAuthLayout({ children, title, subtitle }) {
           overflowY: 'auto',
           px: { xs: 2.5, sm: 4, md: 5 },
           py: { xs: 2, sm: 3 },
-          bgcolor: isDark ? '#111827' : '#ffffff',
+          bgcolor: isDark ? '#16152b' : '#ffffff',
           position: 'relative'
         }}>
           {/* Header Logo */}

@@ -17,7 +17,8 @@ import {
   ListItemText,
   ListItemSecondaryAction
 } from '@mui/material';
-import { useColorScheme, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 
 // project imports
 import SaasHeader from 'ui-component/extended/SaasHeader';
@@ -53,8 +54,7 @@ import { useNavigate } from 'react-router-dom';
 export default function Dashboard() {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { mode, systemMode } = useColorScheme();
-  const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
+  const { isDark: isDarkMode } = useThemeMode();
 
   const [isLoading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -102,9 +102,9 @@ export default function Dashboard() {
     fetchStats();
   }, []);
 
-  const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
-  const surfaceBgColor = isDarkMode ? '#090d16' : '#f8fafc';
-  const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0';
+  const cardBgColor = isDarkMode ? '#16152b' : '#ffffff';
+  const surfaceBgColor = isDarkMode ? '#212040' : '#f8fafc';
+  const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0';
 
   const recentBookingColumns = [
     {
@@ -112,7 +112,7 @@ export default function Dashboard() {
       label: 'Customer',
       render: (row) => (
         <Stack direction="row" spacing={1.5} alignItems="center">
-          <Avatar sx={{ width: 34, height: 34, bgcolor: '#ff5252', fontWeight: 700, fontSize: '0.9rem' }}>
+          <Avatar sx={{ width: 34, height: 34, bgcolor: theme.palette.primary.main, fontWeight: 700, fontSize: '0.9rem' }}>
             {(row.contactDetails?.name || row.user?.name || 'C').charAt(0).toUpperCase()}
           </Avatar>
           <Box>
@@ -348,7 +348,7 @@ export default function Dashboard() {
               size="small"
               endIcon={<ArrowForwardIcon />}
               onClick={() => navigate('/platform/bookings')}
-              sx={{ fontWeight: 700, textTransform: 'none', color: '#ff5252' }}
+              sx={{ fontWeight: 700, textTransform: 'none', color: 'primary.main' }}
             >
               View All Bookings
             </Button>

@@ -5,6 +5,14 @@ const categorySchema = new mongoose.Schema({
     type: String,
     unique: true
   },
+  service: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Service'
+  },
+  subService: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SubService'
+  },
   title: {
     type: String,
     required: [true, 'Please add a category title'],

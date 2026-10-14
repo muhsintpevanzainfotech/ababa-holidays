@@ -100,7 +100,7 @@ const TestimonialsCarousel = ({ testimonials, loading }: TestimonialsCarouselPro
               type="button"
               onClick={() => handleScroll("left")}
               aria-label="Previous Testimonials"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:border-accent active:scale-95"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-card text-foreground shadow-sm transition-all duration-200 hover:gradient-accent hover:text-accent-foreground hover:border-transparent hover:shadow-md hover:scale-105 active:scale-95"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -108,7 +108,7 @@ const TestimonialsCarousel = ({ testimonials, loading }: TestimonialsCarouselPro
               type="button"
               onClick={() => handleScroll("right")}
               aria-label="Next Testimonials"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:border-accent active:scale-95"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-card text-foreground shadow-sm transition-all duration-200 hover:gradient-accent hover:text-accent-foreground hover:border-transparent hover:shadow-md hover:scale-105 active:scale-95"
             >
               <ChevronRight className="h-5 w-5" />
             </button>

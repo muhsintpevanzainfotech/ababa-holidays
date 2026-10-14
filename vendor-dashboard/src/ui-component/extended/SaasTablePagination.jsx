@@ -1,8 +1,8 @@
 import PropTypes from 'prop-types';
 import { Box, Stack, Typography, Select, MenuItem, Button } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import useThemeMode from 'hooks/useThemeMode';
 
 export default function SaasTablePagination({
     count = 0,
@@ -12,12 +12,14 @@ export default function SaasTablePagination({
     onRowsPerPageChange,
     rowsPerPageOptions = [5, 10, 25, 50]
 }) {
-    const theme = useTheme();
-    const isLightExplicit = theme.palette.mode === 'light' && document.documentElement.getAttribute('data-color-scheme') === 'light';
-    const isDarkMode = !isLightExplicit;
+    const { isDark: isDarkMode } = useThemeMode();
 
     const totalPages = Math.ceil(count / rowsPerPage) || 1;
     const currentPage = page + 1;
+
+    // Accurate calculation for list count: e.g. "Showing 1 to 10 of 45 entries"
+    const from = count === 0 ? 0 : page * rowsPerPage + 1;
+    const to = Math.min((page + 1) * rowsPerPage, count);
 
     const renderPageNumbers = () => {
         const pages = [];
@@ -37,18 +39,29 @@ export default function SaasTablePagination({
                     size="small"
                     onClick={() => onPageChange(null, i - 1)}
                     sx={{
-                        minWidth: 32,
-                        height: 32,
-                        px: 1,
+                        minWidth: 34,
+                        height: 34,
+                        px: 1.2,
                         borderRadius: '8px',
                         fontWeight: 700,
-                        fontSize: '0.82rem',
+                        fontSize: '0.84rem',
                         color: isActive ? '#ffffff' : (isDarkMode ? '#e5e7eb' : '#334155'),
-                        bgcolor: isActive ? '#ff5252' : (isDarkMode ? '#1f2937' : 'transparent'),
+                        background: isActive 
+                            ? (isDarkMode 
+                                ? 'linear-gradient(135deg, #41a0ae 0%, #36669c 100%)' 
+                                : 'linear-gradient(135deg, #36669c 0%, #41a0ae 100%)')
+                            : (isDarkMode ? '#212040' : '#ffffff'),
                         border: isActive ? 'none' : '1px solid',
                         borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0',
+                        boxShadow: isActive ? '0 2px 8px rgba(54, 102, 156, 0.35)' : 'none',
+                        transition: 'all 0.18s ease-in-out',
                         '&:hover': {
-                            bgcolor: isActive ? '#e04848' : (isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#f8fafc')
+                            background: isActive 
+                                ? (isDarkMode 
+                                    ? 'linear-gradient(135deg, #358b97 0%, #2e5784 100%)' 
+                                    : 'linear-gradient(135deg, #2e5784 0%, #358b97 100%)')
+                                : (isDarkMode ? 'rgba(65, 160, 174, 0.18)' : '#f8fafc'),
+                            borderColor: isActive ? 'none' : (isDarkMode ? 'rgba(65, 160, 174, 0.35)' : '#cbd5e1')
                         }
                     }}
                 >
@@ -62,49 +75,77 @@ export default function SaasTablePagination({
 
     return (
         <Stack
-            direction={{ xs: 'column', sm: 'row' }}
+            direction={{ xs: 'column', md: 'row' }}
             justifyContent="space-between"
-            alignItems="center"
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
             spacing={2}
-            sx={{ pt: 2.5, pb: 1, px: 2 }}
+            sx={{
+                py: 2,
+                px: { xs: 2, sm: 2.5 },
+                borderTop: '1px solid',
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0',
+                bgcolor: isDarkMode ? '#16152b' : '#ffffff',
+                borderBottomLeftRadius: 'inherit',
+                borderBottomRightRadius: 'inherit'
+            }}
         >
-            {/* Left: Result per page */}
-            <Stack direction="row" alignItems="center" spacing={1.5}>
-                <Typography variant="body2" sx={{ color: isDarkMode ? '#9ca3af' : 'text.secondary', fontWeight: 600, fontSize: '0.85rem' }}>
-                    Result per page:
+            {/* Left: Accurate List Count & Rows Per Page */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={{ xs: 1.5, sm: 3 }} sx={{ width: { xs: '100%', md: 'auto' } }}>
+                {/* List count summary */}
+                <Typography variant="body2" sx={{ color: isDarkMode ? '#9ca3af' : '#64748b', fontWeight: 500, fontSize: '0.85rem' }}>
+                    Showing{' '}
+                    <Box component="span" sx={{ color: isDarkMode ? '#f9fafb' : '#0f172a', fontWeight: 700 }}>
+                        {from}
+                    </Box>
+                    {' '}to{' '}
+                    <Box component="span" sx={{ color: isDarkMode ? '#f9fafb' : '#0f172a', fontWeight: 700 }}>
+                        {to}
+                    </Box>
+                    {' '}of{' '}
+                    <Box component="span" sx={{ color: isDarkMode ? '#41a0ae' : '#36669c', fontWeight: 800 }}>
+                        {count}
+                    </Box>
+                    {' '}{count === 1 ? 'entry' : 'entries'}
                 </Typography>
-                <Select
-                    value={rowsPerPage}
-                    onChange={onRowsPerPageChange}
-                    size="small"
-                    sx={{
-                        height: 34,
-                        borderRadius: '8px',
-                        fontSize: '0.85rem',
-                        fontWeight: 700,
-                        bgcolor: isDarkMode ? '#1f2937' : '#ffffff',
-                        color: isDarkMode ? '#f9fafb' : '#0f172a',
-                        '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0'
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.25)' : '#cbd5e1'
-                        },
-                        '& .MuiSvgIcon-root': {
-                            color: isDarkMode ? '#9ca3af' : 'text.secondary'
-                        }
-                    }}
-                >
-                    {rowsPerPageOptions.map((opt) => (
-                        <MenuItem key={opt} value={opt} sx={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                            {opt}
-                        </MenuItem>
-                    ))}
-                </Select>
+
+                {/* Rows per page selector */}
+                <Stack direction="row" alignItems="center" spacing={1.2}>
+                    <Typography variant="body2" sx={{ color: isDarkMode ? '#9ca3af' : '#64748b', fontWeight: 600, fontSize: '0.82rem' }}>
+                        Rows per page:
+                    </Typography>
+                    <Select
+                        value={rowsPerPage}
+                        onChange={onRowsPerPageChange}
+                        size="small"
+                        sx={{
+                            height: 32,
+                            borderRadius: '8px',
+                            fontSize: '0.82rem',
+                            fontWeight: 700,
+                            bgcolor: isDarkMode ? '#212040' : '#ffffff',
+                            color: isDarkMode ? '#f9fafb' : '#0f172a',
+                            '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0'
+                            },
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: isDarkMode ? 'rgba(65, 160, 174, 0.4)' : '#cbd5e1'
+                            },
+                            '& .MuiSvgIcon-root': {
+                                color: isDarkMode ? '#9ca3af' : '#64748b'
+                            }
+                        }}
+                    >
+                        {rowsPerPageOptions.map((opt) => (
+                            <MenuItem key={opt} value={opt} sx={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                                {opt}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </Stack>
             </Stack>
 
-            {/* Right: Pagination controls */}
-            <Stack direction="row" alignItems="center" spacing={1}>
+            {/* Right: Pagination Navigation Controls */}
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ alignSelf: { xs: 'center', md: 'auto' }, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'space-between', sm: 'flex-end' } }}>
                 <Button
                     size="small"
                     disabled={page === 0}
@@ -115,17 +156,20 @@ export default function SaasTablePagination({
                         fontWeight: 700,
                         fontSize: '0.82rem',
                         color: isDarkMode ? '#e5e7eb' : '#334155',
-                        bgcolor: isDarkMode ? '#1f2937' : 'transparent',
+                        bgcolor: isDarkMode ? '#212040' : '#ffffff',
                         border: '1px solid',
                         borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0',
-                        height: 32,
+                        height: 34,
                         px: 1.5,
                         textTransform: 'none',
+                        transition: 'all 0.15s ease',
                         '&:hover': {
-                            bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#f8fafc'
+                            bgcolor: isDarkMode ? 'rgba(65, 160, 174, 0.18)' : '#f8fafc',
+                            borderColor: isDarkMode ? 'rgba(65, 160, 174, 0.35)' : '#cbd5e1'
                         },
                         '&.Mui-disabled': {
-                            borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0',
+                            borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9',
+                            bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
                             opacity: 0.4
                         }
                     }}
@@ -133,7 +177,7 @@ export default function SaasTablePagination({
                     Previous
                 </Button>
 
-                <Stack direction="row" spacing={0.8} alignItems="center">
+                <Stack direction="row" spacing={0.7} alignItems="center">
                     {renderPageNumbers()}
                 </Stack>
 
@@ -147,17 +191,20 @@ export default function SaasTablePagination({
                         fontWeight: 700,
                         fontSize: '0.82rem',
                         color: isDarkMode ? '#e5e7eb' : '#334155',
-                        bgcolor: isDarkMode ? '#1f2937' : 'transparent',
+                        bgcolor: isDarkMode ? '#212040' : '#ffffff',
                         border: '1px solid',
                         borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : '#e2e8f0',
-                        height: 32,
+                        height: 34,
                         px: 1.5,
                         textTransform: 'none',
+                        transition: 'all 0.15s ease',
                         '&:hover': {
-                            bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#f8fafc'
+                            bgcolor: isDarkMode ? 'rgba(65, 160, 174, 0.18)' : '#f8fafc',
+                            borderColor: isDarkMode ? 'rgba(65, 160, 174, 0.35)' : '#cbd5e1'
                         },
                         '&.Mui-disabled': {
-                            borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0',
+                            borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9',
+                            bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
                             opacity: 0.4
                         }
                     }}

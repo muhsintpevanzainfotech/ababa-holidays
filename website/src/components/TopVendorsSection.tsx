@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { fetchVendorsStart } from "@/store/slices/vendorSlice";
 import { getImageUrl } from "@/lib/imageHelper";
+import { getVendorSlug } from "@/lib/utils";
 
 export interface Vendor {
   id: string;
@@ -82,7 +83,10 @@ const TopVendorsSection = () => {
     });
   };
 
-  const activeVendors: Vendor[] = reduxVendors || [];
+  // Only show verified and active vendors in home page section
+  const activeVendors: Vendor[] = (reduxVendors || []).filter((v: any) => 
+    (v.isVerified === true || v.verified === true) && !v.isSuspended
+  );
 
   return (
     <section className="py-8 lg:py-12 bg-background border-none select-none" data-reveal>
@@ -98,17 +102,27 @@ const TopVendorsSection = () => {
               Top Vendors & Travel Partners
             </h2>
             <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-              Connect directly with top-rated resort chains, houseboat operators, and verified local travel partners.
+              Connect directly with verified resort chains, certified tour operators, and approved local travel partners.
             </p>
           </div>
 
-          {/* Slider Prev / Next Circular Buttons */}
+          {/* Slider Prev / Next Circular Buttons & View All Link */}
           <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
+            <Link to="/vendors">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full text-xs font-bold gap-1.5 h-10 px-4 border-border/80 hover:bg-muted shadow-sm transition-all"
+              >
+                <span>View All Partners</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Button>
+            </Link>
             <button
               type="button"
               onClick={() => handleScroll("left")}
               aria-label="Previous Vendors"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:scale-105 active:scale-95"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-card text-foreground shadow-sm transition-all duration-200 hover:gradient-accent hover:text-accent-foreground hover:border-transparent hover:shadow-md hover:scale-105 active:scale-95"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -116,7 +130,7 @@ const TopVendorsSection = () => {
               type="button"
               onClick={() => handleScroll("right")}
               aria-label="Next Vendors"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-all hover:bg-muted hover:scale-105 active:scale-95"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-card text-foreground shadow-sm transition-all duration-200 hover:gradient-accent hover:text-accent-foreground hover:border-transparent hover:shadow-md hover:scale-105 active:scale-95"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -129,8 +143,17 @@ const TopVendorsSection = () => {
             {Array.from({ length: 4 }).map((_, idx) => (
               <div
                 key={idx}
-                className="w-[280px] sm:w-[320px] h-[390px] shrink-0 rounded-3xl bg-muted/60 animate-pulse border border-border/40"
-              />
+                className="w-[280px] sm:w-[320px] shrink-0 rounded-3xl bg-card border border-border/70 p-3 shadow-card flex flex-col justify-between overflow-hidden animate-pulse space-y-4"
+              >
+                <div className="relative h-44 w-full rounded-2xl bg-muted/80" />
+                <div className="space-y-2.5 px-2 pb-2">
+                  <div className="h-5 w-3/4 rounded-lg bg-muted" />
+                  <div className="h-3.5 w-1/2 rounded bg-muted/70" />
+                  <div className="h-3 w-full rounded bg-muted/60" />
+                  <div className="h-8 rounded-xl bg-muted/50 mt-2" />
+                  <div className="h-10 rounded-xl bg-muted mt-2" />
+                </div>
+              </div>
             ))}
           </div>
         ) : activeVendors.length === 0 ? (
@@ -259,7 +282,7 @@ const TopVendorsSection = () => {
                     </div>
 
                     {/* Primary Action Button: "Go to Explore" */}
-                    <Link to={`/vendor/${vendorId}`} className="block w-full">
+                    <Link to={`/vendor/${getVendorSlug(vendor)}`} className="block w-full">
                       <Button
                         type="button"
                         className="w-full h-11 rounded-2xl gradient-accent text-white font-bold text-xs sm:text-sm shadow-md transition-all gap-1.5 hover:scale-[1.02] active:scale-95 border-0"
@@ -388,7 +411,7 @@ const TopVendorsSection = () => {
                 {/* Action buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <Link
-                    to={`/vendor/${selectedVendor.id || (selectedVendor as any)._id}`}
+                    to={`/vendor/${getVendorSlug(selectedVendor)}`}
                     onClick={() => setSelectedVendor(null)}
                     className="flex-1"
                   >

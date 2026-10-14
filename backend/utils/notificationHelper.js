@@ -23,12 +23,15 @@ const sendNotification = async ({
   metadata = {}
 }) => {
   try {
+    const allowedCategories = ['contact', 'enquiry', 'booking', 'request', 'review', 'payment', 'system', 'vendor', 'package', 'auth', 'user'];
+    const safeCategory = allowedCategories.includes(category) ? category : 'system';
+
     const notification = await Notification.create({
       user,
       recipientRole,
       title,
       message,
-      category,
+      category: safeCategory,
       type,
       link,
       metadata,

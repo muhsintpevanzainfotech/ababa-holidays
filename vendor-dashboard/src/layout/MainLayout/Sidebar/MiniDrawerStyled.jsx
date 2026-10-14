@@ -8,28 +8,34 @@ import { drawerWidth } from 'store/constant';
 function openedMixin(theme) {
   return {
     width: drawerWidth,
-    borderRight: 'none',
+    borderRight: '1px solid',
+    borderColor: theme.vars?.palette?.divider || theme.palette.divider,
     zIndex: 1099,
-    background: theme.vars.palette.background.default,
+    top: '70px !important',
+    height: 'calc(100vh - 70px) !important',
+    background: theme.vars?.palette?.background?.default || theme.palette.background.default,
     overflowX: 'hidden',
     boxShadow: 'none',
     transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen + 200
+      duration: theme.transitions.duration.enteringScreen
     })
   };
 }
 
 function closedMixin(theme) {
   return {
-    borderRight: 'none',
+    borderRight: '1px solid',
+    borderColor: theme.vars?.palette?.divider || theme.palette.divider,
     zIndex: 1099,
-    background: theme.vars.palette.background.default,
+    top: '70px !important',
+    height: 'calc(100vh - 70px) !important',
+    background: theme.vars?.palette?.background?.default || theme.palette.background.default,
     overflowX: 'hidden',
     width: 72,
     transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen + 200
+      duration: theme.transitions.duration.leavingScreen
     })
   };
 }

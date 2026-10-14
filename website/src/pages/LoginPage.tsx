@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail,
@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   ArrowLeft,
   Smartphone,
+  Building2,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,8 +27,13 @@ import { loginApi, verifyOtpApi, requestForgotOtpApi, resetPasswordWithOtpApi } 
 import OtpInput from "@/components/auth/OtpInput";
 
 type AuthTab = "password" | "otp" | "forgot";
+type PortalRole = "traveler" | "vendor";
 
 const LoginPage = () => {
+  const [searchParams] = useSearchParams();
+  const initialRole = searchParams.get("role") === "vendor" || searchParams.get("portal") === "vendor" ? "vendor" : "traveler";
+  
+  const [portalRole, setPortalRole] = useState<PortalRole>(initialRole);
   const [activeTab, setActiveTab] = useState<AuthTab>("password");
   
   // Password Login state
@@ -69,37 +76,25 @@ const LoginPage = () => {
     setIsLoading(true);
     try {
       const data = await loginApi({ email, pass: password });
-      
-      // If vendor or user requires OTP step
-      if (data.needsOTP) {
-        setOtpEmail(email);
-        setActiveTab("otp");
-        setOtpSent(true);
-        setCountdown(60);
-        toast({
-          title: "Verification Required",
-          description: "An OTP has been sent to your email to complete sign-in.",
-        });
-        return;
-      }
 
-      // Successful direct login
-      const token = data.accessToken || data.token || "demo-jwt-token-xyz123";
-      const user = {
-        id: data._id || data.user?.id || "u-101",
-        name: data.name || data.user?.name || email.split("@")[0],
-        email: data.email || email,
-        phone: data.phone || data.user?.phone,
-        role: data.role || "user",
+      const token = data.token || "demo-jwt-token-xyz123";
+      const user = data.user || {
+        id: "u-101",
+        name: email.split("@")[0],
+        email: email,
+        role: portalRole === "vendor" ? "Vendor" : "User",
       };
 
       dispatch(loginSuccess({ token, user }));
-      toast({ title: "Welcome back!", description: `Signed in successfully as ${user.name}` });
+      toast({
+        title: "Welcome Back!",
+        description: `Signed in successfully as ${user.name || user.email}`,
+      });
       navigate("/dashboard");
     } catch (err: any) {
       toast({
         title: "Login Failed",
-        description: err.message || "Invalid credentials",
+        description: err.message || "Invalid credentials. Please verify your email and password.",
         variant: "destructive",
       });
     } finally {
@@ -123,8 +118,8 @@ const LoginPage = () => {
       setOtpSent(true);
       setCountdown(60);
       toast({
-        title: "OTP Code Sent!",
-        description: `We have sent a 6-digit code to ${targetEmail}`,
+        title: "OTP Code Dispatched!",
+        description: `We've sent a 6-digit verification code to ${targetEmail}`,
       });
     } catch (err: any) {
       toast({
@@ -145,13 +140,13 @@ const LoginPage = () => {
       await requestForgotOtpApi({ email: otpEmail });
       setCountdown(60);
       toast({
-        title: "New Code Sent",
-        description: `A fresh 6-digit OTP code has been dispatched to ${otpEmail}`,
+        title: "Fresh Code Sent",
+        description: `A new 6-digit code has been dispatched to ${otpEmail}`,
       });
     } catch (err: any) {
       toast({
         title: "Resend Failed",
-        description: err.message || "Failed to resend code",
+        description: err.message || "Failed to resend verification code.",
         variant: "destructive",
       });
     } finally {
@@ -171,18 +166,17 @@ const LoginPage = () => {
     setIsLoading(true);
     try {
       const res = await verifyOtpApi({ email: otpEmail, otp: code });
-      const token = res.accessToken || res.token || "demo-jwt-token-xyz123";
-      const user = {
-        id: res._id || "u-101",
-        name: res.name || otpEmail.split("@")[0],
-        email: res.email || otpEmail,
-        phone: res.phone,
-        role: res.role || "user",
+      const token = res.token || "demo-jwt-token-xyz123";
+      const user = res.user || {
+        id: "u-101",
+        name: otpEmail.split("@")[0],
+        email: otpEmail,
+        role: portalRole === "vendor" ? "Vendor" : "User",
       };
 
       dispatch(loginSuccess({ token, user }));
       toast({
-        title: "OTP Verified!",
+        title: "OTP Verified! 🎉",
         description: `Welcome back, ${user.name}! Access granted.`,
       });
       navigate("/dashboard");
@@ -235,9 +229,9 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen bg-background relative flex items-center justify-center p-4 sm:p-6 overflow-hidden">
       {/* Dynamic Ambient Background Glow Elements */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-accent/15 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-[380px] h-[380px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-10 left-10 w-[320px] h-[320px] bg-sky-500/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-accent/15 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[130px] pointer-events-none" />
+      <div className="absolute top-10 left-10 w-[320px] h-[320px] bg-sky-500/10 rounded-full blur-[110px] pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 24, scale: 0.98 }}
@@ -264,26 +258,63 @@ const LoginPage = () => {
             </span>
           </Link>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-semibold mb-3">
+          {/* Portal Switcher (Traveler vs Vendor) */}
+          <div className="flex bg-muted/60 p-1 rounded-2xl max-w-xs mx-auto mb-4 border border-border/50 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setPortalRole("traveler")}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                portalRole === "traveler"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <User className="w-3.5 h-3.5 text-accent" />
+              Traveler
+            </button>
+            <button
+              type="button"
+              onClick={() => setPortalRole("vendor")}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                portalRole === "vendor"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5 text-accent" />
+              Partner / Vendor
+            </button>
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-semibold mb-2">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Secure Modern Authentication</span>
+            <span>
+              {portalRole === "vendor" ? "Travel Partner Portal" : "Traveler Account Access"}
+            </span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground tracking-tight">
-            {activeTab === "password" && "Welcome Back"}
-            {activeTab === "otp" && "OTP Verification"}
-            {activeTab === "forgot" && "Reset Your Password"}
+            {activeTab === "password" && (portalRole === "vendor" ? "Partner Sign In" : "Welcome Back")}
+            {activeTab === "otp" && "OTP Sign In"}
+            {activeTab === "forgot" && "Reset Password"}
           </h1>
-          <p className="text-muted-foreground mt-1.5 text-xs sm:text-sm max-w-xs mx-auto">
-            {activeTab === "password" && "Sign in to access your bookings, itineraries and saved trips"}
-            {activeTab === "otp" && (otpSent ? `Enter the 6-digit code sent to ${otpEmail}` : "Sign in quickly using your registered email OTP")}
-            {activeTab === "forgot" && (otpSent ? `Enter code and set new password` : "Receive a 6-digit code to recover your account")}
+          <p className="text-muted-foreground mt-1.5 text-xs sm:text-sm max-w-xs mx-auto leading-relaxed">
+            {activeTab === "password" &&
+              (portalRole === "vendor"
+                ? "Sign in to manage your tour packages, fleet bookings, and partner payouts."
+                : "Sign in to access your bookings, itineraries, and saved trips.")}
+            {activeTab === "otp" &&
+              (otpSent
+                ? `Enter the 6-digit code sent to ${otpEmail}`
+                : `Sign in quickly using your registered ${portalRole === "vendor" ? "partner" : ""} email OTP.`)}
+            {activeTab === "forgot" &&
+              (otpSent ? `Enter code and set new password` : "Receive a 6-digit code to recover your account.")}
           </p>
         </div>
 
-        {/* Card Container */}
+        {/* Main Glass Card Container */}
         <div className="bg-card/90 backdrop-blur-xl border border-border/80 rounded-3xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
-          {/* Top Tab Switcher */}
+          {/* Method Tab Switcher */}
           <div className="flex bg-muted/60 p-1 rounded-2xl mb-6 border border-border/40">
             <button
               type="button"
@@ -329,7 +360,9 @@ const LoginPage = () => {
                 className="space-y-4"
               >
                 <div>
-                  <Label className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Email Address</Label>
+                  <Label className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                    {portalRole === "vendor" ? "Partner Email Address" : "Email Address"}
+                  </Label>
                   <div className="relative mt-1.5">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -337,7 +370,7 @@ const LoginPage = () => {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@example.com"
+                      placeholder={portalRole === "vendor" ? "partner@company.com" : "name@example.com"}
                       className="pl-10 h-11 rounded-xl bg-background/50 border-border/80 focus:border-accent focus:ring-2 focus:ring-accent/20"
                     />
                   </div>
@@ -380,7 +413,7 @@ const LoginPage = () => {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90 h-11 rounded-xl gap-2 font-bold text-sm shadow-lg shadow-accent/20 transition-all mt-2"
+                  className="w-full gradient-accent text-accent-foreground hover:opacity-90 h-11 rounded-xl gap-2 font-bold text-sm shadow-lg shadow-accent/20 transition-all mt-2"
                 >
                   {isLoading ? (
                     <>
@@ -389,7 +422,7 @@ const LoginPage = () => {
                     </>
                   ) : (
                     <>
-                      Sign In
+                      Sign In to {portalRole === "vendor" ? "Partner Hub" : "Account"}
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -426,7 +459,9 @@ const LoginPage = () => {
                 {!otpSent ? (
                   <form onSubmit={handleRequestOtp} className="space-y-4">
                     <div>
-                      <Label className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Your Email Address</Label>
+                      <Label className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                        {portalRole === "vendor" ? "Registered Partner Email" : "Your Email Address"}
+                      </Label>
                       <div className="relative mt-1.5">
                         <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
@@ -434,8 +469,8 @@ const LoginPage = () => {
                           required
                           value={otpEmail}
                           onChange={(e) => setOtpEmail(e.target.value)}
-                          placeholder="name@example.com"
-                          className="pl-10 h-11 rounded-xl bg-background/50 border-border/80"
+                          placeholder={portalRole === "vendor" ? "partner@company.com" : "name@example.com"}
+                          className="pl-10 h-11 rounded-xl bg-background/50 border-border/80 focus:border-accent"
                         />
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-1.5">
@@ -446,7 +481,7 @@ const LoginPage = () => {
                     <Button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full bg-accent text-accent-foreground hover:bg-accent/90 h-11 rounded-xl gap-2 font-bold text-sm shadow-md mt-2"
+                      className="w-full gradient-accent text-accent-foreground hover:opacity-90 h-11 rounded-xl gap-2 font-bold text-sm shadow-md mt-2"
                     >
                       {isLoading ? (
                         <>
@@ -464,14 +499,17 @@ const LoginPage = () => {
                 ) : (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between bg-accent/5 p-3 rounded-xl border border-accent/20 text-xs">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <ShieldCheck className="w-4 h-4 text-accent shrink-0" />
+                      <div className="flex items-center gap-2 truncate">
+                        <Mail className="w-4 h-4 text-accent shrink-0" />
                         <span className="truncate text-foreground font-medium">{otpEmail}</span>
                       </div>
                       <button
                         type="button"
-                        onClick={() => setOtpSent(false)}
-                        className="text-accent text-[11px] font-semibold hover:underline shrink-0"
+                        onClick={() => {
+                          setOtpSent(false);
+                          setOtpCode("");
+                        }}
+                        className="text-accent hover:underline font-bold text-xs shrink-0"
                       >
                         Change
                       </button>
@@ -479,40 +517,37 @@ const LoginPage = () => {
 
                     <div>
                       <Label className="text-xs font-semibold text-foreground/80 uppercase tracking-wider block text-center mb-1">
-                        Enter 6-Digit Verification Code
+                        Enter 6-Digit Code
                       </Label>
                       <OtpInput
+                        length={6}
                         value={otpCode}
                         onChange={setOtpCode}
-                        disabled={isLoading}
                         onComplete={(code) => handleVerifyOtpLogin(undefined, code)}
+                        disabled={isLoading}
+                        autoFocus
                       />
                     </div>
 
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="text-muted-foreground">Didn't receive code?</span>
-                      {countdown > 0 ? (
-                        <span className="text-accent font-semibold flex items-center gap-1">
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          Resend in {countdown}s
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={handleResendOtp}
-                          disabled={isLoading}
-                          className="text-accent hover:underline font-bold"
-                        >
-                          Resend OTP Code
-                        </button>
-                      )}
+                    <div className="flex justify-between items-center text-xs text-muted-foreground pt-1">
+                      <span>Didn't receive code?</span>
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={countdown > 0 || isLoading}
+                        className={`font-bold ${
+                          countdown > 0 ? "text-muted-foreground cursor-not-allowed" : "text-accent hover:underline"
+                        }`}
+                      >
+                        {countdown > 0 ? `Resend in ${countdown}s` : "Resend Code"}
+                      </button>
                     </div>
 
                     <Button
                       type="button"
-                      onClick={(e) => handleVerifyOtpLogin(e)}
+                      onClick={() => handleVerifyOtpLogin()}
                       disabled={isLoading || otpCode.length < 6}
-                      className="w-full bg-accent text-accent-foreground hover:bg-accent/90 h-11 rounded-xl gap-2 font-bold text-sm shadow-lg shadow-accent/20 transition-all mt-2"
+                      className="w-full gradient-accent text-accent-foreground hover:opacity-90 h-11 rounded-xl gap-2 font-bold text-sm shadow-md mt-2"
                     >
                       {isLoading ? (
                         <>
@@ -563,7 +598,7 @@ const LoginPage = () => {
                     <Button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full bg-accent text-accent-foreground hover:bg-accent/90 h-11 rounded-xl gap-2 font-bold text-sm shadow-md"
+                      className="w-full gradient-accent text-accent-foreground hover:opacity-90 h-11 rounded-xl gap-2 font-bold text-sm shadow-md"
                     >
                       {isLoading ? "Sending..." : "Send Reset Code"}
                       {!isLoading && <ArrowRight className="w-4 h-4" />}
@@ -603,7 +638,7 @@ const LoginPage = () => {
                     <Button
                       type="submit"
                       disabled={isLoading || otpCode.length < 6 || !newPassword}
-                      className="w-full bg-accent text-accent-foreground hover:bg-accent/90 h-11 rounded-xl gap-2 font-bold text-sm shadow-md mt-2"
+                      className="w-full gradient-accent text-accent-foreground hover:opacity-90 h-11 rounded-xl gap-2 font-bold text-sm shadow-md mt-2"
                     >
                       {isLoading ? "Updating Password..." : "Update Password & Sign In"}
                     </Button>
@@ -626,13 +661,44 @@ const LoginPage = () => {
           </AnimatePresence>
         </div>
 
-        {/* Footer Prompt */}
-        <p className="text-center text-xs sm:text-sm text-muted-foreground mt-6">
-          Don't have an account yet?{" "}
-          <Link to="/register" className="text-accent hover:underline font-bold">
-            Create Account
-          </Link>
-        </p>
+        {/* Dynamic Footer Prompt */}
+        <div className="text-center text-xs sm:text-sm text-muted-foreground mt-6 space-y-2">
+          {portalRole === "vendor" ? (
+            <>
+              <p>
+                Want to become an official travel partner?{" "}
+                <Link to="/vendor-register" className="text-accent hover:underline font-bold">
+                  Register Your Agency / Fleet
+                </Link>
+              </p>
+              <p className="text-xs">
+                Are you an individual traveler?{" "}
+                <button
+                  type="button"
+                  onClick={() => setPortalRole("traveler")}
+                  className="text-foreground hover:text-accent hover:underline font-bold"
+                >
+                  Switch to Traveler Sign In
+                </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                Don't have an account yet?{" "}
+                <Link to="/register" className="text-accent hover:underline font-bold">
+                  Create Traveler Account
+                </Link>
+              </p>
+              <p className="text-xs">
+                Are you a tour operator or bus fleet partner?{" "}
+                <Link to="/vendor-register" className="text-foreground hover:text-accent hover:underline font-bold">
+                  Register as Partner
+                </Link>
+              </p>
+            </>
+          )}
+        </div>
       </motion.div>
     </div>
   );

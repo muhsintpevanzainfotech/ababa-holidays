@@ -9,8 +9,11 @@ import {
 
 function* fetchCategoriesSaga(action) {
   try {
-    const { page = 1, limit = 10, search = '', status = 'all' } = action.payload || {};
-    const response = yield call(api.get, `/categories?page=${page}&limit=${limit}&search=${search}&status=${status}`);
+    const { page = 1, limit = 10, search = '', status = 'all', service = '', subService = '' } = action.payload || {};
+    let url = `/categories?page=${page}&limit=${limit}&search=${search}&status=${status}`;
+    if (service && service !== 'all') url += `&service=${service}`;
+    if (subService && subService !== 'all') url += `&subService=${subService}`;
+    const response = yield call(api.get, url);
     yield put(fetchCategoriesSuccess(response.data));
   } catch (error) {
     yield put(fetchCategoriesFailure(error.response?.data?.message || 'Failed to fetch categories'));

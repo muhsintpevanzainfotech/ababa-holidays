@@ -72,7 +72,7 @@ const FeaturedServicesCarousel = () => {
             type="button"
             onClick={() => handleScroll("left")}
             aria-label="Previous Services"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-card text-foreground shadow-sm transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:border-accent active:scale-95"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-card text-foreground shadow-sm transition-all duration-200 hover:gradient-accent hover:text-accent-foreground hover:border-transparent hover:shadow-md hover:scale-105 active:scale-95"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -80,7 +80,7 @@ const FeaturedServicesCarousel = () => {
             type="button"
             onClick={() => handleScroll("right")}
             aria-label="Next Services"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-card text-foreground shadow-sm transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:border-accent active:scale-95"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-card text-foreground shadow-sm transition-all duration-200 hover:gradient-accent hover:text-accent-foreground hover:border-transparent hover:shadow-md hover:scale-105 active:scale-95"
           >
             <ChevronRight className="h-4 w-4" />
           </button>

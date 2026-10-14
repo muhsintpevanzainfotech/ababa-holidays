@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Bell,
   Clock3,
-  Gift,
+  Calendar,
   PlaneTakeoff,
   ShieldCheck,
   Sparkles,
@@ -11,12 +11,15 @@ import {
   AlertTriangle,
   MessageSquarePlus,
   Mail,
-  Calendar,
   CreditCard,
   Star,
   Trash2,
   Check,
+  CheckCheck,
   ChevronRight,
+  RefreshCw,
+  Inbox,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,26 +29,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import axiosInstance from "@/api/axiosInstance";
+import { useNotifications, NotificationItem } from "@/contexts/NotificationContext";
 
 interface NotificationPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-interface NotificationItem {
-  _id?: string;
-  id?: string | number;
-  title: string;
-  message?: string;
-  description?: string;
-  category?: string;
-  type?: "info" | "success" | "warning" | "error";
-  isRead?: boolean;
-  unread?: boolean;
-  createdAt?: string;
-  time?: string;
-  link?: string;
 }
 
 const resolveWebsiteNotificationPath = (item: NotificationItem): string => {
@@ -56,59 +44,24 @@ const resolveWebsiteNotificationPath = (item: NotificationItem): string => {
       item.link.startsWith("/contact") ||
       item.link.startsWith("/packages") ||
       item.link.startsWith("/blog") ||
-      item.link.startsWith("/wishlist")
+      item.link.startsWith("/wishlist") ||
+      item.link.startsWith("/services") ||
+      item.link.startsWith("/about")
     ) {
       return item.link;
     }
     if (item.link.includes("booking")) return "/dashboard";
     if (item.link.includes("enquir") || item.link.includes("contact")) return "/contact";
     if (item.link.includes("testimonial") || item.link.includes("review") || item.link.includes("package")) return "/packages";
+    if (item.link.includes("service")) return "/services";
   }
   const cat = (item.category || "").toLowerCase();
   if (cat.includes("booking")) return "/dashboard";
   if (cat.includes("enquiry") || cat.includes("contact")) return "/contact";
   if (cat.includes("review") || cat.includes("package") || cat.includes("promo") || cat.includes("fare") || cat.includes("featured")) return "/packages";
+  if (cat.includes("service") || cat.includes("vendor")) return "/services";
   return "/dashboard";
 };
-
-const defaultMockNotifications: NotificationItem[] = [
-  {
-    id: "m1",
-    title: "Kerala Monsoon Offer Unlocked",
-    description: "Save up to 18% on Munnar, Wayanad, and Alleppey departures this week.",
-    time: "2 min ago",
-    unread: true,
-    category: "Promo",
-    type: "success",
-  },
-  {
-    id: "m2",
-    title: "Flight Fare Price Drop",
-    description: "Kochi to Dubai non-stop flights dropped for selected travel dates.",
-    time: "1 hour ago",
-    unread: true,
-    category: "Fare Alert",
-    type: "info",
-  },
-  {
-    id: "m3",
-    title: "UAE Visa Guidelines Updated",
-    description: "Simplified 48-hour expedited visa processing is now active for Kerala travelers.",
-    time: "Today",
-    unread: false,
-    category: "Visa Update",
-    type: "info",
-  },
-  {
-    id: "m4",
-    title: "Top-Rated Packages Refreshed",
-    description: "Check out our newest verified luxury resort and backwater tour itineraries.",
-    time: "Yesterday",
-    unread: false,
-    category: "Featured",
-    type: "info",
-  },
-];
 
 const getCategoryIcon = (category?: string, type?: string) => {
   const cat = (category || "").toLowerCase();
@@ -127,6 +80,7 @@ const getCategoryIcon = (category?: string, type?: string) => {
 const formatTimeAgo = (dateStr?: string, fallback = "Recently") => {
   if (!dateStr) return fallback;
   const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return fallback;
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -141,110 +95,150 @@ const formatTimeAgo = (dateStr?: string, fallback = "Recently") => {
 };
 
 const NotificationPanel = ({ open, onOpenChange }: NotificationPanelProps) => {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(defaultMockNotifications);
-  const [loading, setLoading] = useState(false);
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    clearAll,
+    fetchNotifications,
+  } = useNotifications();
+
+  const [activeTab, setActiveTab] = useState<"all" | "unread">("all");
   const navigate = useNavigate();
 
   useEffect(() => {
     if (open) {
       fetchNotifications();
     }
-  }, [open]);
-
-  const fetchNotifications = async () => {
-    setLoading(true);
-    try {
-      const res = await axiosInstance.get("/notifications");
-      const list = res.data?.data || res.data || [];
-      if (Array.isArray(list) && list.length > 0) {
-        setNotifications(list);
-      }
-    } catch {
-      // Fallback to initial mock if unauthenticated or offline
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const markAllAsRead = async () => {
-    try {
-      await axiosInstance.put("/notifications/mark-all-read");
-    } catch {
-      // ignore
-    }
-    setNotifications((prev) =>
-      prev.map((item) => ({ ...item, isRead: true, unread: false }))
-    );
-  };
-
-  const markSingleAsRead = async (id?: string | number) => {
-    if (!id) return;
-    try {
-      await axiosInstance.put(`/notifications/${id}/read`);
-    } catch {
-      // ignore
-    }
-    setNotifications((prev) =>
-      prev.map((item) => ((item._id === id || item.id === id) ? { ...item, isRead: true, unread: false } : item))
-    );
-  };
+  }, [open, fetchNotifications]);
 
   const handleNotificationClick = async (item: NotificationItem) => {
     const notifId = item._id || item.id;
-    await markSingleAsRead(notifId);
+    await markAsRead(notifId);
     const targetPath = resolveWebsiteNotificationPath(item);
     onOpenChange(false);
     navigate(targetPath);
   };
 
-  const unreadCount = notifications.filter((item) => !item.isRead && item.unread !== false).length;
+  const displayedNotifications =
+    activeTab === "unread"
+      ? notifications.filter((item) => !item.isRead && item.unread !== false)
+      : notifications;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg overflow-hidden rounded-3xl border border-border/80 bg-card p-0 shadow-2xl backdrop-blur-2xl text-foreground">
+      <DialogContent className="max-w-lg overflow-hidden rounded-3xl border border-border/80 bg-card p-0 shadow-2xl backdrop-blur-2xl text-foreground sm:max-w-xl">
         {/* Header Strip */}
-        <div className="relative border-b border-border/60 bg-gradient-to-r from-slate-900 via-navy-dark to-slate-900 p-6 text-white overflow-hidden">
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-accent/20 blur-2xl" />
-          <DialogHeader className="space-y-2 text-left relative z-10">
-            <div className="flex items-center justify-between">
+        <div className="relative border-b border-border/60 bg-gradient-to-r from-slate-900 via-navy-dark to-slate-900 p-5 sm:p-6 text-white overflow-hidden">
+          <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-accent/20 blur-2xl pointer-events-none" />
+          <DialogHeader className="space-y-3 text-left relative z-10">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/15 border border-accent/30 text-accent">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/15 border border-accent/30 text-accent shrink-0">
                   <Bell className="h-5 w-5" />
                 </div>
                 <div>
                   <DialogTitle className="font-display text-xl font-bold text-white tracking-tight">
-                    System Notifications
+                    Notifications
                   </DialogTitle>
-                  <DialogDescription className="text-xs text-slate-300">
+                  <DialogDescription className="text-xs text-slate-300 mt-0.5">
                     {unreadCount > 0
-                      ? `${unreadCount} new alerts on bookings, enquiries & updates`
-                      : "All notifications are up to date"}
+                      ? `${unreadCount} unread update${unreadCount > 1 ? "s" : ""} on bookings, deals & alerts`
+                      : "You are all caught up"}
                   </DialogDescription>
                 </div>
               </div>
-              {unreadCount > 0 && (
-                <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold text-accent-foreground shadow-sm">
-                  {unreadCount} New
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => fetchNotifications()}
+                  title="Refresh notifications"
+                  className="h-8 w-8 rounded-full text-slate-300 hover:text-white hover:bg-white/10"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("all")}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                  activeTab === "all"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "bg-white/10 text-white/80 hover:bg-white/15"
+                }`}
+              >
+                <span>All</span>
+                <span
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                    activeTab === "all" ? "bg-slate-200 text-slate-900" : "bg-white/20 text-white"
+                  }`}
+                >
+                  {notifications.length}
                 </span>
-              )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("unread")}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                  activeTab === "unread"
+                    ? "bg-accent text-accent-foreground shadow-sm"
+                    : "bg-white/10 text-white/80 hover:bg-white/15"
+                }`}
+              >
+                <span>Unread</span>
+                {unreadCount > 0 && (
+                  <span
+                    className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                      activeTab === "unread" ? "bg-accent-foreground/20 text-accent-foreground" : "bg-accent text-accent-foreground"
+                    }`}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
             </div>
           </DialogHeader>
         </div>
 
         {/* Notifications List */}
-        <div className="max-h-[60vh] space-y-2.5 overflow-y-auto p-4 sm:p-5">
-          {loading ? (
-            <div className="py-12 text-center text-xs text-muted-foreground">
-              Loading alerts...
+        <div className="max-h-[58vh] space-y-2.5 overflow-y-auto p-4 sm:p-5">
+          {loading && notifications.length === 0 ? (
+            <div className="py-14 text-center space-y-2">
+              <RefreshCw className="h-6 w-6 animate-spin text-accent mx-auto" />
+              <p className="text-xs text-muted-foreground">Checking for new alerts...</p>
             </div>
-          ) : notifications.length === 0 ? (
-            <div className="py-12 text-center space-y-2">
-              <Bell className="h-8 w-8 text-muted-foreground/40 mx-auto" />
-              <p className="font-display text-sm font-bold text-foreground">No Notifications</p>
-              <p className="text-xs text-muted-foreground">Your alert history is clear.</p>
+          ) : displayedNotifications.length === 0 ? (
+            <div className="py-14 text-center space-y-3">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground border border-border/40">
+                {activeTab === "unread" ? (
+                  <CheckCheck className="h-7 w-7 text-accent" />
+                ) : (
+                  <Inbox className="h-7 w-7" />
+                )}
+              </div>
+              <div>
+                <p className="font-display text-sm font-bold text-foreground">
+                  {activeTab === "unread" ? "All Caught Up!" : "No Notifications"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                  {activeTab === "unread"
+                    ? "You have read all current alerts and updates."
+                    : "No new activity or announcements at the moment."}
+                </p>
+              </div>
             </div>
           ) : (
-            notifications.map((item) => {
+            displayedNotifications.map((item) => {
               const notifId = item._id || item.id;
               const isUnread = !item.isRead && item.unread !== false;
               const Icon = getCategoryIcon(item.category, item.type);
@@ -253,46 +247,86 @@ const NotificationPanel = ({ open, onOpenChange }: NotificationPanelProps) => {
 
               return (
                 <div
-                  key={notifId}
+                  key={String(notifId)}
                   onClick={() => handleNotificationClick(item)}
-                  className={`group relative rounded-2xl border p-3.5 transition-all duration-200 cursor-pointer hover:shadow-md ${
+                  className={`group relative rounded-2xl border p-3.5 sm:p-4 transition-all duration-200 cursor-pointer ${
                     isUnread
-                      ? "border-accent/40 bg-accent/5 hover:bg-accent/10"
-                      : "border-border/60 bg-muted/20 hover:bg-muted/50"
+                      ? "border-accent/40 bg-accent/5 hover:bg-accent/10 shadow-sm"
+                      : "border-border/60 bg-muted/20 hover:bg-muted/40"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div
-                      className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                      className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
                         isUnread
                           ? "bg-accent/15 text-accent border border-accent/30 shadow-sm"
                           : "bg-muted text-muted-foreground border border-border/40"
                       }`}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className="h-4.5 w-4.5" />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-1 mb-0.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-accent">
-                          {item.category || "System"}
-                        </span>
+                      <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-accent">
+                            {item.category || "System"}
+                          </span>
+                          {isUnread && (
+                            <span className="inline-block h-2 w-2 rounded-full bg-accent ring-2 ring-accent/30 animate-pulse" />
+                          )}
+                        </div>
                         <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                           <Clock3 className="h-3 w-3" />
                           <span>{timeDisplay}</span>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <h4 className="font-display text-xs sm:text-sm font-semibold text-foreground leading-snug">
+
+                      <div className="flex items-start justify-between gap-2">
+                        <h4
+                          className={`font-display text-xs sm:text-sm font-semibold leading-snug ${
+                            isUnread ? "text-foreground font-bold" : "text-foreground/90"
+                          }`}
+                        >
                           {item.title}
                         </h4>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
                       </div>
+
                       {messageText && (
                         <p className="mt-1 text-xs text-muted-foreground leading-relaxed line-clamp-2">
                           {messageText}
                         </p>
                       )}
+
+                      {/* Quick Item Actions */}
+                      <div className="mt-2.5 flex items-center justify-end gap-2 pt-1 border-t border-border/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {isUnread && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markAsRead(notifId);
+                            }}
+                            className="flex items-center gap-1 text-[11px] font-medium text-accent hover:underline"
+                          >
+                            <Check className="h-3 w-3" />
+                            <span>Mark read</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteNotification(notifId);
+                          }}
+                          title="Dismiss notification"
+                          className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-destructive transition-colors ml-2"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span>Dismiss</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -302,16 +336,30 @@ const NotificationPanel = ({ open, onOpenChange }: NotificationPanelProps) => {
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between border-t border-border/60 bg-muted/40 p-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={markAllAsRead}
-            className="text-xs font-semibold gap-1.5 text-muted-foreground hover:text-foreground"
-          >
-            <Check className="h-3.5 w-3.5" />
-            <span>Mark all read</span>
-          </Button>
+        <div className="flex items-center justify-between border-t border-border/60 bg-muted/40 p-3.5 sm:p-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={unreadCount === 0}
+              onClick={() => markAllAsRead()}
+              className="text-xs font-semibold gap-1.5 text-muted-foreground hover:text-foreground disabled:opacity-40"
+            >
+              <CheckCheck className="h-3.5 w-3.5 text-accent" />
+              <span>Mark all read</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={notifications.length === 0}
+              onClick={() => clearAll()}
+              className="text-xs font-semibold gap-1.5 text-muted-foreground hover:text-destructive disabled:opacity-40"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>Clear all</span>
+            </Button>
+          </div>
 
           <Button
             size="sm"

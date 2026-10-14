@@ -19,11 +19,11 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor to handle 401/403 errors globally
+// Interceptor to handle 401 Unauthorized errors globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && [401, 403].includes(error.response.status)) {
+    if (error.response && error.response.status === 401) {
       // Clear storage and reload on auth failure
       localStorage.removeItem('user');
       localStorage.removeItem('accessToken');

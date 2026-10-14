@@ -39,7 +39,9 @@ import {
   fetchPackagesRequest, 
   addPackageRequest, 
   updatePackageRequest, 
-  deletePackageRequest 
+  deletePackageRequest,
+  addPackageSuccess,
+  updatePackageSuccess
 } from '../store/slices/packagesSlice';
 import { fetchServicesRequest } from '../store/slices/servicesSlice';
 import { fetchSubServicesRequest } from '../store/slices/subServicesSlice';
@@ -272,14 +274,23 @@ const Packages = () => {
     });
     data.append('customData', JSON.stringify(customData));
 
-    if (modalType === 'add') {
-      dispatch(addPackageRequest(data));
-      showToast('Created', 'New package published successfully.', 'success');
-    } else {
-      dispatch(updatePackageRequest({ id: currentPkg._id, data }));
-      showToast('Updated', 'Package updated successfully.', 'success');
+    try {
+      if (modalType === 'add') {
+        const res = await api.post('/packages', data);
+        const pkgData = res.data?.data || res.data;
+        dispatch(addPackageSuccess(pkgData));
+        showToast('Created', 'New package published successfully.', 'success');
+      } else {
+        const res = await api.put(`/packages/${currentPkg._id}`, data);
+        const pkgData = res.data?.data || res.data;
+        dispatch(updatePackageSuccess(pkgData));
+        showToast('Updated', 'Package updated successfully.', 'success');
+      }
+      setShowModal(false);
+    } catch (err) {
+      console.error('Package save error:', err);
+      showToast('Error', err.response?.data?.message || err.message || 'Failed to save package', 'error');
     }
-    setShowModal(false);
   };
 
   const handleDelete = async (id) => {
@@ -297,17 +308,56 @@ const Packages = () => {
 
   const availableSubServices = subServices.filter(sub => {
     if (!activeServiceId) return true;
-    const subSvcId = sub.service?._id || sub.service;
-    return subSvcId === activeServiceId;
+    const subSvcId = (sub.service?._id || sub.service || '').toString();
+    return subSvcId === activeServiceId.toString();
   });
 
-  const availableCategories = categories || [];
+  const availableCategories = categories.filter(c => {
+    const parentSvcId = (c.service?._id || c.service || '').toString();
+    const parentSubId = (c.subService?._id || c.subService || '').toString();
+    if (activeServiceId && parentSvcId && parentSvcId !== activeServiceId.toString()) return false;
+    if (subServiceFilter !== 'all' && parentSubId && parentSubId !== subServiceFilter.toString()) return false;
+    return true;
+  });
 
-  const filteredPackages = packages.filter(pkg => {
+  // Drawer modal form cascading helpers
+  const drawerAvailableSubServices = subServices.filter(sub => {
+    if (!formData.serviceCategory) return true;
+    const subSvcId = (sub.service?._id || sub.service || '').toString();
+    return subSvcId === formData.serviceCategory.toString();
+  });
+
+  const drawerAvailableCategories = categories.filter(c => {
+    if (formData.subService) {
+      const catSubId = (c.subService?._id || c.subService || '').toString();
+      if (catSubId && catSubId === formData.subService.toString()) return true;
+    }
+    if (formData.serviceCategory) {
+      const catSvcId = (c.service?._id || c.service || '').toString();
+      if (catSvcId && catSvcId === formData.serviceCategory.toString()) return true;
+    }
+    if (!formData.serviceCategory && !formData.subService) return true;
+    return false;
+  });
+  const drawerCategoriesList = drawerAvailableCategories.length > 0 ? drawerAvailableCategories : categories;
+
+  const uniquePackagesMap = new Map();
+  packages.forEach(p => {
+    const key = (p._id || p.customId || '').toString();
+    if (key && !uniquePackagesMap.has(key)) {
+      uniquePackagesMap.set(key, p);
+    }
+  });
+  const uniquePackages = Array.from(uniquePackagesMap.values());
+
+  const filteredPackages = uniquePackages.filter(pkg => {
     const matchesSearch = pkg.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          pkg.location?.toLowerCase().includes(searchTerm.toLowerCase());
+    const pkgStatus = pkg.status || (pkg.isActive ? 'Active' : 'Inactive');
     const matchesStatus = statusFilter === 'all' ? true : 
-                         statusFilter === 'active' ? pkg.isActive : !pkg.isActive;
+                         statusFilter.toLowerCase() === 'active' ? (pkg.status === 'Active' || (pkg.status === undefined && pkg.isActive)) :
+                         statusFilter.toLowerCase() === 'inactive' ? (pkg.status === 'Inactive' || (!pkg.isActive && pkg.status !== 'Correction')) :
+                         pkgStatus.toLowerCase() === statusFilter.toLowerCase();
 
     const pkgSvcId = pkg.serviceCategory?._id || pkg.serviceCategory || pkg.service?._id || pkg.service;
     const pkgSvcCustomId = pkg.serviceCategory?.customId || pkg.service?.customId;
@@ -426,12 +476,15 @@ const Packages = () => {
             <FilterSelect 
               options={[
                 { value: 'all', label: 'All Status' },
-                { value: 'active', label: 'Active', color: '#16a34a' },
-                { value: 'inactive', label: 'Inactive', color: '#dc2626' }
+                { value: 'Active', label: 'Active', color: '#16a34a' },
+                { value: 'Correction', label: 'Correction', color: '#d97706' },
+                { value: 'Draft', label: 'Draft', color: '#ca8a04' },
+                { value: 'Pending', label: 'Pending', color: '#2563eb' },
+                { value: 'Inactive', label: 'Inactive', color: '#dc2626' }
               ]}
               value={statusFilter}
               onChange={setStatusFilter}
-              width="140px"
+              width="150px"
             />
             
             <div className="view-toggles" style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)' }}>
@@ -475,7 +528,13 @@ const Packages = () => {
               <div style={{ padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <span style={{ fontSize: '11px', fontWeight: '800', background: 'rgba(var(--primary-rgb), 0.1)', color: 'var(--primary)', padding: '2px 8px', borderRadius: '6px' }}>{pkg.customId || 'PKG-AUTO'}</span>
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: (pkg.status || (pkg.isActive ? 'Active' : 'Inactive')) === 'Active' ? '#16a34a' : ((pkg.status || (pkg.isActive ? 'Active' : 'Inactive')) === 'Inactive' ? '#dc2626' : '#d97706') }}>
+                  <span style={{ 
+                    fontSize: '11px', 
+                    fontWeight: '700', 
+                    color: (pkg.status || (pkg.isActive ? 'Active' : 'Inactive')) === 'Active' 
+                      ? '#16a34a' 
+                      : ((pkg.status === 'Correction') ? '#d97706' : ((pkg.status || (pkg.isActive ? 'Active' : 'Inactive')) === 'Inactive' ? '#dc2626' : '#2563eb')) 
+                  }}>
                     ● {pkg.status || (pkg.isActive ? 'Active' : 'Inactive')}
                   </span>
                 </div>
@@ -553,7 +612,9 @@ const Packages = () => {
                     </td>
                     <td style={{ padding: '16px 24px' }}>
                       <span style={{ 
-                        color: (pkg.status || (pkg.isActive ? 'Active' : 'Inactive')) === 'Active' ? '#16a34a' : ((pkg.status || (pkg.isActive ? 'Active' : 'Inactive')) === 'Inactive' ? '#dc2626' : '#d97706'), 
+                        color: (pkg.status || (pkg.isActive ? 'Active' : 'Inactive')) === 'Active' 
+                          ? '#16a34a' 
+                          : ((pkg.status === 'Correction') ? '#d97706' : ((pkg.status || (pkg.isActive ? 'Active' : 'Inactive')) === 'Inactive' ? '#dc2626' : '#2563eb')), 
                         fontWeight: '700', 
                         fontSize: '13px' 
                       }}>
@@ -610,11 +671,24 @@ const Packages = () => {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--primary)' }}>₹{currentPkg.price}</div>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: currentPkg.isActive ? '#16a34a' : '#dc2626' }}>
-                  {currentPkg.isActive ? '● Live' : '○ Inactive'}
+                <span style={{ 
+                  fontSize: '12px', 
+                  fontWeight: '700', 
+                  color: (currentPkg.status === 'Active' || currentPkg.isActive) ? '#16a34a' : (currentPkg.status === 'Correction' ? '#d97706' : '#dc2626') 
+                }}>
+                  ● {currentPkg.status || (currentPkg.isActive ? 'Active' : 'Inactive')}
                 </span>
               </div>
             </div>
+
+            {currentPkg.correctionNotes && (
+              <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid #f59e0b', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', color: '#92400e' }}>
+                <div style={{ fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <Wrench size={16} /> Correction Notes / Instructions
+                </div>
+                <div style={{ fontSize: '12px', lineHeight: '1.5' }}>{currentPkg.correctionNotes}</div>
+              </div>
+            )}
 
             <div style={{ background: 'var(--bg-main)', padding: '12px 16px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', border: '1px solid var(--border)' }}>
               <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Offered By</span>
@@ -737,7 +811,14 @@ const Packages = () => {
                 options={services.map(s => ({ value: s._id, label: s.title }))} 
                 value={formData.serviceCategory} 
                 onChange={(val) => {
-                  setFormData({...formData, serviceCategory: val, subService: ''});
+                  setFormData(prev => ({
+                    ...prev,
+                    serviceCategory: val,
+                    subService: '',
+                    category: '',
+                    selectedSubServices: [],
+                    selectedCategories: []
+                  }));
                   fetchCustomFields(val);
                 }} 
               />
@@ -745,11 +826,26 @@ const Packages = () => {
             <div className="form-group">
               <FormSelect 
                 label="Sub Service" 
-                options={availableSubServices.map(sub => ({ value: sub._id, label: sub.title }))} 
+                options={drawerAvailableSubServices.map(sub => ({ value: sub._id, label: sub.title }))} 
                 value={formData.subService} 
-                onChange={(val) => setFormData({ ...formData, subService: val })} 
-                placeholder={availableSubServices.length === 0 ? 'No sub services for this service' : 'Select Sub Service...'}
-                disabled={availableSubServices.length === 0}
+                onChange={(val) => setFormData(prev => {
+                  const updated = {
+                    ...prev,
+                    subService: val,
+                    selectedSubServices: val ? [val] : []
+                  };
+                  if (prev.category) {
+                    const catObj = categories.find(c => (c._id || '').toString() === prev.category.toString());
+                    const catSubId = (catObj?.subService?._id || catObj?.subService || '').toString();
+                    if (val && catSubId && catSubId !== val.toString()) {
+                      updated.category = '';
+                      updated.selectedCategories = [];
+                    }
+                  }
+                  return updated;
+                })} 
+                placeholder={drawerAvailableSubServices.length === 0 ? 'No sub services for this service' : 'Select Sub Service...'}
+                disabled={drawerAvailableSubServices.length === 0}
               />
             </div>
           </div>
@@ -758,10 +854,10 @@ const Packages = () => {
             <div className="form-group">
               <FormSelect 
                 label="Package Category" 
-                options={availableCategories.map(c => ({ value: c._id, label: c.title || c.name }))} 
+                options={drawerCategoriesList.map(c => ({ value: c._id, label: c.title || c.name }))} 
                 value={formData.category} 
-                onChange={(val) => setFormData({ ...formData, category: val })} 
-                placeholder="Select Category..."
+                onChange={(val) => setFormData({ ...formData, category: val, selectedCategories: val ? [val] : [] })} 
+                placeholder={drawerCategoriesList.length === 0 ? 'No categories found' : 'Select Category...'}
               />
             </div>
             <div className="form-group">
@@ -778,16 +874,16 @@ const Packages = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
             <SearchableMultiSelect
               label="Multiple Sub Services (Searchable Multi-Select)"
-              options={availableSubServices.map(s => ({ value: s._id, label: s.title }))}
+              options={drawerAvailableSubServices.map(s => ({ value: s._id, label: s.title }))}
               value={formData.selectedSubServices}
-              onChange={(val) => setFormData({ ...formData, selectedSubServices: val })}
+              onChange={(val) => setFormData({ ...formData, selectedSubServices: val, subService: val[0] || '' })}
               placeholder="Search & select sub services..."
             />
             <SearchableMultiSelect
               label="Multiple Categories & Tags (Searchable Multi-Select)"
-              options={availableCategories.map(c => ({ value: c._id, label: c.title || c.name }))}
+              options={drawerCategoriesList.map(c => ({ value: c._id, label: c.title || c.name }))}
               value={formData.selectedCategories}
-              onChange={(val) => setFormData({ ...formData, selectedCategories: val })}
+              onChange={(val) => setFormData({ ...formData, selectedCategories: val, category: val[0] || '' })}
               placeholder="Search & select categories..."
             />
           </div>

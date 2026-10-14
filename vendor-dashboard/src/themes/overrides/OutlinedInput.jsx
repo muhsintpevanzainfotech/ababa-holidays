@@ -31,6 +31,13 @@ export default function OutlinedInput(theme, borderRadius, outlinedFilled) {
           background: outlinedFilled ? theme.vars.palette.grey[50] : 'transparent',
           padding: '15.5px 14px',
           borderRadius: `${borderRadius}px`,
+          '&:-webkit-autofill, &:-webkit-autofill:hover, &:-webkit-autofill:focus, &:-webkit-autofill:active': {
+            WebkitBackgroundClip: 'text !important',
+            backgroundClip: 'text !important',
+            WebkitTextFillColor: 'inherit !important',
+            transition: 'background-color 9999999s ease-in-out 0s, color 9999999s ease-in-out 0s !important',
+            caretColor: 'inherit !important'
+          },
 
           '&.MuiInputBase-inputSizeSmall': {
             padding: '10px 14px',

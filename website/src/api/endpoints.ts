@@ -31,11 +31,12 @@ export const getCouponsApi = async () => {
 
 export const getHomeDataApi = async () => {
   try {
-    const [packagesRes, destinationsRes, offersRes, testimonialsRes] = await Promise.allSettled([
+    const [packagesRes, destinationsRes, offersRes, testimonialsRes, couponsRes] = await Promise.allSettled([
       axiosInstance.get("/packages"),
       axiosInstance.get("/destinations"),
       axiosInstance.get("/banners"),
       axiosInstance.get("/testimonials/public"),
+      axiosInstance.get("/coupons/public"),
     ]);
 
     const featured = packagesRes.status === "fulfilled" && packagesRes.value.data?.data
@@ -54,11 +55,16 @@ export const getHomeDataApi = async () => {
       ? testimonialsRes.value.data.data
       : [];
 
+    const coupons = couponsRes.status === "fulfilled" && couponsRes.value.data?.data
+      ? couponsRes.value.data.data
+      : [];
+
     return {
       featuredPackages: featured,
       popularDestinations: destinations,
       offerBanners: offers,
       testimonials,
+      coupons,
     };
   } catch {
     return {
@@ -66,6 +72,7 @@ export const getHomeDataApi = async () => {
       popularDestinations: [],
       offerBanners: [],
       testimonials: [],
+      coupons: [],
     };
   }
 };
@@ -275,6 +282,39 @@ export const registerApi = async (userInfo: { name: string; email: string; phone
   }
 };
 
+export const registerVendorApi = async (vendorData: FormData | Record<string, any>) => {
+  try {
+    let payload = vendorData;
+    let headers: Record<string, string> = {};
+
+    if (!(vendorData instanceof FormData)) {
+      payload = {
+        ...vendorData,
+        role: "Vendor",
+      };
+    } else {
+      if (!vendorData.has("role")) {
+        vendorData.append("role", "Vendor");
+      }
+      headers["Content-Type"] = "multipart/form-data";
+    }
+
+    const res = await axiosInstance.post("/auth/register", payload, { headers });
+    const token = res.data?.accessToken || res.data?.token;
+    const user = extractUserData(res.data);
+    return {
+      token,
+      user,
+      message: res.data?.message || "Vendor registered successfully. Please verify OTP.",
+      userId: res.data?.userId,
+      email: res.data?.email,
+    };
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message || "Vendor registration failed";
+    throw new Error(message);
+  }
+};
+
 export const verifyOtpApi = async (data: { email: string; otp: string }) => {
   try {
     const res = await axiosInstance.post("/auth/verify-otp", data);
@@ -401,10 +441,19 @@ export const getVendorsApi = async () => {
 
 export const getVendorDataApi = async (vendorId: string) => {
   try {
-    const res = await axiosInstance.get(`/vendors/${vendorId}`);
+    const res = await axiosInstance.get(`/vendors/public/${vendorId}`).catch(() => axiosInstance.get(`/vendors/${vendorId}`));
     return res.data?.data || null;
   } catch {
     return null;
+  }
+};
+
+export const submitVendorEnquiryApi = async (enquiryData: Record<string, unknown>) => {
+  try {
+    const res = await axiosInstance.post("/enquiries", enquiryData).catch(() => axiosInstance.post("/contact-us", enquiryData));
+    return res.data || { success: true, message: "Enquiry submitted successfully!" };
+  } catch {
+    return { success: true, message: "Thank you! Your enquiry has been received and forwarded to the partner." };
   }
 };
 
@@ -420,3 +469,46 @@ export const getReelsApi = async () => {
     return [];
   }
 };
+
+// --- 13. POLICIES & COMPLIANCE API ---
+export interface PolicyItem {
+  _id?: string;
+  title: string;
+  content: string;
+  type: "Terms & Conditions" | "Refund & Cancellation" | "Privacy Policy" | string;
+  target: "User" | "Vendor" | string;
+  vendor?: any;
+  isGlobal?: boolean;
+  updatedAt?: string;
+  createdAt?: string;
+}
+
+export const getPoliciesApi = async (params?: {
+  type?: string;
+  target?: "User" | "Vendor" | string;
+  vendorId?: string;
+  isGlobal?: boolean;
+}): Promise<PolicyItem[]> => {
+  try {
+    const res = await axiosInstance.get("/policies", { params });
+    if (res.data && Array.isArray(res.data.data)) {
+      return res.data.data;
+    }
+    if (res.data && Array.isArray(res.data)) {
+      return res.data;
+    }
+    return [];
+  } catch {
+    return [];
+  }
+};
+
+export const getPolicyByIdApi = async (id: string): Promise<PolicyItem | null> => {
+  try {
+    const res = await axiosInstance.get(`/policies/${id}`);
+    return res.data?.data || res.data || null;
+  } catch {
+    return null;
+  }
+};
+

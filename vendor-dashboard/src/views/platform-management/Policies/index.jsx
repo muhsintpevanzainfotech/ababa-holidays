@@ -11,7 +11,8 @@ import {
     DialogTitle, DialogContent, DialogActions, Chip,
     InputAdornment, Tabs, Tab, Avatar, MenuItem, Snackbar, FormHelperText
 } from '@mui/material';
-import { useColorScheme, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -189,8 +190,7 @@ const policyValidationSchema = Yup.object().shape({
 const PoliciesManagement = () => {
     const theme = useTheme();
     const navigate = useNavigate();
-    const { mode, systemMode } = useColorScheme();
-    const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
+    const { isDark: isDarkMode } = useThemeMode();
     const { isUnlocked, unlockedUntil, user } = useSelector((state) => state.auth);
     const [searchParams] = useSearchParams();
     const typeParam = searchParams.get('type');
@@ -198,8 +198,8 @@ const PoliciesManagement = () => {
 
     const textColor = isDarkMode ? '#f9fafb' : '#0f172a';
     const subTextColor = isDarkMode ? '#cbd5e1' : '#64748b';
-    const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
-    const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0';
+    const cardBgColor = isDarkMode ? '#16152b' : '#ffffff';
+    const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0';
 
     // UI state
     const [view, setView] = useState('list'); // 'list' or 'edit'
@@ -739,7 +739,7 @@ const PoliciesManagement = () => {
                         sx: {
                             borderRadius: '20px',
                             p: 1,
-                            backgroundColor: isDarkMode ? '#111936' : '#ffffff',
+                            backgroundColor: cardBgColor,
                             color: isDarkMode ? '#ffffff' : '#1e293b'
                         }
                     }}

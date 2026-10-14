@@ -1,12 +1,13 @@
 import { Activity, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// material-ui
-import { useTheme, useColorScheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Avatar from '@mui/material/Avatar';
 import Badge from '@mui/material/Badge';
 import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
 import CardActions from '@mui/material/CardActions';
 import Chip from '@mui/material/Chip';
 import ClickAwayListener from '@mui/material/ClickAwayListener';
@@ -39,7 +40,7 @@ const statusOptions = [
 
 export default function NotificationSection() {
   const theme = useTheme();
-  const { mode } = useColorScheme();
+  const { isDark } = useThemeMode();
   const downMD = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
 
@@ -123,7 +124,7 @@ export default function NotificationSection() {
     return true;
   });
 
-  const isDark = mode === 'dark' || theme.palette.mode === 'dark';
+
 
   return (
     <>
@@ -143,21 +144,21 @@ export default function NotificationSection() {
             }
           }}
         >
-          <Avatar
-            variant="rounded"
+          <IconButton
+            size="small"
             sx={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '12px',
-              transition: 'all .2s ease-in-out',
-              color: isDark ? '#41a0ae' : '#36669c',
-              background: isDark ? 'rgba(65, 160, 174, 0.18)' : 'rgba(54, 102, 156, 0.1)',
+              width: 38,
+              height: 38,
+              borderRadius: '10px',
               border: '1px solid',
-              borderColor: isDark ? 'rgba(65, 160, 174, 0.3)' : 'rgba(54, 102, 156, 0.2)',
-              cursor: 'pointer',
+              borderColor: 'divider',
+              bgcolor: (theme) => isDark ? 'rgba(255, 255, 255, 0.04)' : 'grey.50',
+              color: 'text.primary',
+              transition: 'all .2s ease-in-out',
               '&:hover, &[aria-controls="menu-list-grow"]': {
+                bgcolor: 'primary.main',
                 color: '#ffffff',
-                background: '#36669c'
+                borderColor: 'primary.main'
               }
             }}
             ref={anchorRef}
@@ -165,8 +166,8 @@ export default function NotificationSection() {
             aria-haspopup="true"
             onClick={handleToggle}
           >
-            <IconBell stroke={1.5} size="22px" />
-          </Avatar>
+            <IconBell stroke={1.5} size="20px" />
+          </IconButton>
         </Badge>
       </Box>
       <Popper

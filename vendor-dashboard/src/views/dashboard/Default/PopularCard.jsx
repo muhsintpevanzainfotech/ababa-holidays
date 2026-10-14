@@ -11,7 +11,8 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Paper from '@mui/material/Paper';
-import { useTheme, useColorScheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -26,8 +27,7 @@ import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 
 export default function PopularCard({ isLoading, stats }) {
   const theme = useTheme();
-  const { mode, systemMode } = useColorScheme();
-  const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
+  const { isDark: isDarkMode } = useThemeMode();
 
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(new Date().getDate());
@@ -122,10 +122,10 @@ export default function PopularCard({ isLoading, stats }) {
                   p: 1.8,
                   borderRadius: '14px',
                   background: isDarkMode
-                    ? 'linear-gradient(135deg, #090d16 0%, #1e1b4b 100%)'
+                    ? 'linear-gradient(135deg, #16152b 0%, #212040 100%)'
                     : 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
                   border: '1.5px solid',
-                  borderColor: isDarkMode ? 'rgba(99,102,241,0.4)' : '#bfdbfe',
+                  borderColor: isDarkMode ? 'rgba(65, 160, 174, 0.4)' : '#bfdbfe',
                   boxShadow: '0 4px 18px rgba(0,0,0,0.03)'
                 }}
               >
@@ -168,9 +168,9 @@ export default function PopularCard({ isLoading, stats }) {
                 sx={{
                   p: 2,
                   borderRadius: '14px',
-                  bgcolor: isDarkMode ? '#111936' : '#ffffff',
+                  bgcolor: isDarkMode ? '#16152b' : '#ffffff',
                   border: '1px solid',
-                  borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : '#e2e8f0',
+                  borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0',
                   flexGrow: 1,
                   display: 'flex',
                   flexDirection: 'column',

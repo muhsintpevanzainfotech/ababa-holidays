@@ -116,8 +116,9 @@ export const fallbackBannerSlides: BannerSlide[] = [
   },
 ];
 
-const resolveBannerImage = (path?: string) => {
-  return getImageUrl(path, destKerala);
+const resolveBannerImage = (path?: string, index = 0) => {
+  const fallback = fallbackBannerSlides[index % fallbackBannerSlides.length]?.image || destKerala;
+  return getImageUrl(path, fallback);
 };
 
 const gradientsList = [
@@ -144,20 +145,26 @@ const PromoBannerCarousel = () => {
       try {
         const rawBanners = await getBannersApi();
         if (isSubscribed && Array.isArray(rawBanners) && rawBanners.length > 0) {
-          const mappedSlides: BannerSlide[] = rawBanners.map((b: any, idx: number) => ({
-            id: b._id || b.customId || `admin-banner-${idx}`,
-            badge: b.userRole === "Admin" ? "✨ Official Web Offer" : "🔥 Special Promotion",
-            badgeIcon: Sparkles,
-            title: b.title || "Exclusive Travel Offer",
-            highlightText: "Special Offer",
-            description:
-              b.description ||
-              "Discover handcrafted travel itineraries, luxury stays, and memorable journeys with Ababa Holidays.",
-            ctaText: "Explore Offer",
-            ctaPath: b.link || "/packages",
-            image: resolveBannerImage(b.image),
-            gradientBg: gradientsList[idx % gradientsList.length],
-          }));
+          const mappedSlides: BannerSlide[] = rawBanners.map((b: any, idx: number) => {
+            const rawImg = b.image || b.banner || b.coverBanner || b.imageUrl || b.photo;
+            const bannerImg = resolveBannerImage(rawImg, idx);
+            return {
+              id: b._id || b.customId || `admin-banner-${idx}`,
+              badge: b.userRole === "Admin" ? "✨ Official Web Offer" : (b.badge || "🔥 Special Promotion"),
+              badgeIcon: Sparkles,
+              title: b.title || "Exclusive Travel Offer",
+              highlightText: b.highlightText || (b.code ? `Code: ${b.code}` : "Special Offer"),
+              description:
+                b.description ||
+                "Discover handcrafted travel itineraries, luxury stays, and memorable journeys with Ababa Holidays.",
+              offerCode: b.code || b.couponCode || b.offerCode || "",
+              discountText: b.discount || b.discountText || "",
+              ctaText: b.buttonText || b.ctaText || "Explore Offer",
+              ctaPath: b.link || b.ctaPath || "/packages",
+              image: bannerImg,
+              gradientBg: gradientsList[idx % gradientsList.length],
+            };
+          });
           setSlides(mappedSlides);
         }
       } catch {
@@ -207,14 +214,31 @@ const PromoBannerCarousel = () => {
       onMouseLeave={() => setIsPaused(false)}
     >
       <div className="container mx-auto px-3 sm:px-4 lg:px-8">
-        <div className={`relative overflow-hidden rounded-3xl sm:rounded-[2.5rem] bg-gradient-to-r ${currentSlide.gradientBg} border border-white/15 shadow-2xl min-h-[340px] sm:min-h-[380px] lg:min-h-[420px] flex items-center transition-all duration-700`}>
+        <div className={`relative overflow-hidden rounded-3xl sm:rounded-[2.5rem] bg-gradient-to-r ${currentSlide.gradientBg} border border-white/15 shadow-2xl min-h-[360px] sm:min-h-[400px] lg:min-h-[440px] flex items-center transition-all duration-700`}>
+          {/* Full-Bleed Ambient Banner Background Image */}
+          {currentSlide.image && (
+            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+              <img
+                key={`bg-${currentSlide.id}`}
+                src={currentSlide.image}
+                alt={currentSlide.title}
+                className="w-full h-full object-cover object-center md:object-right filter brightness-[0.42] contrast-[1.12] scale-105 transition-all duration-1000"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = destKerala;
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/75 to-slate-950/25" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-slate-950/40" />
+            </div>
+          )}
+
           {/* Dynamic Ambient Blur Highlights */}
           <div className="absolute -top-24 -left-24 w-96 h-96 bg-accent/20 rounded-full blur-[140px] pointer-events-none" />
           <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-sky-500/15 rounded-full blur-[140px] pointer-events-none" />
 
           {/* Background Mesh Overlay Pattern */}
           <div
-            className="absolute inset-0 opacity-10 pointer-events-none"
+            className="absolute inset-0 opacity-10 pointer-events-none z-0"
             style={{
               backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.4) 1px, transparent 0)`,
               backgroundSize: "24px 24px",
@@ -228,10 +252,10 @@ const PromoBannerCarousel = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.45, ease: "easeOut" }}
-              className="w-full grid grid-cols-1 md:grid-cols-12 items-center gap-6 sm:gap-8 p-6 sm:p-10 lg:p-12 relative z-10"
+              className="w-full p-6 sm:p-10 lg:p-14 relative z-10"
             >
-              {/* Left Content Column */}
-              <div className="md:col-span-7 space-y-4 sm:space-y-5">
+              {/* Content Column (Spans cleanly over background) */}
+              <div className="max-w-2xl lg:max-w-3xl space-y-4 sm:space-y-5">
                 {/* Floating Badges */}
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-accent/20 text-accent text-xs font-bold uppercase tracking-wider backdrop-blur-md border border-accent/30 shadow-sm">
@@ -245,6 +269,12 @@ const PromoBannerCarousel = () => {
                       {currentSlide.highlightText}
                     </span>
                   )}
+
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-black/40 text-amber-400 text-xs font-bold border border-white/15 backdrop-blur-md">
+                    <Star className="w-3.5 h-3.5 fill-amber-400" />
+                    <span>4.9 / 5</span>
+                    <span className="text-slate-300 font-normal ml-0.5">| 50k+ Happy Travelers</span>
+                  </span>
                 </div>
 
                 {/* Main Headline */}
@@ -253,13 +283,13 @@ const PromoBannerCarousel = () => {
                 </h1>
 
                 {/* Description */}
-                <p className="text-xs sm:text-base text-slate-300 max-w-xl leading-relaxed font-normal">
+                <p className="text-sm sm:text-base text-slate-200 max-w-xl leading-relaxed font-normal">
                   {currentSlide.description}
                 </p>
 
                 {/* Offer Code & Discount Snippet */}
                 {currentSlide.offerCode && (
-                  <div className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border border-dashed border-accent/50 bg-black/40 backdrop-blur-md text-xs">
+                  <div className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border border-dashed border-accent/50 bg-black/50 backdrop-blur-md text-xs">
                     <span className="text-slate-300 font-medium">Use Code:</span>
                     <button
                       type="button"
@@ -296,48 +326,18 @@ const PromoBannerCarousel = () => {
                   <Button
                     variant="outline"
                     onClick={() => navigate("/packages")}
-                    className="h-12 sm:h-13 px-6 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/15 hover:text-white text-xs sm:text-sm font-semibold backdrop-blur-md hidden sm:inline-flex"
+                    className="h-12 sm:h-13 px-6 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/15 hover:text-white text-xs sm:text-sm font-semibold backdrop-blur-md"
                   >
                     Browse All Deals
                   </Button>
-                </div>
-              </div>
-
-              {/* Right Media Card Showcase */}
-              <div className="md:col-span-5 hidden md:block">
-                <div className="relative h-64 sm:h-72 lg:h-80 w-full overflow-hidden rounded-3xl border border-white/20 shadow-2xl group bg-slate-900">
-                  <img
-                    src={currentSlide.image}
-                    alt={currentSlide.title}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = destKerala;
-                    }}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                  {/* Top Rating Floating Pill */}
-                  <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1.5 rounded-full border border-white/15 flex items-center gap-1.5 shadow-md">
-                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                    <span>4.9 / 5</span>
-                    <span className="text-slate-400 font-normal">| 50k+ Happy Travelers</span>
-                  </div>
-
-                  {/* Bottom Caption Pill */}
-                  <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-white text-xs font-semibold backdrop-blur-md bg-black/50 px-4 py-2.5 rounded-2xl border border-white/15">
-                    <span className="truncate">{currentSlide.title}</span>
-                    <span className="text-accent font-bold text-xs shrink-0 flex items-center gap-1">
-                      Explore <ArrowRight className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
                 </div>
               </div>
             </motion.div>
           </AnimatePresence>
 
           {/* Bottom Floating Control Bar */}
-          <div className="absolute right-6 bottom-5 z-20 flex items-center gap-2 bg-black/40 backdrop-blur-md p-1.5 rounded-full border border-white/15">
-            <span className="px-3 text-xs font-bold text-white font-mono border-r border-white/15">
+          <div className="absolute right-4 sm:right-8 bottom-5 z-20 flex items-center gap-1.5 bg-black/60 backdrop-blur-xl p-1.5 rounded-full border border-white/20 shadow-2xl">
+            <span className="px-3 text-xs font-bold text-white font-mono border-r border-white/20">
               0{currentIndex + 1} / 0{slides.length}
             </span>
 
@@ -346,7 +346,7 @@ const PromoBannerCarousel = () => {
               onClick={() => setIsPlaying((prev) => !prev)}
               aria-label={isPlaying ? "Pause auto-play" : "Start auto-play"}
               title={isPlaying ? "Pause Slideshow" : "Play Slideshow"}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-all hover:bg-white/20 active:scale-95"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-white/90 transition-all hover:bg-white/20 hover:text-white active:scale-95"
             >
               {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
             </button>
@@ -355,7 +355,7 @@ const PromoBannerCarousel = () => {
               type="button"
               onClick={handlePrev}
               aria-label="Previous slide"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-all hover:bg-white/20 active:scale-95"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white transition-all hover:bg-accent hover:text-accent-foreground hover:scale-105 active:scale-95 shadow-sm"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -364,7 +364,7 @@ const PromoBannerCarousel = () => {
               type="button"
               onClick={handleNext}
               aria-label="Next slide"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-all hover:bg-white/20 active:scale-95"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white transition-all hover:bg-accent hover:text-accent-foreground hover:scale-105 active:scale-95 shadow-sm"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

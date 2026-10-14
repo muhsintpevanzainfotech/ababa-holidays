@@ -14,7 +14,6 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import MainContentStyled from './MainContentStyled';
 import Loader from 'ui-component/Loader';
-import Breadcrumbs from 'ui-component/extended/Breadcrumbs';
 
 import useConfig from 'hooks/useConfig';
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
@@ -39,31 +38,27 @@ export default function MainLayout() {
     downMD && handlerDrawerOpen(false);
   }, [downMD]);
 
-  // horizontal menu-list bar : drawer
-
   if (menuMasterLoading) return <Loader />;
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* header */}
-      <AppBar 
-        enableColorOnDark 
-        position="fixed" 
-        color="inherit" 
-        elevation={0} 
-        sx={{ 
+      <AppBar
+        enableColorOnDark
+        position="fixed"
+        color="inherit"
+        elevation={0}
+        sx={{
           bgcolor: theme.vars.palette.background.default,
-          backdropFilter: 'blur(10px)',
-          opacity: 0.95,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          backdropFilter: 'blur(12px)',
           zIndex: theme.zIndex.drawer + 1,
-          [theme.breakpoints.up('md')]: {
-            bgcolor: 'background.default',
-            backdropFilter: 'none',
-            opacity: 1
-          }
+          height: '70px',
+          justifyContent: 'center'
         }}
       >
-        <Toolbar sx={{ p: 2 }}>
+        <Toolbar sx={{ px: { xs: 2, md: 3 }, minHeight: '70px !important', height: '70px' }}>
           <Header />
         </Toolbar>
       </AppBar>
@@ -73,8 +68,7 @@ export default function MainLayout() {
 
       {/* main content */}
       <MainContentStyled {...{ borderRadius, open: drawerOpen }}>
-        <Box sx={{ ...{ px: { xs: 0 } }, minHeight: 'calc(100vh - 128px)', display: 'flex', flexDirection: 'column' }}>
-          {/* breadcrumb moved to header */}
+        <Box sx={{ minHeight: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
           <Outlet />
           <Footer />
         </Box>

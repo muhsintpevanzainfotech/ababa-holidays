@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useColorScheme, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 import {
   Box,
   Grid,
@@ -44,8 +45,7 @@ const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function CalendarPage() {
   const theme = useTheme();
-  const { mode, systemMode } = useColorScheme();
-  const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
+  const { isDark: isDarkMode } = useThemeMode();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filterType, setFilterType] = useState('all');

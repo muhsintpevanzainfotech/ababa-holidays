@@ -15,7 +15,10 @@ export const CustomSearchableSelect = ({
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef(null);
 
-  const selectedOption = options.find((opt) => String(opt.value) === String(value));
+  const selectedOption = options.find((opt) => 
+    String(opt.value) === String(value) || 
+    (opt.label && value && opt.label.toLowerCase() === String(value).toLowerCase())
+  );
 
   const filteredOptions = options.filter((opt) =>
     opt.label.toLowerCase().includes(searchTerm.toLowerCase())

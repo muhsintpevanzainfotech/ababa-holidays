@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { useTheme, useColorScheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 import {
   Grid, Typography, Stack, Box, Button, Chip,
   Snackbar, Alert, CircularProgress, Paper, Divider,
@@ -85,9 +86,8 @@ const getAllFeaturesWithLimits = (plan = {}) => {
 
 const VendorSubscriptionSettings = () => {
   const theme = useTheme();
-  const { mode, systemMode } = useColorScheme();
+  const { isDark: isDarkMode } = useThemeMode();
   const { user } = useSelector((state) => state.auth);
-  const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark' || theme.palette.mode === 'dark';
 
   const authUser = user || (() => {
     try {
@@ -106,8 +106,8 @@ const VendorSubscriptionSettings = () => {
           textAlign: 'center',
           borderRadius: '16px',
           border: '1px solid',
-          borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : '#e2e8f0',
-          backgroundColor: isDarkMode ? '#111936' : '#ffffff',
+          borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0',
+          backgroundColor: isDarkMode ? '#16152b' : '#ffffff',
           mt: 3
         }}
       >
@@ -158,11 +158,13 @@ const VendorSubscriptionSettings = () => {
       // 2. Fetch all system subscription plans
       const plansRes = await api.get('/subscriptions');
       if (plansRes.success && plansRes.data && plansRes.data.length > 0) {
-        // Merge system plans with features array
-        const fetchedPlans = plansRes.data.map(planObj => ({
-          ...planObj,
-          isPopular: planObj.plan === 'Professional' || planObj.title?.includes('Professional')
-        }));
+        // Filter by visibility & active status, and merge system plans with features array
+        const fetchedPlans = plansRes.data
+          .filter(planObj => planObj.isVisible !== false && planObj.isActive !== false)
+          .map(planObj => ({
+            ...planObj,
+            isPopular: planObj.plan === 'Professional' || planObj.title?.includes('Professional')
+          }));
         setAvailablePlans(fetchedPlans);
       } else {
         setAvailablePlans([]);
@@ -626,7 +628,7 @@ const VendorSubscriptionSettings = () => {
           sx: {
             borderRadius: '20px',
             p: 1,
-            bgcolor: isDarkMode ? '#111936' : '#ffffff',
+            bgcolor: isDarkMode ? '#16152b' : '#ffffff',
             color: isDarkMode ? '#ffffff' : 'text.primary'
           }
         }}

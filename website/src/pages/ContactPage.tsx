@@ -40,8 +40,7 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { submitContactStart } from "@/store/slices/contactSlice";
 import { getImageUrl } from "@/lib/imageHelper";
 import { fetchReelsRequest } from "@/store/slices/reelsSlice";
-import axiosInstance from "@/api/axiosInstance";
-
+import { useSystemSettings, isAvailable } from "@/hooks/useSystemSettings";
 import destKerala from "@/assets/dest-kerala-backwaters.jpg";
 
 export interface CustomContactItem {
@@ -104,33 +103,29 @@ const ContactPage = () => {
   const [selectedShow, setSelectedShow] = useState<WebShow | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
-  const [systemContacts, setSystemContacts] = useState(defaultSystemContacts);
-  const [systemSocials, setSystemSocials] = useState(defaultSystemSocials);
+  const { contactDetails: systemContacts, socialLinks: systemSocials } = useSystemSettings();
   const sliderRef = useRef<HTMLDivElement>(null);
 
   const categories = ["All", "Houseboats & Cruises", "Resort Tours", "Pilgrimage Guides", "International VIP"];
 
   useEffect(() => {
     dispatch(fetchReelsRequest());
-
-    const fetchAdminSettings = async () => {
-      try {
-        const [contactRes, socialRes] = await Promise.all([
-          axiosInstance.get("/settings/contact-details"),
-          axiosInstance.get("/settings/social-links"),
-        ]);
-        if (contactRes.data?.success && contactRes.data.contactDetails) {
-          setSystemContacts((prev) => ({ ...prev, ...contactRes.data.contactDetails }));
-        }
-        if (socialRes.data?.success && socialRes.data.socialLinks) {
-          setSystemSocials((prev) => ({ ...prev, ...socialRes.data.socialLinks }));
-        }
-      } catch (err) {
-        console.error("Error fetching official system settings from admin API:", err);
-      }
-    };
-    fetchAdminSettings();
   }, [dispatch]);
+
+  const whatsappNumberVal = isAvailable(systemContacts.supportPhone)
+    ? systemContacts.supportPhone!
+    : isAvailable(systemContacts.primaryPhone)
+    ? systemContacts.primaryPhone!
+    : isAvailable(systemSocials.whatsapp)
+    ? systemSocials.whatsapp!
+    : "";
+
+  const isWhatsappAvailable = isAvailable(whatsappNumberVal);
+  const whatsappLinkUrl = isAvailable(systemSocials.whatsapp) && systemSocials.whatsapp!.startsWith("http")
+    ? systemSocials.whatsapp!
+    : isWhatsappAvailable
+    ? `https://wa.me/${whatsappNumberVal.replace(/[^0-9]/g, "")}`
+    : "";
 
   const scrollSlider = (direction: "left" | "right") => {
     if (sliderRef.current) {
@@ -330,25 +325,33 @@ const ContactPage = () => {
                 </div>
                 <h3 className="font-display font-bold text-foreground text-base mb-1">Official Contact Hotline</h3>
                 <p className="text-base font-extrabold text-foreground tracking-wide font-mono mb-1">
-                  {systemContacts.primaryPhone}
+                  {isAvailable(systemContacts.primaryPhone) ? systemContacts.primaryPhone : <span className="text-muted-foreground italic">Not available</span>}
                 </p>
                 <p className="text-xs text-muted-foreground">Main Kerala & International Booking Desk</p>
               </div>
 
               <div className="mt-5 pt-4 border-t border-border/60 flex items-center gap-2">
-                <a href={`tel:${systemContacts.primaryPhone.replace(/\s+/g, "")}`} className="flex-1">
-                  <Button size="sm" className="w-full rounded-2xl gradient-accent text-white font-bold text-xs shadow-sm gap-1.5 border-0">
-                    <Zap className="w-3.5 h-3.5" /> Call Now
+                {isAvailable(systemContacts.primaryPhone) ? (
+                  <>
+                    <a href={`tel:${systemContacts.primaryPhone!.replace(/\s+/g, "")}`} className="flex-1">
+                      <Button size="sm" className="w-full rounded-2xl gradient-accent text-white font-bold text-xs shadow-sm gap-1.5 border-0">
+                        <Zap className="w-3.5 h-3.5" /> Call Now
+                      </Button>
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCopy(systemContacts.primaryPhone!, "Primary Contact Phone")}
+                      className="rounded-2xl border-border px-3 text-xs"
+                    >
+                      {copiedItem === "Primary Contact Phone" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    </Button>
+                  </>
+                ) : (
+                  <Button size="sm" disabled variant="outline" className="w-full rounded-2xl text-xs opacity-60">
+                    Not Available
                   </Button>
-                </a>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleCopy(systemContacts.primaryPhone, "Primary Contact Phone")}
-                  className="rounded-2xl border-border px-3 text-xs"
-                >
-                  {copiedItem === "Primary Contact Phone" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                </Button>
+                )}
               </div>
             </motion.div>
 
@@ -371,34 +374,38 @@ const ContactPage = () => {
                 </div>
                 <h3 className="font-display font-bold text-foreground text-base mb-1">WhatsApp Support Line</h3>
                 <p className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 tracking-wide font-mono mb-1">
-                  {systemContacts.supportPhone || systemContacts.primaryPhone}
+                  {isAvailable(whatsappNumberVal) ? whatsappNumberVal : <span className="text-muted-foreground italic">Not available</span>}
                 </p>
                 <p className="text-xs text-muted-foreground">Instant chat for itineraries & quotes</p>
               </div>
 
               <div className="mt-5 pt-4 border-t border-emerald-500/20 flex items-center gap-2">
-                <a
-                  href={
-                    systemSocials.whatsapp && systemSocials.whatsapp.startsWith("http")
-                      ? systemSocials.whatsapp
-                      : `https://wa.me/${(systemContacts.supportPhone || systemContacts.primaryPhone).replace(/[^0-9]/g, "")}`
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1"
-                >
-                  <Button size="sm" className="w-full rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-xs shadow-sm gap-1.5 border-0">
-                    <MessageCircle className="w-3.5 h-3.5" /> Chat WhatsApp
+                {isWhatsappAvailable ? (
+                  <>
+                    <a
+                      href={whatsappLinkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1"
+                    >
+                      <Button size="sm" className="w-full rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-xs shadow-sm gap-1.5 border-0">
+                        <MessageCircle className="w-3.5 h-3.5" /> Chat WhatsApp
+                      </Button>
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCopy(whatsappNumberVal, "WhatsApp Support")}
+                      className="rounded-2xl border-emerald-500/30 px-3 text-xs"
+                    >
+                      {copiedItem === "WhatsApp Support" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    </Button>
+                  </>
+                ) : (
+                  <Button size="sm" disabled variant="outline" className="w-full rounded-2xl text-xs opacity-60 border-emerald-500/30">
+                    Not Available
                   </Button>
-                </a>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleCopy(systemContacts.supportPhone || systemContacts.primaryPhone, "WhatsApp Support")}
-                  className="rounded-2xl border-emerald-500/30 px-3 text-xs"
-                >
-                  {copiedItem === "WhatsApp Support" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                </Button>
+                )}
               </div>
             </motion.div>
 
@@ -421,25 +428,33 @@ const ContactPage = () => {
                 </div>
                 <h3 className="font-display font-bold text-foreground text-base mb-1">24/7 Emergency Support</h3>
                 <p className="text-base font-extrabold text-foreground tracking-wide font-mono mb-1">
-                  {systemContacts.emergencyPhone}
+                  {isAvailable(systemContacts.emergencyPhone) ? systemContacts.emergencyPhone : <span className="text-muted-foreground italic">Not available</span>}
                 </p>
-                <p className="text-xs text-muted-foreground">{systemContacts.workingHours}</p>
+                <p className="text-xs text-muted-foreground">{isAvailable(systemContacts.workingHours) ? systemContacts.workingHours : "Not available"}</p>
               </div>
 
               <div className="mt-5 pt-4 border-t border-border/60 flex items-center gap-2">
-                <a href={`tel:${systemContacts.emergencyPhone.replace(/\s+/g, "")}`} className="flex-1">
-                  <Button size="sm" variant="secondary" className="w-full rounded-2xl font-bold text-xs gap-1.5">
-                    <Phone className="w-3.5 h-3.5" /> Call Helpline
+                {isAvailable(systemContacts.emergencyPhone) ? (
+                  <>
+                    <a href={`tel:${systemContacts.emergencyPhone!.replace(/\s+/g, "")}`} className="flex-1">
+                      <Button size="sm" variant="secondary" className="w-full rounded-2xl font-bold text-xs gap-1.5">
+                        <Phone className="w-3.5 h-3.5" /> Call Helpline
+                      </Button>
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCopy(systemContacts.emergencyPhone!, "Emergency Phone")}
+                      className="rounded-2xl border-border px-3 text-xs"
+                    >
+                      {copiedItem === "Emergency Phone" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    </Button>
+                  </>
+                ) : (
+                  <Button size="sm" disabled variant="outline" className="w-full rounded-2xl text-xs opacity-60">
+                    Not Available
                   </Button>
-                </a>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleCopy(systemContacts.emergencyPhone, "Emergency Phone")}
-                  className="rounded-2xl border-border px-3 text-xs"
-                >
-                  {copiedItem === "Emergency Phone" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                </Button>
+                )}
               </div>
             </motion.div>
 
@@ -462,25 +477,33 @@ const ContactPage = () => {
                 </div>
                 <h3 className="font-display font-bold text-foreground text-base mb-1">Official Email Desk</h3>
                 <p className="text-sm font-extrabold text-foreground tracking-tight font-mono mb-1 truncate">
-                  {systemContacts.primaryEmail}
+                  {isAvailable(systemContacts.primaryEmail) ? systemContacts.primaryEmail : <span className="text-muted-foreground italic">Not available</span>}
                 </p>
-                <p className="text-xs text-muted-foreground">{systemContacts.supportEmail}</p>
+                <p className="text-xs text-muted-foreground">{isAvailable(systemContacts.supportEmail) ? systemContacts.supportEmail : "Support: Not available"}</p>
               </div>
 
               <div className="mt-5 pt-4 border-t border-border/60 flex items-center gap-2">
-                <a href={`mailto:${systemContacts.primaryEmail}`} className="flex-1">
-                  <Button size="sm" variant="secondary" className="w-full rounded-2xl font-bold text-xs gap-1.5">
-                    <Mail className="w-3.5 h-3.5" /> Send Email
+                {isAvailable(systemContacts.primaryEmail) ? (
+                  <>
+                    <a href={`mailto:${systemContacts.primaryEmail}`} className="flex-1">
+                      <Button size="sm" variant="secondary" className="w-full rounded-2xl font-bold text-xs gap-1.5">
+                        <Mail className="w-3.5 h-3.5" /> Send Email
+                      </Button>
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCopy(systemContacts.primaryEmail!, "Primary Email")}
+                      className="rounded-2xl border-border px-3 text-xs"
+                    >
+                      {copiedItem === "Primary Email" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    </Button>
+                  </>
+                ) : (
+                  <Button size="sm" disabled variant="outline" className="w-full rounded-2xl text-xs opacity-60">
+                    Not Available
                   </Button>
-                </a>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleCopy(systemContacts.primaryEmail, "Primary Email")}
-                  className="rounded-2xl border-border px-3 text-xs"
-                >
-                  {copiedItem === "Primary Email" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                </Button>
+                )}
               </div>
             </motion.div>
           </div>
@@ -529,66 +552,70 @@ const ContactPage = () => {
             {[
               {
                 name: "Instagram",
-                handle: "@ababatravels",
-                url: systemSocials.instagram || "https://instagram.com/ababatravels",
+                handle: isAvailable(systemSocials.instagram) ? "@ababatravels" : "Not available",
+                url: systemSocials.instagram || "",
                 icon: Instagram,
                 gradient: "from-purple-600 via-pink-500 to-amber-500",
-                badge: "Official Profile",
+                badge: isAvailable(systemSocials.instagram) ? "Official Profile" : "Not Available",
+                available: isAvailable(systemSocials.instagram),
               },
               {
                 name: "WhatsApp Support",
-                handle: systemContacts.supportPhone || systemContacts.primaryPhone,
-                url:
-                  systemSocials.whatsapp && systemSocials.whatsapp.startsWith("http")
-                    ? systemSocials.whatsapp
-                    : `https://wa.me/${(systemContacts.supportPhone || systemContacts.primaryPhone).replace(/[^0-9]/g, "")}`,
+                handle: isWhatsappAvailable ? whatsappNumberVal : "Not available",
+                url: whatsappLinkUrl,
                 icon: MessageCircle,
                 gradient: "from-emerald-600 to-green-500",
-                badge: "Instant Chat 24/7",
+                badge: isWhatsappAvailable ? "Instant Chat 24/7" : "Not Available",
+                available: isWhatsappAvailable,
               },
               {
                 name: "Facebook",
-                handle: "Ababa Holidays Official",
-                url: systemSocials.facebook || "https://facebook.com/ababatravels",
+                handle: isAvailable(systemSocials.facebook) ? "Ababa Holidays Official" : "Not available",
+                url: systemSocials.facebook || "",
                 icon: Facebook,
                 gradient: "from-blue-700 to-blue-500",
-                badge: "Official Page",
+                badge: isAvailable(systemSocials.facebook) ? "Official Page" : "Not Available",
+                available: isAvailable(systemSocials.facebook),
               },
               {
                 name: "YouTube",
-                handle: "@ababatravels",
-                url: systemSocials.youtube || "https://youtube.com/@ababatravels",
+                handle: isAvailable(systemSocials.youtube) ? "@ababatravels" : "Not available",
+                url: systemSocials.youtube || "",
                 icon: Youtube,
                 gradient: "from-red-600 to-rose-500",
-                badge: "Tour Videos & Reels",
+                badge: isAvailable(systemSocials.youtube) ? "Tour Videos & Reels" : "Not Available",
+                available: isAvailable(systemSocials.youtube),
               },
               {
                 name: "Twitter / X",
-                handle: "@ababatravels",
-                url: systemSocials.twitter || "https://twitter.com/ababatravels",
+                handle: isAvailable(systemSocials.twitter) ? "@ababatravels" : "Not available",
+                url: systemSocials.twitter || "",
                 icon: Twitter,
                 gradient: "from-slate-900 to-slate-700",
-                badge: "Live Travel News",
+                badge: isAvailable(systemSocials.twitter) ? "Live Travel News" : "Not Available",
+                available: isAvailable(systemSocials.twitter),
               },
               {
                 name: "LinkedIn",
-                handle: "Ababa Holidays & Travels",
-                url: systemSocials.linkedin || "https://linkedin.com/company/ababatravels",
+                handle: isAvailable(systemSocials.linkedin) ? "Ababa Holidays & Travels" : "Not available",
+                url: systemSocials.linkedin || "",
                 icon: Linkedin,
                 gradient: "from-sky-700 to-blue-600",
-                badge: "Corporate & Partners",
+                badge: isAvailable(systemSocials.linkedin) ? "Corporate & Partners" : "Not Available",
+                available: isAvailable(systemSocials.linkedin),
               },
               ...(systemSocials.customLinks || []).map((custom: any) => ({
-                name: custom.title,
-                handle: custom.url,
-                url: custom.url,
+                name: custom.title || "Custom Channel",
+                handle: isAvailable(custom.url) ? custom.url : "Not available",
+                url: custom.url || "",
                 icon: Share2,
                 gradient: "from-indigo-600 to-sky-500",
-                badge: "Custom Channel",
+                badge: isAvailable(custom.url) ? "Custom Channel" : "Not Available",
+                available: isAvailable(custom.url),
               })),
             ].map((social, idx) => {
               const SocialIcon = social.icon;
-              return (
+              return social.available ? (
                 <motion.a
                   key={`${social.name}-${idx}`}
                   href={social.url}
@@ -625,6 +652,38 @@ const ContactPage = () => {
                     </span>
                   </div>
                 </motion.a>
+              ) : (
+                <motion.div
+                  key={`${social.name}-${idx}`}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="group relative overflow-hidden rounded-3xl border border-border/50 bg-card/50 p-5 shadow-sm opacity-65 flex flex-col justify-between min-h-[170px]"
+                >
+                  <div className="absolute top-0 inset-x-0 h-1 bg-slate-700/50" />
+
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 rounded-2xl bg-muted text-muted-foreground flex items-center justify-center">
+                        <SocialIcon className="w-5 h-5" />
+                      </div>
+                    </div>
+
+                    <h3 className="font-display font-bold text-muted-foreground text-sm leading-snug">
+                      {social.name}
+                    </h3>
+                    <p className="text-xs font-mono font-medium text-muted-foreground line-clamp-1 mt-0.5 italic">
+                      Not available
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-border/40">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Not Available
+                    </span>
+                  </div>
+                </motion.div>
               );
             })}
           </div>
@@ -897,7 +956,7 @@ const ContactPage = () => {
                 <div className="pt-2 border-t border-border/60">
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground flex items-start gap-1.5 leading-relaxed">
                     <span>📍</span>
-                    <span>{systemContacts.address}</span>
+                    <span>{isAvailable(systemContacts.address) ? systemContacts.address : "Not available"}</span>
                   </p>
                 </div>
               </div>

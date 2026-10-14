@@ -15,7 +15,7 @@ const Step3Location = ({
     }
     setIsSearchingCity(true);
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`);
       const data = await response.json();
       setCitySuggestions(data || []);
     } catch (error) {
@@ -27,52 +27,77 @@ const Step3Location = ({
   };
 
   const selectCitySuggestion = (suggestion) => {
-    formik.setFieldValue('address.city', suggestion.display_name?.split(',')[0] || suggestion.display_name);
+    const addr = suggestion.address || {};
+    const cityName = addr.city || addr.town || addr.village || addr.municipality || addr.county || suggestion.display_name?.split(',')[0]?.trim() || '';
+    
+    formik.setFieldValue('address.city', cityName);
+
     if (!formik.values.address.fullAddress) {
       formik.setFieldValue('address.fullAddress', suggestion.display_name);
     }
+    if (addr.postcode && !formik.values.address.zipCode) {
+      formik.setFieldValue('address.zipCode', addr.postcode);
+    }
+
     formik.setFieldValue('address.latitude', parseFloat(suggestion.lat));
     formik.setFieldValue('address.longitude', parseFloat(suggestion.lon));
+
+    // 1. Automatic Country Selection
+    const countryName = (addr.country || '').trim().toLowerCase();
+    const countryCode = (addr.country_code || '').trim().toUpperCase();
+
+    const matchedCountry = displayCountries.find(c => 
+      (c.code && c.code.toUpperCase() === countryCode) ||
+      (c.name && c.name.toLowerCase() === countryName) ||
+      (typeof c._id === 'string' && (c._id.toLowerCase() === countryName || c._id.toUpperCase() === countryCode))
+    );
+
+    let resolvedCountryId = '';
+    if (matchedCountry) {
+      resolvedCountryId = matchedCountry._id;
+      formik.setFieldValue('address.country', matchedCountry._id);
+    } else if (addr.country) {
+      resolvedCountryId = addr.country;
+      formik.setFieldValue('address.country', addr.country);
+    }
+
+    // 2. Automatic State / Region Selection
+    const rawStateName = (addr.state || addr.region || addr.state_district || '').trim().toLowerCase();
+    if (rawStateName) {
+      // Find candidate states
+      const candidateStates = states && states.length > 0 ? states : displayStates;
+      const matchedState = candidateStates.find(s => {
+        const sName = (s.name || '').trim().toLowerCase();
+        const sId = (typeof s._id === 'string' ? s._id : '').trim().toLowerCase();
+        return sName === rawStateName || sId === rawStateName || rawStateName.includes(sName) || (sName.length > 3 && sName.includes(rawStateName));
+      });
+
+      if (matchedState) {
+        formik.setFieldValue('address.state', matchedState._id);
+      } else if (addr.state || addr.region) {
+        formik.setFieldValue('address.state', addr.state || addr.region);
+      }
+    }
+
     setCitySuggestions([]);
   };
 
   const selectedCountryId = formik.values.address.country;
 
-  // Filter states by selected country
-  const filteredStates = states.filter(s => {
-    if (!selectedCountryId) return true;
-    const countryId = typeof s.country === 'object' ? s.country?._id : s.country;
-    return String(countryId) === String(selectedCountryId);
-  });
+  const displayCountries = (countries && Array.isArray(countries)) ? countries : [];
 
-  const displayCountries = (countries && countries.length > 0) ? countries : [
-    { _id: 'India', name: 'India', code: 'IN' },
-    { _id: 'United Arab Emirates', name: 'United Arab Emirates', code: 'AE' },
-    { _id: 'Saudi Arabia', name: 'Saudi Arabia', code: 'SA' },
-    { _id: 'Thailand', name: 'Thailand', code: 'TH' },
-    { _id: 'Singapore', name: 'Singapore', code: 'SG' },
-    { _id: 'Malaysia', name: 'Malaysia', code: 'MY' },
-    { _id: 'Maldives', name: 'Maldives', code: 'MV' },
-    { _id: 'United States', name: 'United States', code: 'US' },
-    { _id: 'United Kingdom', name: 'United Kingdom', code: 'GB' }
-  ];
+  // Filter states by selected country
+  const filteredStates = (states && Array.isArray(states))
+    ? states.filter(s => {
+        if (!selectedCountryId) return true;
+        const countryId = typeof s.country === 'object' ? s.country?._id : s.country;
+        return String(countryId) === String(selectedCountryId);
+      })
+    : [];
 
   const displayStates = (filteredStates && filteredStates.length > 0)
     ? filteredStates
-    : ((states && states.length > 0) ? states : [
-        { _id: 'Maharashtra', name: 'Maharashtra' },
-        { _id: 'Kerala', name: 'Kerala' },
-        { _id: 'Delhi', name: 'Delhi' },
-        { _id: 'Karnataka', name: 'Karnataka' },
-        { _id: 'Tamil Nadu', name: 'Tamil Nadu' },
-        { _id: 'Gujarat', name: 'Gujarat' },
-        { _id: 'Goa', name: 'Goa' },
-        { _id: 'Rajasthan', name: 'Rajasthan' },
-        { _id: 'West Bengal', name: 'West Bengal' },
-        { _id: 'Telangana', name: 'Telangana' },
-        { _id: 'Uttar Pradesh', name: 'Uttar Pradesh' },
-        { _id: 'Punjab', name: 'Punjab' }
-      ]);
+    : ((states && Array.isArray(states)) ? states : []);
 
   const countryOptions = displayCountries.map(c => ({
     value: c._id,

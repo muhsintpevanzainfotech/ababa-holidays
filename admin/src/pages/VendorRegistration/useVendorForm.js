@@ -4,6 +4,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useToast } from '../../context/ToastContext';
+import { useConfirm } from '../../context/ConfirmDialogContext';
 import { getImageUrl } from '../../utils/constants';
 import api from '../../utils/api';
 import { fetchServicesRequest } from '../../store/slices/servicesSlice';
@@ -17,6 +18,7 @@ export const useVendorForm = (isPublic = false) => {
   const location = useLocation();
   const isViewMode = location.pathname.includes('/view/');
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [imagePreview, setImagePreview] = useState(null);
@@ -83,6 +85,10 @@ export const useVendorForm = (isPublic = false) => {
       description: '',
       businessLicense: '',
       zone: '',
+      coverBanner: null,
+      coverBannerPreview: null,
+      logo: null,
+      logoPreview: null,
       logoS: null,
       logoM: null,
       logoL: null,
@@ -103,7 +109,7 @@ export const useVendorForm = (isPublic = false) => {
       kycStatus: 'Pending',
       isApproved: false,
       seo: { title: '', description: '', keywords: '' },
-      subscriptionPlan: 'Free',
+      subscriptionPlan: '',
       subscription: '',
       selectedServices: [],
       packageCommission: {
@@ -114,6 +120,20 @@ export const useVendorForm = (isPublic = false) => {
     },
     validationSchema,
     onSubmit: async (values) => {
+      // Step confirmation: Require explicit confirmation before saving or closing
+      const isConfirmed = await confirm(
+        id ? 'Update Vendor Profile?' : 'Submit Partner Registration?',
+        `Are you sure you want to finalize and save the onboarding protocol for ${values.companyName || values.name || 'this vendor'}? Please ensure all compliance documents and banking details are verified.`,
+        {
+          confirmText: id ? 'Update Vendor' : 'Submit Registration',
+          variant: 'success'
+        }
+      );
+
+      if (!isConfirmed) {
+        return; // User did not confirm, do not close or save!
+      }
+
       try {
         setIsFinalizing(true);
         const formData = new FormData();
@@ -131,8 +151,21 @@ export const useVendorForm = (isPublic = false) => {
           }
         });
 
+        if (values.subscription) {
+          formData.append('subscriptionId', values.subscription);
+        }
+
         // Append Files
         if (values.avatar instanceof File) formData.append('avatar', values.avatar);
+        if (values.coverBanner instanceof File) {
+          formData.append('coverBanner', values.coverBanner);
+          formData.append('coverBannerFile', values.coverBanner);
+        }
+        if (values.logo instanceof File) {
+          formData.append('logo', values.logo);
+          formData.append('logoFile', values.logo);
+          formData.append('companyLogo', values.logo);
+        }
         if (values.logoS instanceof File) formData.append('logoS', values.logoS);
         if (values.logoM instanceof File) formData.append('logoM', values.logoM);
         if (values.logoL instanceof File) formData.append('logoL', values.logoL);
@@ -200,6 +233,12 @@ export const useVendorForm = (isPublic = false) => {
             description: profile.description || '',
             businessLicense: profile.businessLicense || '',
             zone: profile.zone || '',
+            coverBanner: null,
+            coverBannerPreview: profile.coverBanner ? getImageUrl(profile.coverBanner) : null,
+            logo: null,
+            logoPreview: profile.companylogos?.large 
+              ? getImageUrl(profile.companylogos.large) 
+              : (profile.companylogos?.medium ? getImageUrl(profile.companylogos.medium) : (profile.companylogos?.small ? getImageUrl(profile.companylogos.small) : null)),
             logoS: null,
             logoM: null,
             logoL: null,
@@ -242,7 +281,7 @@ export const useVendorForm = (isPublic = false) => {
               description: seoObj.description || '',
               keywords: Array.isArray(seoObj.keywords) ? seoObj.keywords.join(', ') : (seoObj.keywords || '')
             },
-            subscriptionPlan: profile.subscriptionPlan || 'Free',
+            subscriptionPlan: profile.subscriptionPlan || profile.subscription?.plan || profile.subscription?.title || '',
             subscription: profile.subscription?._id || profile.subscription || '',
             selectedServices: Array.isArray(profile.selectedServices)
               ? profile.selectedServices.map(s => (typeof s === 'object' ? s._id : s))
@@ -269,10 +308,9 @@ export const useVendorForm = (isPublic = false) => {
 
   const handleNext = async () => {
     const fieldsByStep = {
-      1: ['name', 'email', 'phone', ...(id ? [] : ['password'])],
-      2: ['companyName', 'vendorType', 'description', 'spoc.name', 'spoc.phone'],
-      3: ['address.fullAddress', 'address.city', 'address.state', 'address.country'],
-      6: ['subscription']
+      1: ['name', 'email', 'phone', ...(id ? [] : ['password']), 'companyName', 'vendorType', 'description', 'spoc.name', 'spoc.phone'],
+      2: ['address.fullAddress', 'address.city', 'address.state', 'address.country'],
+      5: ['subscription']
     };
 
     const fieldsToValidate = fieldsByStep[currentStep] || [];
@@ -295,7 +333,7 @@ export const useVendorForm = (isPublic = false) => {
         return;
       }
     }
-    setCurrentStep(prev => Math.min(prev + 1, 7));
+    setCurrentStep(prev => Math.min(prev + 1, 6));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -374,6 +412,6 @@ export const useVendorForm = (isPublic = false) => {
     isSearchingCity, setIsSearchingCity, showPassword, setShowPassword,
     loadingVendorData, isViewMode, navigate, id, vendors, vendorsLoading,
     services, servicesLoading, subscriptions, subsLoading,
-    brands, countries, states, handleNestedFileChange, handleDrop, handleArrayToggle
+    brands, countries, states, isPublic, handleNestedFileChange, handleDrop, handleArrayToggle
   };
 };

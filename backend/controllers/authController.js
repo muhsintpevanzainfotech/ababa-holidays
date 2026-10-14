@@ -8,6 +8,8 @@ const Subscription = require('../models/Subscription');
 const jwt = require('jsonwebtoken');
 const { generateOTP, hashOTP, hashToken } = require('../utils/authHelpers');
 const { deleteFile } = require('../utils/fileHelpers');
+const { notifyAdmin } = require('../utils/notificationHelper');
+
 
 // ================= HELPERS =================
 const getOtpTemplate = (otp, title, description, name = '') => {
@@ -164,17 +166,18 @@ const register = asyncHandler(async (req, res, next) => {
         req.body.address = await resolveAddressIds(req.body.address);
       }
 
-      let planTitle = 'Free';
-      if (subscriptionId) {
-        const sub = await Subscription.findById(subscriptionId);
-        if (sub) planTitle = sub.plan;
+      let planTitle = req.body.subscriptionPlan || 'Free';
+      const effectiveSubId = subscriptionId || req.body.subscription;
+      if (effectiveSubId && mongoose.Types.ObjectId.isValid(effectiveSubId)) {
+        const sub = await Subscription.findById(effectiveSubId);
+        if (sub) planTitle = sub.title || sub.plan;
       }
 
       const profilePayload = {
         companyName: companyName || req.body.companyName || (profile ? profile.companyName : 'New Vendor'),
         businessLicense: businessLicense || req.body.businessLicense || (profile ? profile.businessLicense : ''),
         selectedServices: req.body.selectedServices || (profile ? profile.selectedServices : []),
-        subscription: subscriptionId || (profile ? profile.subscription : null),
+        subscription: (effectiveSubId && mongoose.Types.ObjectId.isValid(effectiveSubId)) ? effectiveSubId : (profile ? profile.subscription : null),
         subscriptionPlan: planTitle,
         vendorType: req.body.vendorType || (profile ? profile.vendorType : 'Individual'),
         address: req.body.address || (profile ? profile.address : undefined),
@@ -207,13 +210,28 @@ const register = asyncHandler(async (req, res, next) => {
             if (profile?.bankDetails?.upload) deleteFile(profile.bankDetails.upload);
             profilePayload.bankDetails = { ...(profilePayload.bankDetails || {}), upload: file.path };
         }
+        if (req.files.coverBanner || req.files.coverBannerFile || req.files.coverImage || req.files.banner) {
+          const file = (req.files.coverBanner || req.files.coverBannerFile || req.files.coverImage || req.files.banner)[0];
+          if (profile?.coverBanner) deleteFile(profile.coverBanner);
+          profilePayload.coverBanner = file.path;
+        }
         if (req.files.tradeLicenseUpload || req.files.tradeLicenseFile) {
-            const file = (req.files.tradeLicenseUpload || req.files.tradeLicenseFile)[0];
-            if (profile?.tradeLicenseDoc) deleteFile(profile.tradeLicenseDoc);
-            profilePayload.tradeLicenseDoc = file.path;
+          const file = (req.files.tradeLicenseUpload || req.files.tradeLicenseFile)[0];
+          if (profile?.tradeLicenseDoc) deleteFile(profile.tradeLicenseDoc);
+          profilePayload.tradeLicenseDoc = file.path;
         }
         
-        if (req.files.logoS || req.files.logoM || req.files.logoL) {
+        if (req.files.logo || req.files.logoFile || req.files.companyLogo) {
+          const logoPath = (req.files.logo || req.files.logoFile || req.files.companyLogo)[0].path;
+          if (profile?.companylogos?.small) deleteFile(profile.companylogos.small);
+          if (profile?.companylogos?.medium && profile.companylogos.medium !== profile.companylogos?.small) deleteFile(profile.companylogos.medium);
+          if (profile?.companylogos?.large && profile.companylogos.large !== profile.companylogos?.small) deleteFile(profile.companylogos.large);
+          profilePayload.companylogos = {
+            small: logoPath,
+            medium: logoPath,
+            large: logoPath
+          };
+        } else if (req.files.logoS || req.files.logoM || req.files.logoL) {
           profilePayload.companylogos = {
             small: req.files.logoS ? (deleteFile(profile?.companylogos?.small), req.files.logoS[0].path) : (profile?.companylogos?.small),
             medium: req.files.logoM ? (deleteFile(profile?.companylogos?.medium), req.files.logoM[0].path) : (profile?.companylogos?.medium),
@@ -264,6 +282,9 @@ const register = asyncHandler(async (req, res, next) => {
   const otp = isStaffRole ? undefined : generateOTP();
   if (otp) console.log(`OTP generated for ${email}: ${otp}`);
 
+  const effectiveSubId = subscriptionId || req.body.subscription;
+  const validSubId = (effectiveSubId && mongoose.Types.ObjectId.isValid(effectiveSubId)) ? effectiveSubId : null;
+
   user = await User.create({
     name,
     email,
@@ -274,16 +295,16 @@ const register = asyncHandler(async (req, res, next) => {
     isVerified: isStaffRole ? true : false,
     role: role || 'User',
     managedBy: managedBy || (req.user ? req.user._id : null),
-    subscription: subscriptionId || null
+    subscription: validSubId
   });
 
   // Create Vendor Profile if role is Vendor
   if (user.role === 'Vendor') {
-    let planTitle = 'Free';
-    if (subscriptionId) {
-      const sub = await Subscription.findById(subscriptionId);
+    let planTitle = req.body.subscriptionPlan || 'Free';
+    if (validSubId) {
+      const sub = await Subscription.findById(validSubId);
       if (sub) {
-        planTitle = sub.plan;
+        planTitle = sub.title || sub.plan;
       }
     }
 
@@ -319,7 +340,7 @@ const register = asyncHandler(async (req, res, next) => {
       companyName: companyName || req.body.companyName || 'New Vendor',
       businessLicense: businessLicense || req.body.businessLicense || '',
       selectedServices: req.body.selectedServices || [],
-      subscription: subscriptionId || null,
+      subscription: validSubId,
       subscriptionPlan: planTitle,
       packageCommission: packageCommissionObj,
       isApproved: false,
@@ -356,12 +377,23 @@ const register = asyncHandler(async (req, res, next) => {
         const file = (req.files.bankUpload || req.files.bankFile || req.files.passbookUpload || req.files.passbookFile)[0];
         profilePayload.bankDetails = { ...(profilePayload.bankDetails || {}), upload: file.path };
       }
+      if (req.files.coverBanner || req.files.coverBannerFile || req.files.coverImage || req.files.banner) {
+        const file = (req.files.coverBanner || req.files.coverBannerFile || req.files.coverImage || req.files.banner)[0];
+        profilePayload.coverBanner = file.path;
+      }
       if (req.files.tradeLicenseUpload || req.files.tradeLicenseFile) {
         const file = (req.files.tradeLicenseUpload || req.files.tradeLicenseFile)[0];
         profilePayload.tradeLicenseDoc = file.path;
       }
       
-      if (req.files.logoS || req.files.logoM || req.files.logoL) {
+      if (req.files.logo || req.files.logoFile || req.files.companyLogo) {
+        const logoPath = (req.files.logo || req.files.logoFile || req.files.companyLogo)[0].path;
+        profilePayload.companylogos = {
+          small: logoPath,
+          medium: logoPath,
+          large: logoPath
+        };
+      } else if (req.files.logoS || req.files.logoM || req.files.logoL) {
         profilePayload.companylogos = {
           small: req.files.logoS ? req.files.logoS[0].path : undefined,
           medium: req.files.logoM ? req.files.logoM[0].path : undefined,
@@ -398,6 +430,28 @@ const register = asyncHandler(async (req, res, next) => {
       subject: 'Account Verification',
       html: getOtpTemplate(otp, 'Account Verification', 'Please use the verification code below to complete your registration.')
     });
+  }
+
+  // Trigger Admin Notification when a Vendor registers
+  if (user.role === 'Vendor' || role === 'Vendor') {
+    try {
+      await notifyAdmin({
+        title: 'New Vendor Registration',
+        message: `New partner "${companyName || name}" (${email}) submitted registration and is awaiting onboarding review.`,
+        category: 'vendor',
+        type: 'info',
+        link: '/vendors',
+        metadata: {
+          vendorId: user._id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          companyName: companyName || req.body.companyName
+        }
+      });
+    } catch (notifErr) {
+      console.error('Error sending vendor registration notification to admin:', notifErr.message);
+    }
   }
 
   res.status(201).json({
@@ -443,6 +497,24 @@ const verifyOTP = asyncHandler(async (req, res, next) => {
   await user.save();
 
   if (user.role === 'Vendor') {
+    // Notify admin that vendor completed OTP verification and is awaiting approval
+    try {
+      await notifyAdmin({
+        title: 'Vendor Partner OTP Verified',
+        message: `Vendor partner "${user.name}" (${user.email}) successfully verified their OTP and is awaiting review/approval.`,
+        category: 'vendor',
+        type: 'success',
+        link: '/vendors',
+        metadata: {
+          vendorId: user._id,
+          name: user.name,
+          email: user.email
+        }
+      });
+    } catch (notifErr) {
+      console.error('Error sending vendor OTP verified notification to admin:', notifErr.message);
+    }
+
     const profile = await VendorProfile.findOne({ user: user._id });
     if (!profile || !profile.isApproved) {
       return res.json({
@@ -457,6 +529,7 @@ const verifyOTP = asyncHandler(async (req, res, next) => {
       });
     }
   }
+
 
   const accessToken = generateAccessToken(user._id);
   const refreshToken = generateRefreshToken(user._id);

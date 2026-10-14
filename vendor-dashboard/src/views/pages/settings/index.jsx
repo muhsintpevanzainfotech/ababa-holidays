@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 import {
   Grid, Typography, Stack, Box, Avatar, TextField,
   Divider, Button, Chip, IconButton, InputAdornment,
@@ -292,6 +293,7 @@ const DocumentDropZone = ({
 
 const VendorSettings = () => {
   const theme = useTheme();
+  const { isDark } = useThemeMode();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
 
@@ -1233,7 +1235,7 @@ const VendorSettings = () => {
               sx={{
                 border: '1.5px solid',
                 borderColor: 'primary.light',
-                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(30, 58, 138, 0.25)' : '#eff6ff'),
+                bgcolor: isDark ? 'rgba(65, 160, 174, 0.12)' : '#eff6ff',
                 boxShadow: '0 4px 16px rgba(37, 99, 235, 0.1)'
               }}
             >

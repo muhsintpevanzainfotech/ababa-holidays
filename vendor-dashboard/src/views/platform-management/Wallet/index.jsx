@@ -38,6 +38,7 @@ import FilterChip from 'ui-component/extended/FilterChip';
 import DataTable from 'ui-component/extended/DataTable';
 import { gridSpacing } from 'store/constant';
 import api from 'utils/api';
+import useThemeMode from 'hooks/useThemeMode';
 
 // assets / icons
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
@@ -52,7 +53,7 @@ import SendIcon from '@mui/icons-material/Send';
 import InfoIcon from '@mui/icons-material/Info';
 
 const WalletManagement = () => {
-    const theme = useTheme();
+    const { isDark, theme } = useThemeMode();
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -232,7 +233,7 @@ const WalletManagement = () => {
                     borderRadius: '16px',
                     border: '1px solid',
                     borderColor: 'divider',
-                    bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'background.paper'),
+                    bgcolor: isDark ? '#16152b' : 'background.paper',
                     boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
                 }}
             >
@@ -348,11 +349,15 @@ const WalletManagement = () => {
                                 <Stack direction="row" spacing={1.5} alignItems="center">
                                     <Avatar
                                         sx={{
-                                            bgcolor: row.type === 'Earning' ? '#ecfdf5' : '#fffbeb',
+                                            bgcolor: row.type === 'Earning' 
+                                                ? (isDark ? 'rgba(62, 201, 149, 0.15)' : '#ecfdf5') 
+                                                : (isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb'),
                                             color: row.type === 'Earning' ? '#10b981' : '#f59e0b',
                                             width: 36,
                                             height: 36,
-                                            border: `1px solid ${row.type === 'Earning' ? '#a7f3d0' : '#fde68a'}`
+                                            border: `1px solid ${row.type === 'Earning' 
+                                                ? (isDark ? 'rgba(62, 201, 149, 0.3)' : '#a7f3d0') 
+                                                : (isDark ? 'rgba(245, 158, 11, 0.3)' : '#fde68a')}`
                                         }}
                                     >
                                         {row.type === 'Earning' ? <ArrowDownwardIcon fontSize="small" /> : <ArrowUpwardIcon fontSize="small" />}
@@ -437,15 +442,15 @@ const WalletManagement = () => {
                 <DialogContent>
                     <Grid container spacing={1.5} sx={{ mb: 2.5 }}>
                         <Grid size={{ xs: 6 }}>
-                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'grey.50'), border: '1px solid', borderColor: 'divider' }}>
+                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'grey.50', border: '1px solid', borderColor: 'divider' }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 800, textTransform: 'uppercase' }}>Available Balance</Typography>
-                                <Typography variant="h4" fontWeight="900" color="#ff5252">
+                                <Typography variant="h4" fontWeight="900" color="success.main">
                                     ₹{(walletData.walletBalance || 0).toLocaleString('en-IN')}
                                 </Typography>
                             </Box>
                         </Grid>
                         <Grid size={{ xs: 6 }}>
-                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'grey.50'), border: '1px solid', borderColor: 'divider' }}>
+                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'grey.50', border: '1px solid', borderColor: 'divider' }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 800, textTransform: 'uppercase' }}>Payout Bank</Typography>
                                 <Typography variant="subtitle2" fontWeight="800" color="primary.main" noWrap>
                                     {walletData.bankDetails?.bankName || 'Linked Bank'}
@@ -455,7 +460,7 @@ const WalletManagement = () => {
                     </Grid>
 
                     {walletData.bankDetails?.accountNumber && (
-                        <Box sx={{ p: 1.5, mb: 2.5, borderRadius: '10px', bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(99,102,241,0.1)' : '#eff6ff'), border: '1px solid', borderColor: 'primary.light' }}>
+                        <Box sx={{ p: 1.5, mb: 2.5, borderRadius: '10px', bgcolor: isDark ? 'rgba(65, 160, 174, 0.1)' : '#eff6ff', border: '1px solid', borderColor: 'primary.light' }}>
                             <Typography variant="caption" fontWeight="800" color="primary.main" display="block">
                                 TARGET BANK ACCOUNT:
                             </Typography>

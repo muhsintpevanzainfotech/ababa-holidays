@@ -164,7 +164,19 @@ export default function AuthLogin() {
                 borderRadius: '10px',
                 bgcolor: inputBgColor,
                 color: inputTextColor,
-                '& fieldset': { borderColor: inputBorderColor }
+                '& fieldset': { borderColor: inputBorderColor },
+                '& input': {
+                  color: inputTextColor,
+                  '&:-webkit-autofill, &:-webkit-autofill:hover, &:-webkit-autofill:focus, &:-webkit-autofill:active': {
+                    WebkitBackgroundClip: 'text !important',
+                    backgroundClip: 'text !important',
+                    WebkitTextFillColor: `${inputTextColor} !important`,
+                    WebkitBoxShadow: `0 0 0 1000px ${inputBgColor} inset !important`,
+                    boxShadow: `0 0 0 1000px ${inputBgColor} inset !important`,
+                    transition: 'background-color 9999999s ease-in-out 0s, color 9999999s ease-in-out 0s !important',
+                    caretColor: `${inputTextColor} !important`
+                  }
+                }
               }
             }}
             sx={{
@@ -213,7 +225,19 @@ export default function AuthLogin() {
                 borderRadius: '10px',
                 bgcolor: inputBgColor,
                 color: inputTextColor,
-                '& fieldset': { borderColor: inputBorderColor }
+                '& fieldset': { borderColor: inputBorderColor },
+                '& input': {
+                  color: inputTextColor,
+                  '&:-webkit-autofill, &:-webkit-autofill:hover, &:-webkit-autofill:focus, &:-webkit-autofill:active': {
+                    WebkitBackgroundClip: 'text !important',
+                    backgroundClip: 'text !important',
+                    WebkitTextFillColor: `${inputTextColor} !important`,
+                    WebkitBoxShadow: `0 0 0 1000px ${inputBgColor} inset !important`,
+                    boxShadow: `0 0 0 1000px ${inputBgColor} inset !important`,
+                    transition: 'background-color 9999999s ease-in-out 0s, color 9999999s ease-in-out 0s !important',
+                    caretColor: `${inputTextColor} !important`
+                  }
+                }
               }
             }}
             sx={{

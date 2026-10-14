@@ -36,6 +36,8 @@ const BrandManagement = () => {
     const [loading, setLoading] = useState(true);
     const [brands, setBrands] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     const fetchBrands = async () => {
         try {
@@ -86,7 +88,7 @@ const BrandManagement = () => {
                         placeholder="Search brands..."
                         size="small"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
                         sx={{ width: { xs: '100%', sm: 300 } }}
                         InputProps={{
                             startAdornment: (
@@ -156,6 +158,11 @@ const BrandManagement = () => {
                     ]}
                     rows={filteredBrands}
                     loading={loading}
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalCount={filteredBrands.length}
+                    onPageChange={(e, newPage) => setPage(newPage)}
+                    onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
                     emptyTitle="No Brands Found"
                     emptySubtitle="No agency brands match your search query."
                 />

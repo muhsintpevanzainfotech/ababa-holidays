@@ -104,7 +104,7 @@ export default function SaasHeader({
                             onClick={onActionClick}
                             startIcon={actionIcon}
                             sx={{
-                                bgcolor: '#ff5252',
+                                background: 'linear-gradient(135deg, #36669c 0%, #41a0ae 100%)',
                                 color: '#ffffff',
                                 borderRadius: '10px',
                                 fontWeight: 700,
@@ -112,10 +112,10 @@ export default function SaasHeader({
                                 textTransform: 'none',
                                 px: 2.5,
                                 height: 40,
-                                boxShadow: '0 4px 14px rgba(255, 82, 82, 0.35)',
+                                boxShadow: '0 4px 14px rgba(54, 102, 156, 0.35)',
                                 '&:hover': {
-                                    bgcolor: '#e04848',
-                                    boxShadow: '0 6px 18px rgba(255, 82, 82, 0.45)'
+                                    background: 'linear-gradient(135deg, #2e5784 0%, #358b97 100%)',
+                                    boxShadow: '0 6px 18px rgba(54, 102, 156, 0.45)'
                                 }
                             }}
                         >

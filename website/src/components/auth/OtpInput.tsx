@@ -6,7 +6,8 @@ interface OtpInputProps {
   value: string;
   onChange: (val: string) => void;
   disabled?: boolean;
-  onComplete?: (code: string) => void;
+  onComplete?: (code: string) => void | Promise<void>;
+  autoFocus?: boolean;
 }
 
 export const OtpInput: React.FC<OtpInputProps> = ({
@@ -15,9 +16,17 @@ export const OtpInput: React.FC<OtpInputProps> = ({
   onChange,
   disabled = false,
   onComplete,
+  autoFocus = false,
 }) => {
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const [digits, setDigits] = useState<string[]>(Array(length).fill(""));
+
+  useEffect(() => {
+    if (autoFocus && inputsRef.current[0]) {
+      inputsRef.current[0].focus();
+    }
+  }, [autoFocus]);
+
 
   useEffect(() => {
     const arr = value.split("").slice(0, length);

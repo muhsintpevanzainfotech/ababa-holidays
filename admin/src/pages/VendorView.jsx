@@ -108,7 +108,11 @@ const VendorView = () => {
     const nextVerified = !vendor.isVerified;
     const isConfirmed = await confirm(
       `${nextVerified ? 'Verify' : 'Revoke Verification'} Account?`,
-      `Are you sure you want to mark ${vendor.name} as ${nextVerified ? 'Verified' : 'Unverified'}?`
+      `Are you sure you want to mark ${vendor.name} as ${nextVerified ? 'Verified' : 'Unverified'}?`,
+      {
+        confirmText: nextVerified ? 'Verify Account' : 'Revoke Verification',
+        variant: nextVerified ? 'success' : 'warning'
+      }
     );
 
     if (isConfirmed) {
@@ -128,7 +132,11 @@ const VendorView = () => {
     const action = vendor.isSuspended ? 'unsuspend' : 'suspend';
     const isConfirmed = await confirm(
       `${action.charAt(0).toUpperCase() + action.slice(1)} Vendor?`,
-      `Are you sure you want to ${action} ${vendor.name}? This will affect their ability to manage services.`
+      `Are you sure you want to ${action} ${vendor.name}? ${vendor.isSuspended ? 'They will regain access to their dashboard.' : 'This will affect their ability to manage services.'}`,
+      {
+        confirmText: vendor.isSuspended ? 'Unsuspend Vendor' : 'Suspend Vendor',
+        variant: vendor.isSuspended ? 'success' : 'warning'
+      }
     );
 
     if (isConfirmed) {
@@ -379,16 +387,16 @@ const VendorView = () => {
               borderRadius: '10px',
               fontSize: '12px',
               fontWeight: '800',
-              background: isVerified ? 'rgba(59, 130, 246, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-              color: isVerified ? '#2563eb' : '#dc2626',
-              border: `1px solid ${isVerified ? 'rgba(59, 130, 246, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+              background: isVerified ? 'rgba(34, 197, 94, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+              color: isVerified ? '#16a34a' : '#d97706',
+              border: `1px solid ${isVerified ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.35)'}`,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px'
             }}
           >
-            <ShieldCheck size={14} /> {isVerified ? 'Verified KYC' : 'Unverified KYC'}
+            {isVerified ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />} {isVerified ? 'Verified Account' : 'Verify Account'}
           </button>
 
           {/* Suspension toggle */}

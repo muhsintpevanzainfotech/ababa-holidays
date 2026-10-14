@@ -43,6 +43,7 @@ import DataTable from 'ui-component/extended/DataTable';
 import FileUpload from 'ui-component/extended/FileUpload';
 import { gridSpacing } from 'store/constant';
 import api from 'utils/api';
+import useThemeMode from 'hooks/useThemeMode';
 
 // assets
 import AddIcon from '@mui/icons-material/Add';
@@ -90,10 +91,8 @@ const blogValidationSchema = Yup.object().shape({
 import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
 
 const BlogManagement = () => {
-    const theme = useTheme();
+    const { isDark: isDarkMode, theme } = useThemeMode();
     const navigate = useNavigate();
-    const { mode, systemMode } = useColorScheme();
-    const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
 
     const [loading, setLoading] = useState(true);
     const [blogs, setBlogs] = useState([]);
@@ -284,11 +283,11 @@ const BlogManagement = () => {
     const publishedCount = safeBlogs.filter((b) => b.status === 'Published').length;
     const draftCount = safeBlogs.length - publishedCount;
 
-    const textColor = isDarkMode ? '#ffffff' : '#0f172a';
-    const subTextColor = isDarkMode ? '#cbd5e1' : '#64748b';
-    const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
-    const surfaceBgColor = isDarkMode ? '#090d16' : '#f8fafc';
-    const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0';
+    const textColor = isDarkMode ? '#f9fafb' : '#0f172a';
+    const subTextColor = isDarkMode ? '#9ca3af' : '#64748b';
+    const cardBgColor = isDarkMode ? '#16152b' : '#ffffff';
+    const surfaceBgColor = isDarkMode ? '#212040' : '#f8fafc';
+    const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0';
 
     if (!loading && !isBlogAllowed) {
         return (

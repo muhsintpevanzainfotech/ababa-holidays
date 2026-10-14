@@ -27,7 +27,8 @@ import {
   AccordionSummary,
   AccordionDetails
 } from '@mui/material';
-import { useTheme, useColorScheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -62,8 +63,7 @@ import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestricte
 
 export default function ApiDocumentation() {
   const theme = useTheme();
-  const { mode, systemMode } = useColorScheme();
-  const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark' || theme.palette.mode === 'dark';
+  const { isDark: isDarkMode } = useThemeMode();
   const { user } = useSelector((state) => state.auth);
 
   const [loading, setLoading] = useState(true);
@@ -586,7 +586,7 @@ print("Availability:", avail)`;
           border: '1.5px solid',
           borderColor: isDarkMode ? 'rgba(99,102,241,0.4)' : 'secondary.light',
           background: isDarkMode
-            ? 'linear-gradient(135deg, #111936 0%, #1e1b4b 100%)'
+            ? 'linear-gradient(135deg, #16152b 0%, #212040 100%)'
             : 'linear-gradient(135deg, #eff6ff 0%, #f4f3ff 100%)',
           boxShadow: isDarkMode ? '0 4px 24px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.04)'
         }}
@@ -636,7 +636,7 @@ print("Availability:", avail)`;
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: isDarkMode ? '#090d16 !important' : '#ffffff !important',
+                    bgcolor: isDarkMode ? '#16152b !important' : '#ffffff !important',
                     borderRadius: '12px !important',
                     '& fieldset': {
                       borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2) !important' : 'divider !important'
@@ -766,22 +766,22 @@ print("Availability:", avail)`;
               sx={{
                 borderRadius: '12px !important',
                 border: '1px solid !important',
-                borderColor: isDarkMode ? 'rgba(255,255,255,0.12) !important' : '#e2e8f0 !important',
-                bgcolor: isDarkMode ? '#111936 !important' : '#ffffff !important',
+                borderColor: isDarkMode ? 'rgba(255,255,255,0.08) !important' : '#e2e8f0 !important',
+                bgcolor: isDarkMode ? '#16152b !important' : '#ffffff !important',
                 boxShadow: 'none !important',
                 '&:before': { display: 'none !important' },
                 '&.MuiAccordion-root': {
-                  bgcolor: isDarkMode ? '#111936 !important' : '#ffffff !important',
+                  bgcolor: isDarkMode ? '#16152b !important' : '#ffffff !important',
                   color: isDarkMode ? '#ffffff !important' : '#0f172a !important'
                 },
                 '& .MuiAccordionSummary-root': {
-                  bgcolor: isDarkMode ? '#111936 !important' : '#ffffff !important',
+                  bgcolor: isDarkMode ? '#16152b !important' : '#ffffff !important',
                   borderRadius: '12px !important'
                 },
                 '& .MuiAccordionDetails-root': {
-                  bgcolor: isDarkMode ? '#0d1322 !important' : '#f8fafc !important',
+                  bgcolor: isDarkMode ? '#212040 !important' : '#f8fafc !important',
                   borderTop: '1px solid !important',
-                  borderColor: isDarkMode ? 'rgba(255,255,255,0.1) !important' : '#e2e8f0 !important'
+                  borderColor: isDarkMode ? 'rgba(255,255,255,0.08) !important' : '#e2e8f0 !important'
                 }
               }}
             >

@@ -142,7 +142,29 @@ const DynamicPackageForm = ({
     );
   }
 
-  const activeFields = (fields && Array.isArray(fields)) ? fields : [];
+  const standardFieldKeys = new Set([
+    'title', 'packagename', 'package_name', 'name',
+    'price', 'regularprice', 'originalprice', 'original_price', 'discountprice', 'discount_price',
+    'pricetype', 'price_type', 'pricingunit', 'currency', 'taxrate', 'tax_rate', 'taxpercentage', 'tax_percentage', 'taxpolicy', 'tax_policy',
+    'pricenotes', 'price_notes',
+    'duration', 'days', 'nights',
+    'location', 'destination', 'city', 'country',
+    'description', 'packagedescription', 'package_description', 'overview', 'details',
+    'inclusions', 'inclusion', 'exclusions', 'exclusion',
+    'image', 'images', 'photos', 'gallery',
+    'itinerary', 'schedule', 'dayschedule',
+    'availability', 'availabilitydates', 'dates', 'departure_dates',
+    'badge', 'tag', 'featured', 'isfeatured', 'toppick', 'istoppick', 'toprated',
+    'status', 'isactive', 'active',
+    'seotitle', 'seo_title', 'seodescription', 'seo_description', 'seokeywords', 'seo_keywords'
+  ]);
+
+  const activeFields = (fields && Array.isArray(fields))
+    ? fields.filter(f => {
+        const key = (f.fieldName || f.name || f.key || f.label || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return !standardFieldKeys.has(key);
+      })
+    : [];
 
   if (activeFields.length === 0) {
     return (

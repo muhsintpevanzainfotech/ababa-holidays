@@ -28,6 +28,7 @@ import {
   List,
   Power,
   ShieldCheck,
+  ShieldAlert,
   Globe,
   Smartphone,
   Check
@@ -74,8 +75,12 @@ const Vendors = () => {
   const handleToggleVerification = async (vendor) => {
     const nextVerified = !vendor.isVerified;
     const isConfirmed = await confirm(
-      `${nextVerified ? 'Verify' : 'Unverify'} Account?`,
-      `Are you sure you want to mark ${vendor.name} as ${nextVerified ? 'Verified' : 'Unverified'}?`
+      `${nextVerified ? 'Verify' : 'Revoke Verification'} Account?`,
+      `Are you sure you want to mark ${vendor.name} as ${nextVerified ? 'Verified' : 'Unverified'}?`,
+      {
+        confirmText: nextVerified ? 'Verify Account' : 'Revoke Verification',
+        variant: nextVerified ? 'success' : 'warning'
+      }
     );
 
     if (isConfirmed) {
@@ -87,7 +92,11 @@ const Vendors = () => {
   const handleDelete = async (id) => {
     const isConfirmed = await confirm(
       'Delete Vendor?',
-      'Are you sure you want to delete this vendor account? This action is permanent and cannot be undone.'
+      'Are you sure you want to delete this vendor account? This action is permanent and cannot be undone.',
+      {
+        confirmText: 'Delete Account',
+        variant: 'danger'
+      }
     );
 
     if (isConfirmed) {
@@ -100,7 +109,11 @@ const Vendors = () => {
     const action = vendor.isSuspended ? 'unsuspend' : 'suspend';
     const isConfirmed = await confirm(
       `${action.charAt(0).toUpperCase() + action.slice(1)} Partner?`,
-      `Are you sure you want to ${action} ${vendor.name}? They will lose access to the dashboard until reinstated.`
+      `Are you sure you want to ${action} ${vendor.name}? ${vendor.isSuspended ? 'They will regain access to their dashboard.' : 'They will lose access to the dashboard until reinstated.'}`,
+      {
+        confirmText: vendor.isSuspended ? 'Unsuspend Partner' : 'Suspend Partner',
+        variant: vendor.isSuspended ? 'success' : 'warning'
+      }
     );
 
     if (isConfirmed) {
@@ -287,7 +300,25 @@ const Vendors = () => {
                          <ShieldCheck size={14} /> <span>{vendor.brand.title}</span>
                       </div>
                     )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '13px' }}>
+                      <button 
+                        type="button"
+                        onClick={() => handleToggleVerification(vendor)}
+                        title={vendor.isVerified ? "Verified Partner — Click to unverify" : "Unverified Partner — Click to verify account"}
+                        className={`vendor-verify-badge-btn ${vendor.isVerified ? 'verified' : 'unverified'}`}
+                      >
+                        {vendor.isVerified ? (
+                          <>
+                            <ShieldCheck size={13} />
+                            <span>Verified</span>
+                          </>
+                        ) : (
+                          <>
+                            <ShieldAlert size={13} />
+                            <span>Verify Account</span>
+                          </>
+                        )}
+                      </button>
                       <span style={{
                         padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700',
                         background: vendor.profile?.isApproved ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)',
@@ -405,27 +436,31 @@ const Vendors = () => {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {vendor.isSuspended ? (
                               <span style={{
-                                padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
-                                background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)'
-                              }}>Suspended</span>
-                            ) : (
-                              <span 
-                                onClick={() => handleToggleVerification(vendor)}
-                                title="Click to toggle vendor verification status"
-                                style={{
-                                  padding: '4px 10px',
-                                  borderRadius: '20px',
-                                  fontSize: '11px',
-                                  fontWeight: '700',
-                                  background: vendor.isVerified ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                  color: vendor.isVerified ? '#22c55e' : '#ef4444',
-                                  border: `1px solid ${vendor.isVerified ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                                  cursor: 'pointer',
-                                  userSelect: 'none'
-                                }}
-                              >
-                                {vendor.isVerified ? 'Verified' : 'Unverified'}
+                                padding: '5px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
+                                background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)',
+                                display: 'inline-flex', alignItems: 'center', gap: '5px'
+                              }}>
+                                <UserX size={13} /> Suspended
                               </span>
+                            ) : (
+                              <button 
+                                type="button"
+                                onClick={() => handleToggleVerification(vendor)}
+                                title={vendor.isVerified ? "Verified Partner — Click to unverify" : "Unverified Partner — Click to verify account"}
+                                className={`vendor-verify-badge-btn ${vendor.isVerified ? 'verified' : 'unverified'}`}
+                              >
+                                {vendor.isVerified ? (
+                                  <>
+                                    <ShieldCheck size={14} />
+                                    <span>Verified</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ShieldAlert size={14} />
+                                    <span>Verify Account</span>
+                                  </>
+                                )}
+                              </button>
                             )}
                           </div>
                         </td>

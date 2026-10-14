@@ -2,24 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 
-// material-ui
-import { useTheme, useColorScheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 import Avatar from '@mui/material/Avatar';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
+import ButtonBase from '@mui/material/ButtonBase';
 import Chip from '@mui/material/Chip';
 import ClickAwayListener from '@mui/material/ClickAwayListener';
 import Divider from '@mui/material/Divider';
-import InputAdornment from '@mui/material/InputAdornment';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import OutlinedInput from '@mui/material/OutlinedInput';
 import Paper from '@mui/material/Paper';
 import Popper from '@mui/material/Popper';
 import Stack from '@mui/material/Stack';
-import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 
@@ -31,8 +27,14 @@ import { logout } from 'store/slices/authSlice';
 import api from 'utils/api';
 
 // assets
-import User1 from 'assets/images/users/avatar-user.jpg';
-import { IconLogout, IconSearch, IconSettings, IconUser, IconShieldLock } from '@tabler/icons-react';
+import {
+  IconLogout,
+  IconSettings,
+  IconUser,
+  IconShieldLock,
+  IconWallet,
+  IconChevronDown
+} from '@tabler/icons-react';
 
 // helper for full image url
 const getFullImageUrl = (path) => {
@@ -47,14 +49,13 @@ const getFullImageUrl = (path) => {
 
 export default function ProfileSection() {
   const theme = useTheme();
-  const { mode } = useColorScheme();
+  const { isDark } = useThemeMode();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const {
     state: { borderRadius }
   } = useConfig();
 
-  const [value, setValue] = useState('');
   const [open, setOpen] = useState(false);
   const [vendorProfile, setVendorProfile] = useState(null);
 
@@ -82,20 +83,18 @@ export default function ProfileSection() {
     if (anchorRef.current && anchorRef.current.contains(event.target)) {
       return;
     }
-
     setOpen(false);
   };
 
   const prevOpen = useRef(open);
   useEffect(() => {
     if (prevOpen.current === true && open === false) {
-      anchorRef.current.focus();
+      anchorRef.current?.focus();
     }
-
     prevOpen.current = open;
   }, [open]);
 
-  const isDark = mode === 'dark' || theme.palette.mode === 'dark';
+
 
   const isStaffMember = Boolean(
     user?.managedBy ||
@@ -107,42 +106,92 @@ export default function ProfileSection() {
   const userAvatar = vendorProfile?.avatar || vendorProfile?.profile?.avatar || user?.avatar || user?.profileImage || user?.image || user?.avatarUrl;
   const hasAvatar = Boolean(userAvatar);
   const avatarSrc = hasAvatar ? getFullImageUrl(userAvatar) : '/logo.png';
-  const displayName = vendorProfile?.profile?.companyName || vendorProfile?.name || user?.name || user?.companyName || 'Waterways';
-  const displayRole = vendorProfile?.role || user?.role || 'Vendor';
+  const displayName = vendorProfile?.profile?.companyName || vendorProfile?.name || user?.name || user?.companyName || 'Vendor';
+  const displayRole = vendorProfile?.role || user?.role || 'Vendor Partner';
   const staffName = vendorProfile?.staffDetails?.name || (isStaffMember ? user?.name : '');
 
   return (
     <>
-      <Avatar
-        src={avatarSrc}
-        alt={hasAvatar ? displayName : 'Ababa Travels Logo'}
-        sx={{
-          cursor: 'pointer',
-          borderRadius: '12px',
-          width: '42px',
-          height: '42px',
-          ml: 1.5,
-          bgcolor: hasAvatar ? (isDark ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9') : '#ffffff',
-          p: hasAvatar ? 0 : '3px',
-          border: '2px solid',
-          borderColor: isDark ? '#41a0ae' : '#36669c',
-          boxShadow: isDark ? '0 4px 14px rgba(0,0,0,0.4)' : '0 4px 12px rgba(54, 102, 156, 0.25)',
-          transition: 'all 0.2s ease-in-out',
-          '& img': {
-            objectFit: hasAvatar ? 'cover' : 'contain',
-            borderRadius: '8px'
-          },
-          '&:hover': {
-            borderColor: '#77f07f',
-            transform: 'scale(1.05)',
-            boxShadow: '0 6px 18px rgba(119, 240, 127, 0.3)'
-          }
-        }}
+      <ButtonBase
         ref={anchorRef}
-        aria-controls={open ? 'menu-list-grow' : undefined}
+        aria-controls={open ? 'profile-grow' : undefined}
         aria-haspopup="true"
         onClick={handleToggle}
-      />
+        sx={{
+          p: '4px 8px 4px 5px',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.2,
+          cursor: 'pointer',
+          border: '1px solid',
+          borderColor: open
+            ? (isDark ? '#41a0ae' : '#36669c')
+            : (isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'),
+          bgcolor: open
+            ? (isDark ? 'rgba(65, 160, 174, 0.15)' : 'rgba(54, 102, 156, 0.08)')
+            : (isDark ? 'rgba(255, 255, 255, 0.03)' : '#f8fafc'),
+          transition: 'all 0.2s ease-in-out',
+          '&:hover': {
+            borderColor: isDark ? '#41a0ae' : '#36669c',
+            bgcolor: isDark ? 'rgba(65, 160, 174, 0.12)' : 'rgba(54, 102, 156, 0.06)'
+          }
+        }}
+      >
+        <Avatar
+          src={avatarSrc}
+          alt={hasAvatar ? displayName : 'Ababa Travels Logo'}
+          sx={{
+            borderRadius: '9px',
+            width: 32,
+            height: 32,
+            bgcolor: hasAvatar ? (isDark ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9') : '#ffffff',
+            p: hasAvatar ? 0 : '2px',
+            border: '1px solid',
+            borderColor: isDark ? 'rgba(65, 160, 174, 0.4)' : 'rgba(54, 102, 156, 0.3)',
+            '& img': {
+              objectFit: hasAvatar ? 'cover' : 'contain',
+              borderRadius: '7px'
+            }
+          }}
+        />
+        <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', maxWidth: 140 }}>
+          <Typography
+            noWrap
+            variant="subtitle2"
+            sx={{
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              color: isDark ? '#ffffff' : '#0f172a',
+              lineHeight: 1.2
+            }}
+          >
+            {isStaffMember ? (staffName || displayName) : displayName}
+          </Typography>
+          <Typography
+            noWrap
+            variant="caption"
+            sx={{
+              fontSize: '0.68rem',
+              fontWeight: 600,
+              color: isDark ? '#9ca3af' : '#64748b',
+              lineHeight: 1.1
+            }}
+          >
+            {isStaffMember ? 'Staff Member' : displayRole}
+          </Typography>
+        </Box>
+        <IconChevronDown
+          size={16}
+          stroke={2}
+          style={{
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s ease-in-out',
+            color: isDark ? '#9ca3af' : '#64748b'
+          }}
+        />
+      </ButtonBase>
+
       <Popper
         placement="bottom-end"
         open={open}
@@ -189,8 +238,8 @@ export default function ProfileSection() {
                           src={avatarSrc}
                           alt={hasAvatar ? displayName : 'Ababa Travels Logo'}
                           sx={{
-                            width: 40,
-                            height: 40,
+                            width: 42,
+                            height: 42,
                             borderRadius: '10px',
                             bgcolor: hasAvatar ? (isDark ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9') : '#ffffff',
                             p: hasAvatar ? 0 : '2px',
@@ -215,7 +264,7 @@ export default function ProfileSection() {
                                 {staffName || displayName}
                               </Typography>
                               <Chip
-                                label="Vendor Staff Member"
+                                label="Vendor Staff"
                                 size="small"
                                 color="info"
                                 sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800, my: 0.3, bgcolor: '#2563eb', color: '#ffffff' }}
@@ -280,7 +329,7 @@ export default function ProfileSection() {
                             my: 0.35,
                             py: 1,
                             px: 1.75,
-                            minHeight: 44,
+                            minHeight: 42,
                             transition: 'all 0.15s ease-in-out',
                             '&:hover': {
                               bgcolor: isDark ? 'rgba(65, 160, 174, 0.18)' : 'rgba(54, 102, 156, 0.08)',
@@ -303,34 +352,33 @@ export default function ProfileSection() {
                           />
                         </ListItemButton>
 
-                        <ListItemButton component={Link} to="/system/settings/profile" onClick={handleClose}>
+                        <ListItemButton component={Link} to="/wallet" onClick={handleClose}>
                           <ListItemIcon sx={{ color: isDark ? '#41a0ae' : '#36669c', minWidth: 36 }}>
-                            <IconUser stroke={1.5} size="19px" />
+                            <IconWallet stroke={1.5} size="19px" />
                           </ListItemIcon>
                           <ListItemText
                             primary={
-                              <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: isDark ? '#ffffff !important' : '#1e293b', fontSize: '0.88rem' }}>
-                                  Social Profile
-                                </Typography>
-                                <Chip
-                                  label="02"
-                                  size="small"
-                                  sx={{
-                                    bgcolor: isDark ? 'rgba(119, 240, 127, 0.18)' : '#e6f9f2',
-                                    color: isDark ? '#77f07f' : '#2db382',
-                                    border: '1px solid',
-                                    borderColor: isDark ? 'rgba(119, 240, 127, 0.35)' : '#a4f3d2',
-                                    fontWeight: 800,
-                                    fontSize: '0.7rem',
-                                    height: 20,
-                                    minWidth: 24
-                                  }}
-                                />
-                              </Stack>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: isDark ? '#ffffff !important' : '#1e293b', fontSize: '0.88rem' }}>
+                                My Wallet & Payouts
+                              </Typography>
                             }
                           />
                         </ListItemButton>
+
+                        <ListItemButton component={Link} to="/system/settings/security" onClick={handleClose}>
+                          <ListItemIcon sx={{ color: isDark ? '#41a0ae' : '#36669c', minWidth: 36 }}>
+                            <IconShieldLock stroke={1.5} size="19px" />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: isDark ? '#ffffff !important' : '#1e293b', fontSize: '0.88rem' }}>
+                                Security & Password
+                              </Typography>
+                            }
+                          />
+                        </ListItemButton>
+
+                        <Divider sx={{ my: 0.75, borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0' }} />
 
                         <ListItemButton onClick={handleLogout} sx={{ '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.12) !important' } }}>
                           <ListItemIcon sx={{ color: '#ef4444', minWidth: 36 }}>

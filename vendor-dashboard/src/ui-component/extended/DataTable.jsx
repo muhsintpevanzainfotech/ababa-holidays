@@ -1,11 +1,11 @@
 import PropTypes from 'prop-types';
 import { 
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
-    Paper, LinearProgress, Box, Typography, Stack, Skeleton 
+    Paper, LinearProgress, Box, Typography, Skeleton 
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 import SaasTablePagination from './SaasTablePagination';
 import FolderOffIcon from '@mui/icons-material/FolderOff';
+import useThemeMode from 'hooks/useThemeMode';
 
 const DataTable = ({
     columns = [],
@@ -23,12 +23,10 @@ const DataTable = ({
     minWidth = 700,
     sx = {}
 }) => {
-    const theme = useTheme();
-    const isLightExplicit = theme.palette.mode === 'light' && document.documentElement.getAttribute('data-color-scheme') === 'light';
-    const isDarkMode = !isLightExplicit;
+    const { isDark: isDarkMode } = useThemeMode();
 
-    const cardBgColor = isDarkMode ? '#111827' : '#ffffff';
-    const surfaceBgColor = isDarkMode ? '#1f2937' : '#f8fafc';
+    const cardBgColor = isDarkMode ? '#16152b' : '#ffffff';
+    const surfaceBgColor = isDarkMode ? '#212040' : '#f8fafc';
     const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0';
     const subTextColor = isDarkMode ? '#9ca3af' : '#64748b';
     const textColor = isDarkMode ? '#f9fafb' : '#0f172a';
@@ -36,7 +34,14 @@ const DataTable = ({
     const tableRows = Array.isArray(rows) ? rows : (Array.isArray(data) ? data : []);
     const count = totalCount !== undefined ? totalCount : tableRows.length;
     
-    const paginatedRows = (page !== undefined && rowsPerPage !== undefined && totalCount === undefined)
+    // Automatically slice client-side rows when pagination is enabled
+    const shouldSlice = 
+        onPageChange && 
+        page !== undefined && 
+        rowsPerPage !== undefined && 
+        (totalCount === undefined || totalCount === tableRows.length || tableRows.length > rowsPerPage);
+
+    const paginatedRows = shouldSlice
         ? tableRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
         : tableRows;
 
@@ -46,16 +51,26 @@ const DataTable = ({
         <Paper
             elevation={0}
             sx={{
-                borderRadius: '6px',
+                borderRadius: '10px',
                 border: '1px solid',
                 borderColor: borderLineColor,
                 backgroundColor: cardBgColor,
                 overflow: 'hidden',
-                boxShadow: 'none',
+                boxShadow: isDarkMode ? '0 4px 20px rgba(0, 0, 0, 0.25)' : '0 2px 12px rgba(15, 23, 42, 0.03)',
                 ...sx
             }}
         >
-            {loading && <LinearProgress sx={{ height: 3, backgroundColor: 'transparent' }} />}
+            {loading && (
+                <LinearProgress 
+                    sx={{ 
+                        height: 3, 
+                        bgcolor: isDarkMode ? 'rgba(65, 160, 174, 0.15)' : 'rgba(54, 102, 156, 0.1)',
+                        '& .MuiLinearProgress-bar': {
+                            bgcolor: isDarkMode ? '#41a0ae' : '#36669c'
+                        }
+                    }} 
+                />
+            )}
 
             <TableContainer>
                 <Table sx={{ minWidth }}>
@@ -68,7 +83,7 @@ const DataTable = ({
                                     sx={{
                                         color: subTextColor,
                                         fontWeight: 800,
-                                        fontSize: '0.72rem',
+                                        fontSize: '0.74rem',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.06em',
                                         py: 1.75,
@@ -101,7 +116,12 @@ const DataTable = ({
                                                 pr: cIdx === cols.length - 1 ? 3 : 2
                                             }}
                                         >
-                                            <Skeleton variant="text" height={24} width={cIdx === 0 ? '70%' : '50%'} />
+                                            <Skeleton 
+                                                variant="text" 
+                                                height={24} 
+                                                width={cIdx === 0 ? '70%' : '50%'} 
+                                                sx={{ bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : undefined }}
+                                            />
                                         </TableCell>
                                     ))}
                                 </TableRow>
@@ -128,11 +148,11 @@ const DataTable = ({
                                     key={row._id || row.id || rIdx}
                                     hover
                                     sx={{
-                                        '&:last-child td, &:last-child th': { border: 0 },
+                                        '&:last-child td, &:last-child th': { borderBottom: 0 },
                                         borderColor: borderLineColor,
                                         transition: 'background-color 0.15s ease',
                                         '&:hover': {
-                                            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.035) !important' : '#f8fafc !important'
+                                            backgroundColor: isDarkMode ? 'rgba(65, 160, 174, 0.08) !important' : 'rgba(54, 102, 156, 0.04) !important'
                                         }
                                     }}
                                 >

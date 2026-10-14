@@ -5,6 +5,7 @@ export interface HomeState {
   popularDestinations: any[];
   offerBanners: any[];
   testimonials: any[];
+  coupons: any[];
   loading: boolean;
   error: string | null;
 }
@@ -14,6 +15,7 @@ const initialState: HomeState = {
   popularDestinations: [],
   offerBanners: [],
   testimonials: [],
+  coupons: [],
   loading: false,
   error: null,
 };
@@ -33,6 +35,7 @@ const homeSlice = createSlice({
         popularDestinations: any[];
         offerBanners: any[];
         testimonials: any[];
+        coupons?: any[];
       }>
     ) {
       state.loading = false;
@@ -40,6 +43,7 @@ const homeSlice = createSlice({
       state.popularDestinations = action.payload.popularDestinations;
       state.offerBanners = action.payload.offerBanners;
       state.testimonials = action.payload.testimonials || [];
+      state.coupons = action.payload.coupons || [];
     },
     fetchHomeDataFailure(state, action: PayloadAction<string>) {
       state.loading = false;

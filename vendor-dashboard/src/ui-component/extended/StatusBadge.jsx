@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import Chip from '@mui/material/Chip';
-import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 
 const formatStatusLabel = (val) => {
     if (val === undefined || val === null || String(val).trim() === '') {
@@ -51,6 +51,13 @@ const getBadgeStyle = (status = '', isDark = false) => {
                 color: isDark ? '#fbbf24' : '#d97706',
                 border: isDark ? 'rgba(251, 191, 36, 0.4)' : '#fde68a'
             };
+        case 'correction':
+        case 'needs correction':
+            return {
+                bg: isDark ? 'rgba(249, 115, 22, 0.18)' : '#fff7ed',
+                color: isDark ? '#fb923c' : '#ea580c',
+                border: isDark ? 'rgba(251, 146, 60, 0.4)' : '#ffedd5'
+            };
         case 'inactive':
         case 'suspended':
         case 'rejected':
@@ -87,8 +94,7 @@ const getBadgeStyle = (status = '', isDark = false) => {
 };
 
 export default function StatusBadge({ label, status, size = 'small', icon }) {
-    const theme = useTheme();
-    const isDark = theme.palette.mode === 'dark';
+    const { isDark } = useThemeMode();
     
     // Accept either label or status prop
     const rawVal = label !== undefined && label !== null && label !== '' ? label : status;

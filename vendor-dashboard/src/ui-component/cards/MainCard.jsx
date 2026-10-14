@@ -37,22 +37,22 @@ export default function MainCard({
       {...others}
       sx={(theme) => ({
         border: border ? '1px solid' : 'none',
-        borderColor: theme.vars.palette.divider,
+        borderColor: theme.vars?.palette?.divider || '#e2e8f0',
         borderRadius: '16px !important',
-        background: border ? 'rgba(255, 255, 255, 0.96)' : 'inherit',
+        background: border ? '#ffffff' : 'inherit',
         backdropFilter: 'blur(12px)',
         boxShadow: boxShadow ? shadow || defaultShadow : 'none',
         transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease',
         ':hover': {
           transform: 'translateY(-2px)',
           boxShadow: boxShadow ? hoverShadow : 'none',
-          borderColor: 'rgba(37, 99, 235, 0.3)'
+          borderColor: 'rgba(54, 102, 156, 0.35)'
         },
         ...theme.applyStyles('dark', {
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-          background: 'rgba(17, 24, 39, 0.92)',
+          borderColor: 'rgba(255, 255, 255, 0.08)',
+          background: border ? '#16152b' : 'inherit',
           ':hover': {
-            borderColor: 'rgba(59, 130, 246, 0.4)'
+            borderColor: 'rgba(65, 160, 174, 0.4)'
           }
         }),
         ...(typeof sx === 'function' ? sx(theme) : sx || {})

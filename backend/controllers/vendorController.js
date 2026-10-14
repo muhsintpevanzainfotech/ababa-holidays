@@ -8,6 +8,8 @@ const Subscription = require('../models/Subscription');
 const Booking = require('../models/Booking');
 const { generateOTP, hashOTP, hashToken } = require('../utils/authHelpers');
 const { deleteFile } = require('../utils/fileHelpers');
+const { notifyAdmin, notifyVendor } = require('../utils/notificationHelper');
+
 
 // Registration and Login for Vendors are now handled by authController.js
 
@@ -81,8 +83,34 @@ const approveVendor = asyncHandler(async (req, res, next) => {
   profile.isApproved = true;
   await profile.save();
 
+  // Send Admin Notification and Vendor Notification on Approval
+  try {
+    const user = await User.findById(req.params.id);
+    await notifyAdmin({
+      title: 'Vendor Partner Approved',
+      message: `Partner agency "${profile.companyName || user?.name || 'Vendor'}" has been approved.`,
+      category: 'vendor',
+      type: 'success',
+      link: '/vendors',
+      metadata: { vendorId: req.params.id }
+    });
+
+    if (user) {
+      await notifyVendor(user._id, {
+        title: 'Partner Account Approved! 🎉',
+        message: 'Your partner agency account has been approved by admin. You can now publish packages and receive bookings.',
+        category: 'system',
+        type: 'success',
+        link: '/dashboard'
+      });
+    }
+  } catch (notifErr) {
+    console.error('Error sending vendor approval notification:', notifErr);
+  }
+
   // Send Welcome & Account Activation Email to Vendor
   const user = await User.findById(req.params.id);
+
   if (user && user.email) {
     try {
       const loginUrl = process.env.VENDOR_LOGIN_URL || 'https://ababa-holidays-vendor.vercel.app/login';
@@ -295,9 +323,10 @@ const updateVendorProfile = asyncHandler(async (req, res, next) => {
       if (user && user.avatar && !user.avatar.startsWith('http')) deleteFile(user.avatar);
       await User.findByIdAndUpdate(req.user.id, { avatar: req.files.avatar[0].path }, { returnDocument: 'after' });
     }
-    if (req.files.coverBanner) {
+    if (req.files.coverBanner || req.files.coverBannerFile || req.files.coverImage || req.files.banner) {
+      const file = (req.files.coverBanner || req.files.coverBannerFile || req.files.coverImage || req.files.banner)[0];
       if (profile.coverBanner) deleteFile(profile.coverBanner);
-      details.coverBanner = req.files.coverBanner[0].path;
+      details.coverBanner = file.path;
     }
     if (req.files.tradeLicenseUpload || req.files.tradeLicenseFile) {
       const file = req.files.tradeLicenseUpload ? req.files.tradeLicenseUpload[0] : req.files.tradeLicenseFile[0];
@@ -330,20 +359,26 @@ const updateVendorProfile = asyncHandler(async (req, res, next) => {
       if (profile.idCard) deleteFile(profile.idCard);
       details.idCard = file.path;
     }
-    if (req.files.logoS) {
-      const existingLogos = details.companylogos || profile.companylogos || {};
+    if (req.files.logo || req.files.logoFile || req.files.companyLogo) {
+      const file = (req.files.logo || req.files.logoFile || req.files.companyLogo)[0];
       if (profile.companylogos?.small && !profile.companylogos.small.includes('default')) deleteFile(profile.companylogos.small);
-      details.companylogos = { ...existingLogos, small: req.files.logoS[0].path };
-    }
-    if (req.files.logoM) {
-      const existingLogos = details.companylogos || profile.companylogos || {};
-      if (profile.companylogos?.medium && !profile.companylogos.medium.includes('default')) deleteFile(profile.companylogos.medium);
-      details.companylogos = { ...existingLogos, medium: req.files.logoM[0].path };
-    }
-    if (req.files.logoL) {
-      const existingLogos = details.companylogos || profile.companylogos || {};
-      if (profile.companylogos?.large && !profile.companylogos.large.includes('default')) deleteFile(profile.companylogos.large);
-      details.companylogos = { ...existingLogos, large: req.files.logoL[0].path };
+      details.companylogos = { small: file.path, medium: file.path, large: file.path };
+    } else {
+      if (req.files.logoS) {
+        const existingLogos = details.companylogos || profile.companylogos || {};
+        if (profile.companylogos?.small && !profile.companylogos.small.includes('default')) deleteFile(profile.companylogos.small);
+        details.companylogos = { ...existingLogos, small: req.files.logoS[0].path };
+      }
+      if (req.files.logoM) {
+        const existingLogos = details.companylogos || profile.companylogos || {};
+        if (profile.companylogos?.medium && !profile.companylogos.medium.includes('default')) deleteFile(profile.companylogos.medium);
+        details.companylogos = { ...existingLogos, medium: req.files.logoM[0].path };
+      }
+      if (req.files.logoL) {
+        const existingLogos = details.companylogos || profile.companylogos || {};
+        if (profile.companylogos?.large && !profile.companylogos.large.includes('default')) deleteFile(profile.companylogos.large);
+        details.companylogos = { ...existingLogos, large: req.files.logoL[0].path };
+      }
     }
   }
 
@@ -461,11 +496,22 @@ const createVendor = asyncHandler(async (req, res, next) => {
       const file = (req.files.bankUpload || req.files.bankFile || req.files.passbookUpload || req.files.passbookFile)[0];
       profilePayload.bankDetails = { ...(profilePayload.bankDetails || {}), upload: file.path };
     }
+    if (req.files.coverBanner || req.files.coverBannerFile || req.files.coverImage || req.files.banner) {
+      const file = (req.files.coverBanner || req.files.coverBannerFile || req.files.coverImage || req.files.banner)[0];
+      profilePayload.coverBanner = file.path;
+    }
     if (req.files.tradeLicenseUpload || req.files.tradeLicenseFile) {
       const file = (req.files.tradeLicenseUpload || req.files.tradeLicenseFile)[0];
       profilePayload.tradeLicenseDoc = file.path;
     }
-    if (req.files.logoS || req.files.logoM || req.files.logoL) {
+    if (req.files.logo || req.files.logoFile || req.files.companyLogo) {
+      const file = (req.files.logo || req.files.logoFile || req.files.companyLogo)[0];
+      profilePayload.companylogos = {
+        small: file.path,
+        medium: file.path,
+        large: file.path
+      };
+    } else if (req.files.logoS || req.files.logoM || req.files.logoL) {
       profilePayload.companylogos = {
         small: req.files.logoS ? req.files.logoS[0].path : undefined,
         medium: req.files.logoM ? req.files.logoM[0].path : undefined,
@@ -510,6 +556,19 @@ const createVendor = asyncHandler(async (req, res, next) => {
   } catch (error) {
     console.error('Error sending registration email:', error);
     // Continue without error since account is already created
+  }
+
+  try {
+    await notifyAdmin({
+      title: 'New Partner Onboarded',
+      message: `Partner agency "${name}" (${email}) has been successfully created.`,
+      category: 'vendor',
+      type: 'success',
+      link: '/vendors',
+      metadata: { vendorId: user._id, name, email }
+    });
+  } catch (notifErr) {
+    console.error('Error sending admin notification on createVendor:', notifErr);
   }
 
   res.status(201).json({
@@ -637,11 +696,23 @@ const updateVendor = asyncHandler(async (req, res, next) => {
       const existingBank = profileUpdates.bankDetails || profile.bankDetails || {};
       profileUpdates.bankDetails = { ...existingBank, upload: file.path };
     }
+    if (req.files.coverBanner || req.files.coverBannerFile || req.files.coverImage || req.files.banner) {
+      const file = (req.files.coverBanner || req.files.coverBannerFile || req.files.coverImage || req.files.banner)[0];
+      if (profile.coverBanner) deleteFile(profile.coverBanner);
+      profileUpdates.coverBanner = file.path;
+    }
     if (req.files.tradeLicenseUpload || req.files.tradeLicenseFile) {
       const file = (req.files.tradeLicenseUpload || req.files.tradeLicenseFile)[0];
       profileUpdates.tradeLicenseDoc = file.path;
     }
-    if (req.files.logoS || req.files.logoM || req.files.logoL) {
+    if (req.files.logo || req.files.logoFile || req.files.companyLogo) {
+      const file = (req.files.logo || req.files.logoFile || req.files.companyLogo)[0];
+      profileUpdates.companylogos = {
+        small: file.path,
+        medium: file.path,
+        large: file.path
+      };
+    } else if (req.files.logoS || req.files.logoM || req.files.logoL) {
       const existingLogos = profileUpdates.companylogos || profile.companylogos || {};
       profileUpdates.companylogos = {
         small: req.files.logoS ? req.files.logoS[0].path : existingLogos.small,

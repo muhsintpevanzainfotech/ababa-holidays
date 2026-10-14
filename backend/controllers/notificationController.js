@@ -6,7 +6,7 @@ const ErrorResponse = require('../utils/errorResponse');
 // @route   GET /api/notifications
 // @access  Private
 const getNotifications = asyncHandler(async (req, res, next) => {
-  let filter = { user: req.user.id };
+  let filter = {};
 
   if (req.user && (req.user.role === 'Admin' || req.user.role === 'Sub-Admin')) {
     filter = {
@@ -28,13 +28,17 @@ const getNotifications = asyncHandler(async (req, res, next) => {
         { recipientRole: 'All' }
       ]
     };
-  } else {
+  } else if (req.user) {
     filter = {
       $or: [
         { user: req.user.id },
-        { recipientRole: 'Customer' },
-        { recipientRole: 'All' }
+        { recipientRole: { $in: ['Customer', 'All'] } }
       ]
+    };
+  } else {
+    // Guest visitor browsing the public website - only public customer/all announcements
+    filter = {
+      recipientRole: { $in: ['Customer', 'All'] }
     };
   }
 
@@ -52,8 +56,15 @@ const getNotifications = asyncHandler(async (req, res, next) => {
 
 // @desc    Mark notification as read
 // @route   PUT /api/notifications/:id/read
-// @access  Private
+// @access  Private / Public Guest
 const markAsRead = asyncHandler(async (req, res, next) => {
+  if (!req.user) {
+    return res.json({
+      success: true,
+      message: 'Notification marked as read'
+    });
+  }
+
   const notification = await Notification.findById(req.params.id);
 
   if (!notification) {
@@ -80,8 +91,15 @@ const markAsRead = asyncHandler(async (req, res, next) => {
 
 // @desc    Mark all notifications as read
 // @route   PUT /api/notifications/mark-all-read
-// @access  Private
+// @access  Private / Public Guest
 const markAllRead = asyncHandler(async (req, res, next) => {
+  if (!req.user) {
+    return res.json({
+      success: true,
+      message: 'All notifications marked as read'
+    });
+  }
+
   let filter = { user: req.user.id, isRead: false };
 
   if (req.user && (req.user.role === 'Admin' || req.user.role === 'Sub-Admin')) {
@@ -118,8 +136,15 @@ const markAllRead = asyncHandler(async (req, res, next) => {
 
 // @desc    Clear all notifications
 // @route   DELETE /api/notifications
-// @access  Private
+// @access  Private / Public Guest
 const clearNotifications = asyncHandler(async (req, res, next) => {
+  if (!req.user) {
+    return res.json({
+      success: true,
+      message: 'Notifications cleared'
+    });
+  }
+
   let filter = { user: req.user.id };
 
   if (req.user && (req.user.role === 'Admin' || req.user.role === 'Sub-Admin')) {

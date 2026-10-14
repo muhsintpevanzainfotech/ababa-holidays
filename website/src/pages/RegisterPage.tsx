@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   ArrowLeft,
   BadgeCheck,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -143,13 +144,13 @@ const RegisterPage = () => {
     setIsLoading(true);
     try {
       const res = await verifyOtpApi({ email, otp: code });
-      const token = res.accessToken || res.token || "demo-jwt-token-xyz123";
-      const user = {
-        id: res._id || "u-102",
-        name: res.name || name,
-        email: res.email || email,
-        phone: phone || res.phone,
-        role: res.role || "user",
+      const token = res.token || "demo-jwt-token-xyz123";
+      const user = res.user || {
+        id: "u-102",
+        name: name,
+        email: email,
+        phone: phone,
+        role: "User",
       };
 
       dispatch(loginSuccess({ token, user }));
@@ -239,6 +240,23 @@ const RegisterPage = () => {
             OTP Verification
           </div>
         </div>
+
+        {/* Switch to Vendor Register Banner */}
+        {step === 1 && (
+          <div className="mb-5 p-3 rounded-2xl bg-accent/10 border border-accent/20 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-center sm:text-left">
+            <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
+              <Building2 className="w-4 h-4 text-accent shrink-0" />
+              Are you a travel company, hotelier, or fleet operator?
+            </span>
+            <Link
+              to="/vendor-register"
+              className="font-bold text-accent hover:underline shrink-0 flex items-center gap-1 bg-accent/15 px-3 py-1 rounded-xl"
+            >
+              <span>Partner Onboarding</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+        )}
 
         {/* Form Container */}
         <div className="bg-card/90 backdrop-blur-xl border border-border/80 rounded-3xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
@@ -369,6 +387,22 @@ const RegisterPage = () => {
                     </>
                   )}
                 </Button>
+
+                <p className="text-[11px] text-center text-muted-foreground pt-1 leading-relaxed">
+                  By creating an account, you agree to dotravels{" "}
+                  <Link to="/terms" className="text-accent font-semibold hover:underline">
+                    Terms & Conditions
+                  </Link>
+                  ,{" "}
+                  <Link to="/refund" className="text-accent font-semibold hover:underline">
+                    Refund Policy
+                  </Link>
+                  , and{" "}
+                  <Link to="/privacy" className="text-accent font-semibold hover:underline">
+                    Privacy Policy
+                  </Link>
+                  .
+                </p>
               </motion.form>
             )}
 

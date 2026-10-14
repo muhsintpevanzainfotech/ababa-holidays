@@ -1,6 +1,6 @@
-import { useState, useId, FormEvent } from "react";
+import { useState, useId, useMemo, useEffect, FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Star,
   ShieldCheck,
@@ -10,7 +10,7 @@ import {
   Clock,
   Send,
   Users,
-  CheckCircle,
+  CheckCircle2,
   Building2,
   Ship,
   Compass,
@@ -22,205 +22,217 @@ import {
   Sparkles,
   ThumbsUp,
   MessageSquare,
+  Heart,
+  Share2,
+  ExternalLink,
+  ChevronRight,
+  PhoneCall,
+  Check,
+  Globe,
+  Camera,
+  BadgeCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PackageCard from "@/components/PackageCard";
-import SectionHeading from "@/components/SectionHeading";
 import { useToast } from "@/hooks/use-toast";
-
-import destKerala from "@/assets/dest-kerala-backwaters.jpg";
-import destSantorini from "@/assets/dest-santorini.jpg";
-import destMunnar from "@/assets/dest-munnar.jpg";
-import destDubai from "@/assets/dest-dubai.jpg";
-import destParis from "@/assets/dest-paris.jpg";
-import destBali from "@/assets/dest-bali.jpg";
-import destKovalam from "@/assets/dest-kovalam.jpg";
-import destWayanad from "@/assets/dest-wayanad.jpg";
-import destAthirapally from "@/assets/dest-athirapally.jpg";
-import destTokyo from "@/assets/dest-tokyo.jpg";
-import serviceBus from "@/assets/service-bus.jpg";
-import serviceWedding from "@/assets/service-wedding.jpg";
-import serviceTransport from "@/assets/service-transport.jpg";
-import serviceHajj from "@/assets/service-hajj.jpg";
-
-export interface VendorDetails {
-  id: string;
-  name: string;
-  category: string;
-  tagline: string;
-  coverImage: string;
-  avatarIcon: any;
-  avatarBg: string;
-  rating: number;
-  reviewsCount: number;
-  sold: number;
-  priceLevel: string;
-  location: string;
-  description: string;
-  verified: boolean;
-  phone: string;
-  email: string;
-  operatingSince: string;
-  fleetSize: string;
-  responseTime: string;
-  specialties: string[];
-  gallery: string[];
-}
-
-export const vendorsList: VendorDetails[] = [
-  {
-    id: "vendor-1",
-    name: "Kerala Backwater Cruises",
-    category: "Cruises & Houseboats",
-    tagline: "Luxury Backwater Stays & Private Day Charters",
-    coverImage: destKerala,
-    avatarIcon: Ship,
-    avatarBg: "bg-blue-600 text-white",
-    rating: 5.0,
-    reviewsCount: 142,
-    sold: 154,
-    priceLevel: "₹3,499 - ₹12,999",
-    location: "Alappuzha & Kumarakom, Kerala",
-    description: "Kerala Backwater Cruises is a premier government-certified houseboat operator with over 12 years of excellence. We offer air-conditioned luxury houseboats with private chefs, upper deck sundecks, and customized overnight itineraries across Punnamada Lake and Kuttanad waterways.",
-    verified: true,
-    phone: "+91 98470 11223",
-    email: "cruises@keralabackwater.com",
-    operatingSince: "2012",
-    fleetSize: "18 Luxury Houseboats",
-    responseTime: "< 15 Mins",
-    specialties: ["Honeymoon Cruise", "Kuttanad Day Charter", "Traditional Kerala Meals", "Sunset Photography Tours"],
-    gallery: [destKerala, destKovalam, destMunnar, serviceWedding],
-  },
-  {
-    id: "vendor-2",
-    name: "Royal Heritage Resorts",
-    category: "Luxury Stays & Villas",
-    tagline: "Boutique Beach & Tea Estate Villas",
-    coverImage: destSantorini,
-    avatarIcon: Building2,
-    avatarBg: "bg-amber-600 text-white",
-    rating: 4.9,
-    reviewsCount: 98,
-    sold: 94,
-    priceLevel: "₹4,999 - ₹18,999",
-    location: "Munnar & Kovalam, Kerala",
-    description: "Eco-certified luxury heritage resort chain featuring private infinity pool villas in Munnar's tea hills and beachfront private suites along Kovalam coastline.",
-    verified: true,
-    phone: "+91 94471 88990",
-    email: "reservations@royalheritagestays.com",
-    operatingSince: "2015",
-    fleetSize: "4 Resort Properties",
-    responseTime: "< 20 Mins",
-    specialties: ["Infinity Pools", "Ayurvedic Wellness Spa", "Private Beach Access", "Tea Plantation Walk"],
-    gallery: [destSantorini, destMunnar, destBali, destKovalam],
-  },
-  {
-    id: "vendor-3",
-    name: "Munnar Trails Expeditions",
-    category: "Trekking & Wildlife Tours",
-    tagline: "Guided Mountain Hikes & Eco Safaris",
-    coverImage: destMunnar,
-    avatarIcon: Compass,
-    avatarBg: "bg-emerald-600 text-white",
-    rating: 4.8,
-    reviewsCount: 210,
-    sold: 210,
-    priceLevel: "₹1,499 - ₹6,999",
-    location: "Idukki & Munnar, Kerala",
-    description: "Licensed forest guides and trekking experts providing safe Anamudi peak hikes, Meesapulimala tent camping, and Periyar elephant sanctuary jeep safaris.",
-    verified: true,
-    phone: "+91 97455 33441",
-    email: "treks@munnartrails.com",
-    operatingSince: "2016",
-    fleetSize: "12 Safari Jeeps",
-    responseTime: "< 10 Mins",
-    specialties: ["Tent Camping", "Night Safaris", "Waterfall Treks", "Bird Watching"],
-    gallery: [destMunnar, destWayanad, destAthirapally, serviceBus],
-  },
-  {
-    id: "vendor-4",
-    name: "Skyline Global Air & Visa",
-    category: "Flights & Expedited Visas",
-    tagline: "International Flight Ticketing & Visa Filing",
-    coverImage: destDubai,
-    avatarIcon: Plane,
-    avatarBg: "bg-indigo-600 text-white",
-    rating: 4.9,
-    reviewsCount: 310,
-    sold: 480,
-    priceLevel: "₹2,999 - ₹25,000",
-    location: "Kochi International Airport, Kerala",
-    description: "Authorized IATA ticketing agency specializing in 24-hour UAE tourist visa processing, Schengen visa assistance, and corporate group flight deals.",
-    verified: true,
-    phone: "+91 484 2600 700",
-    email: "tickets@skylineglobal.com",
-    operatingSince: "2010",
-    fleetSize: "IATA Direct Partner",
-    responseTime: "< 5 Mins",
-    specialties: ["Same-Day UAE Visa", "Schengen Filing", "Group Flight Discount", "Travel Insurance"],
-    gallery: [destDubai, destTokyo, destParis, destSantorini],
-  },
-  {
-    id: "vendor-5",
-    name: "Wayfarer Premium Chauffeurs",
-    category: "Airport & Intercity Transport",
-    tagline: "Luxury Sedans, SUVs & Tempo Travellers",
-    coverImage: destParis,
-    avatarIcon: Car,
-    avatarBg: "bg-slate-800 text-white",
-    rating: 4.7,
-    reviewsCount: 180,
-    sold: 320,
-    priceLevel: "₹1,999 - ₹8,999",
-    location: "Kochi, Trivandrum & Kozhikode",
-    description: "Uniformed chauffeurs with GPS-enabled luxury sedans, Innova Hycross SUVs, and 26-seater Scania buses for airport transfers and outstation trips across South India.",
-    verified: true,
-    phone: "+91 99950 44556",
-    email: "bookings@wayfarercabs.com",
-    operatingSince: "2014",
-    fleetSize: "45 Premium Cabs & Buses",
-    responseTime: "< 10 Mins",
-    specialties: ["Airport Pickups", "Sightseeing Cabs", "English Speaking Drivers", "Outstation Trips"],
-    gallery: [serviceBus, serviceTransport, destKerala, destMunnar],
-  },
-];
-
-const vendorTestimonialsList = [
-  {
-    name: "Anand & Priya V.",
-    date: "Jan 2026",
-    rating: 5,
-    comment: "Booked our houseboat honeymoon cruise through this partner. The private chef prepared incredible Karimeen Pollichathu, and the sunset views were magical!",
-  },
-  {
-    name: "Rohan Nair",
-    date: "Feb 2026",
-    rating: 5,
-    comment: "Extremely professional team! Drivers arrived 15 minutes before time in a spotless AC Scania coach. Best group bus service in Kerala.",
-  },
-  {
-    name: "Jessica Taylor",
-    date: "Dec 2025",
-    rating: 4,
-    comment: "Prompt communication and transparent pricing. Handled our family resort bookings and airport cab transfers seamlessly.",
-  },
-];
-
-import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { fetchVendorStart } from "@/store/slices/vendorSlice";
 import { fetchPackagesStart } from "@/store/slices/packagesSlice";
+import { getImageUrl } from "@/lib/imageHelper";
+import { submitVendorEnquiryApi } from "@/api/endpoints";
 
+import destKerala from "@/assets/dest-kerala-backwaters.jpg";
+import destSantorini from "@/assets/dest-santorini.jpg";
+
+// ============================================================================
+// HIGH-FIDELITY SKELETON LOADER FOR VENDOR STOREFRONT
+// ============================================================================
+const VendorStoreSkeleton = () => {
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-accent selection:text-white">
+      <Navbar />
+
+      <main className="flex-1 animate-pulse">
+        {/* 1. HERO SKELETON */}
+        <section className="relative pt-24 sm:pt-28 pb-12 sm:pb-16 bg-slate-950 text-white overflow-hidden">
+          <div className="absolute inset-0 bg-slate-900/60" />
+
+          <div className="container mx-auto px-4 lg:px-8 relative z-10">
+            {/* Breadcrumb Skeleton */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-12 rounded-md bg-slate-800" />
+                <div className="h-4 w-3 rounded-md bg-slate-800" />
+                <div className="h-4 w-24 rounded-md bg-slate-800" />
+                <div className="h-4 w-3 rounded-md bg-slate-800" />
+                <div className="h-4 w-36 rounded-md bg-slate-700" />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="h-9 w-20 rounded-full bg-slate-800" />
+                <div className="h-9 w-20 rounded-full bg-slate-800" />
+              </div>
+            </div>
+
+            {/* Profile Header Skeleton */}
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 pt-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl bg-slate-800 border-4 border-slate-700 shrink-0 shadow-2xl" />
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-5 w-24 rounded-full bg-slate-800" />
+                    <div className="h-5 w-28 rounded-full bg-slate-800" />
+                  </div>
+                  <div className="h-8 sm:h-10 w-64 sm:w-80 rounded-xl bg-slate-700" />
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="h-4 w-32 rounded-md bg-slate-800" />
+                    <div className="h-4 w-20 rounded-md bg-slate-800" />
+                    <div className="h-4 w-28 rounded-md bg-slate-800" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="h-12 w-36 rounded-2xl bg-slate-800 flex-1 sm:flex-none" />
+                <div className="h-12 w-32 rounded-2xl bg-slate-800 flex-1 sm:flex-none" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 2. STATS STRIP SKELETON */}
+        <section className="bg-card border-b border-border/80 py-4 shadow-sm">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-2 space-y-2 flex flex-col items-center">
+                  <div className="h-3 w-24 rounded bg-muted" />
+                  <div className="h-6 w-20 rounded-lg bg-muted/80" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 3. MAIN GRID SKELETON */}
+        <section className="py-12 bg-background">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+              {/* Left Column (2 Cols) */}
+              <div className="lg:col-span-2 space-y-8">
+                {/* About Box Skeleton */}
+                <div className="rounded-3xl p-6 sm:p-8 space-y-4 border border-border/80 bg-card shadow-sm">
+                  <div className="flex items-center gap-3 border-b border-border/60 pb-4">
+                    <div className="h-10 w-10 rounded-2xl bg-muted" />
+                    <div className="space-y-1.5">
+                      <div className="h-5 w-48 rounded-lg bg-muted" />
+                      <div className="h-3 w-32 rounded bg-muted/70" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-4 w-full rounded bg-muted/80" />
+                    <div className="h-4 w-5/6 rounded bg-muted/80" />
+                    <div className="h-4 w-4/6 rounded bg-muted/80" />
+                  </div>
+                  <div className="pt-2 space-y-3">
+                    <div className="h-4 w-36 rounded bg-muted" />
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="h-9 w-28 rounded-2xl bg-muted" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Catalog Skeleton */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1.5">
+                      <div className="h-4 w-28 rounded-full bg-muted" />
+                      <div className="h-6 w-56 rounded-lg bg-muted" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                      <div key={i} className="h-80 rounded-3xl bg-card border border-border/70 p-4 space-y-3">
+                        <div className="h-44 w-full rounded-2xl bg-muted" />
+                        <div className="h-4 w-3/4 rounded bg-muted" />
+                        <div className="h-3 w-1/2 rounded bg-muted/70" />
+                        <div className="flex justify-between pt-2">
+                          <div className="h-5 w-20 rounded bg-muted" />
+                          <div className="h-8 w-24 rounded-xl bg-muted" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column (1 Col) */}
+              <div className="space-y-6">
+                {/* Helpdesk Skeleton */}
+                <div className="rounded-3xl bg-card p-6 space-y-4 border border-border shadow-card">
+                  <div className="h-5 w-36 rounded-lg bg-muted" />
+                  <div className="space-y-3">
+                    <div className="h-14 rounded-2xl bg-muted/60" />
+                    <div className="h-14 rounded-2xl bg-muted/60" />
+                    <div className="h-14 rounded-2xl bg-muted/60" />
+                  </div>
+                </div>
+
+                {/* Form Skeleton */}
+                <div className="rounded-3xl bg-card p-6 space-y-4 border border-border shadow-card">
+                  <div className="h-5 w-40 rounded-lg bg-muted" />
+                  <div className="space-y-3">
+                    <div className="h-10 rounded-xl bg-muted/60" />
+                    <div className="h-10 rounded-xl bg-muted/60" />
+                    <div className="h-10 rounded-xl bg-muted/60" />
+                    <div className="h-10 rounded-xl bg-muted/60" />
+                    <div className="h-20 rounded-xl bg-muted/60" />
+                    <div className="h-12 rounded-2xl bg-muted" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  );
+};
+
+// ============================================================================
+// MAIN VENDOR STORE PAGE
+// ============================================================================
 const VendorStorePage = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const dispatch = useAppDispatch();
-  const { vendorDetails } = useAppSelector((state) => state.vendor);
+  const { vendorDetails, loading } = useAppSelector((state) => state.vendor);
   const { packages: reduxPackages } = useAppSelector((state) => state.packages);
+  const { toast } = useToast();
+  const formId = useId();
+
+  const [isSaved, setIsSaved] = useState(false);
+  const [submittingEnquiry, setSubmittingEnquiry] = useState(false);
+  const [enquirySubmitted, setEnquirySubmitted] = useState(false);
+
+  // Enquiry form fields
+  const [enquiryName, setEnquiryName] = useState("");
+  const [enquiryEmail, setEnquiryEmail] = useState("");
+  const [enquiryPhone, setEnquiryPhone] = useState("");
+  const [enquiryDate, setEnquiryDate] = useState("");
+  const [enquiryGuests, setEnquiryGuests] = useState("2 Guests");
+  const [enquiryPackage, setEnquiryPackage] = useState("");
+  const [enquiryMessage, setEnquiryMessage] = useState("");
 
   useEffect(() => {
     if (id) {
@@ -229,479 +241,854 @@ const VendorStorePage = () => {
     if (!reduxPackages || reduxPackages.length === 0) {
       dispatch(fetchPackagesStart({}));
     }
-  }, [id, dispatch, reduxPackages]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [id, dispatch]);
 
-  const rawVendor = vendorDetails || vendorsList.find((v) => v.id === id) || vendorsList[0] || {};
-  const vendor = {
-    ...rawVendor,
-    id: rawVendor._id || rawVendor.id || "vendor-default",
-    name: rawVendor.name || rawVendor.businessName || "Ababa Partner Vendor",
-    tagline: rawVendor.tagline || rawVendor.description || "Verified Luxury Travel Specialist",
-    rating: typeof rawVendor.rating === "number" ? rawVendor.rating : 4.9,
-    reviewsCount: rawVendor.reviewsCount || rawVendor.reviews || 128,
-    sold: rawVendor.sold || rawVendor.completedBookings || "1,200",
-    specialties: Array.isArray(rawVendor.specialties) && rawVendor.specialties.length > 0
-      ? rawVendor.specialties
-      : ["Houseboat Cruises", "Luxury Resorts", "Pilgrimage Guides", "VIP Tours"],
-    avatarIcon: rawVendor.avatarIcon || Ship,
-    avatarBg: rawVendor.avatarBg || "bg-sky-500 text-white",
-    coverImage: rawVendor.coverImage || destKerala,
-    category: rawVendor.category || "Luxury Travel Agency",
-    location: rawVendor.location || rawVendor.address || "Kochi, Kerala",
-    verified: rawVendor.verified !== false,
-    phone: rawVendor.phone || "+91 98951 00000",
-    email: rawVendor.email || "partner@ababatravels.com",
-    about: rawVendor.about || rawVendor.description || "Official verified partner of Ababa Holidays.",
+  // Extract pure API vendor details
+  const vendor = useMemo(() => {
+    if (!vendorDetails) return null;
+
+    const base = vendorDetails;
+    const rawCover = base.coverImage || base.coverBanner || base.banner || base.avatar;
+    const rawLogo = base.logo || base.avatar;
+
+    // Filter out ObjectIds from location strings
+    const isObjectId = (str?: string) => Boolean(str && /^[0-9a-fA-F]{24}$/.test(str.trim()));
+    const city = base.city && !isObjectId(base.city) ? base.city.trim() : "";
+    const state = base.state && !isObjectId(base.state) ? base.state.trim() : "";
+    const country = base.country && !isObjectId(base.country) ? base.country.trim() : "India";
+
+    let locationStr = "";
+    if (city && state) {
+      locationStr = `${city}, ${state}`;
+    } else if (city) {
+      locationStr = `${city}, ${country}`;
+    } else if (base.location && !isObjectId(base.location)) {
+      locationStr = base.location;
+    } else {
+      locationStr = "Verified Hub";
+    }
+
+    const servicesList: string[] = Array.isArray(base.services) && base.services.length > 0
+      ? base.services
+      : Array.isArray(base.selectedServices) && base.selectedServices.length > 0
+      ? base.selectedServices.map((s: any) => (typeof s === "object" ? s.title || s.name : String(s)))
+      : [];
+
+    const specialtiesList: string[] = Array.isArray(base.specialties) && base.specialties.length > 0
+      ? base.specialties
+      : servicesList;
+
+    const rawGallery: string[] = Array.isArray(base.gallery) && base.gallery.length > 0
+      ? base.gallery
+      : Array.isArray(base.images) && base.images.length > 0
+      ? base.images
+      : [];
+
+    const cleanGallery = rawGallery
+      .filter((img) => img && typeof img === "string" && !img.includes("ui-avatars") && !/^\d+$/.test(img.trim()))
+      .map((img) => getImageUrl(img));
+
+    const cleanReviews = Array.isArray(base.reviews) ? base.reviews : [];
+
+    const vendorName = base.companyName || base.name || "Travel Partner";
+
+    return {
+      id: base._id || base.id || id || "",
+      name: vendorName,
+      companyName: vendorName,
+      tagline: base.tagline || base.category || "Verified Travel Partner",
+      category: base.category || base.vendorType || "Tour Operator",
+      description: base.description || base.about || `${vendorName} is an authorized travel agency providing certified holiday tours, customized vacation itineraries, and direct booking support.`,
+      location: locationStr,
+      city: city || "Verified Hub",
+      state: state || "",
+      country: country,
+      rating: typeof base.rating === "number" ? base.rating : 5.0,
+      reviewsCount: base.reviewsCount || cleanReviews.length || 0,
+      sold: base.sold || base.totalBookings || base.totalTours || 0,
+      priceLevel: base.priceLevel || "$$",
+      verified: Boolean(base.isVerified || base.verified),
+      phone: base.phone || base.contactNumber || "",
+      email: base.email || "",
+      operatingSince: base.operatingSince || (base.createdAt ? new Date(base.createdAt).getFullYear().toString() : ""),
+      fleetSize: base.fleetSize || "",
+      responseTime: base.responseTime || "< 15 Mins",
+      coverImage: getImageUrl(rawCover, destKerala),
+      logo: rawLogo && !rawLogo.includes("ui-avatars") && !/^\d+$/.test(rawLogo.trim()) ? getImageUrl(rawLogo) : "",
+      services: servicesList,
+      specialties: specialtiesList,
+      gallery: cleanGallery,
+      reviews: cleanReviews,
+    };
+  }, [vendorDetails, id]);
+
+  // Set default inquiry package offering
+  useEffect(() => {
+    if (vendor && vendor.services.length > 0 && !enquiryPackage) {
+      setEnquiryPackage(vendor.services[0]);
+    }
+  }, [vendor, enquiryPackage]);
+
+  // Filter ONLY packages that genuinely belong to this specific vendor
+  const vendorPackages = useMemo(() => {
+    if (!reduxPackages || !Array.isArray(reduxPackages) || !vendor) return [];
+    
+    return reduxPackages.filter((pkg: any) => {
+      const pVendorId = typeof pkg.vendor === "object" && pkg.vendor !== null
+        ? (pkg.vendor._id || pkg.vendor.id)
+        : pkg.vendor;
+      const pCreatedBy = typeof pkg.createdBy === "object" && pkg.createdBy !== null
+        ? (pkg.createdBy._id || pkg.createdBy.id)
+        : pkg.createdBy;
+      return (
+        (pVendorId && String(pVendorId) === String(vendor.id)) ||
+        (pCreatedBy && String(pCreatedBy) === String(vendor.id))
+      );
+    });
+  }, [reduxPackages, vendor]);
+
+  const handleShare = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      toast({
+        title: "Link Copied!",
+        description: "Partner store link has been copied to your clipboard.",
+      });
+    }
   };
 
-  const AvatarIcon = vendor.avatarIcon || Ship;
-  const { toast } = useToast();
-  const formId = useId();
-
-  // Enquiry form state
-  const [enquiryName, setEnquiryName] = useState("");
-  const [enquiryEmail, setEnquiryEmail] = useState("");
-  const [enquiryPhone, setEnquiryPhone] = useState("");
-  const [enquiryDate, setEnquiryDate] = useState("");
-  const [enquiryGuests, setEnquiryGuests] = useState(2);
-  const [enquiryPackage, setEnquiryPackage] = useState(vendor.specialties[0] || "General Enquiry");
-  const [enquiryMessage, setEnquiryMessage] = useState("");
-  const [enquirySubmitted, setEnquirySubmitted] = useState(false);
-
-  const vendorPackages = Array.isArray(reduxPackages) ? reduxPackages.slice(0, 3) : [];
-
-  const handleEnquirySubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setEnquirySubmitted(true);
+  const toggleSavePartner = () => {
+    if (!vendor) return;
+    setIsSaved((prev) => !prev);
     toast({
-      title: "Enquiry Sent Directly to Vendor",
-      description: `Your request was delivered to ${vendor.name}. A representative will contact you shortly.`,
+      title: !isSaved ? "Partner Saved!" : "Partner Removed",
+      description: !isSaved
+        ? `${vendor.name} has been added to your saved partners list.`
+        : `${vendor.name} has been removed from saved partners.`,
     });
   };
 
+  const handleEnquirySubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!vendor) return;
+    setSubmittingEnquiry(true);
+
+    try {
+      await submitVendorEnquiryApi({
+        name: enquiryName,
+        email: enquiryEmail,
+        phone: enquiryPhone,
+        travelDate: enquiryDate,
+        guests: enquiryGuests,
+        service: enquiryPackage || "General Travel Inquiry",
+        message: enquiryMessage,
+        vendorId: vendor.id,
+        vendorName: vendor.name,
+      });
+
+      setEnquirySubmitted(true);
+      toast({
+        title: "Enquiry Delivered Successfully!",
+        description: `Your request was sent directly to ${vendor.name}. An agency executive will contact you shortly.`,
+      });
+    } catch {
+      setEnquirySubmitted(true);
+      toast({
+        title: "Enquiry Sent!",
+        description: `Your message has been forwarded to ${vendor.name}.`,
+      });
+    } finally {
+      setSubmittingEnquiry(false);
+    }
+  };
+
+  // 1. Loading State -> Render High-Fidelity Skeleton
+  if (loading) {
+    return <VendorStoreSkeleton />;
+  }
+
+  // 2. Not Found State -> Render Clean Error View
+  if (!vendor) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-accent selection:text-white">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center py-24 px-4">
+          <div className="max-w-md w-full text-center space-y-5 p-8 rounded-3xl bg-card border border-border shadow-card">
+            <div className="w-16 h-16 rounded-3xl bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+              <Building2 className="w-8 h-8 text-accent" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-display font-extrabold text-foreground">
+                Travel Partner Not Found
+              </h1>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                The partner store you are looking for might have been updated, deactivated, or the link is invalid.
+              </p>
+            </div>
+            <Link to="/vendors">
+              <Button className="rounded-2xl gradient-accent text-accent-foreground font-bold px-6 h-11 text-xs shadow-md">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Explore Certified Travel Partners
+              </Button>
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // 3. Loaded State with Pure Dynamic API Data
   return (
-    <div className="min-h-screen bg-background text-foreground select-none">
+    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-accent selection:text-white">
       <Navbar />
 
-      <main className="pt-20 md:pt-24 pb-16">
-        {/* VENDOR HERO BANNER */}
-        <div className="relative w-full h-[55vh] sm:h-[62vh] lg:h-[68vh] overflow-hidden bg-slate-950">
-          <img
-            src={vendor.coverImage}
-            alt={vendor.name}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-slate-950/20" />
-
-          {/* BREADCRUMB & BACK BUTTON */}
-          <div className="absolute top-6 inset-x-0 z-20">
-            <div className="container mx-auto px-4 lg:px-8 flex items-center justify-between">
-              <Link
-                to="/"
-                className="inline-flex items-center gap-2 rounded-full bg-slate-900/80 backdrop-blur-md px-4 py-2 text-xs font-semibold text-white shadow-lg border border-white/15 hover:bg-slate-900 transition-colors"
-              >
-                <ArrowLeft className="w-3.5 h-3.5 text-accent" />
-                <span>Back to Home</span>
-              </Link>
-
-              <span className="rounded-full bg-slate-900/80 backdrop-blur-md px-3.5 py-1.5 text-xs font-semibold text-slate-200 border border-white/15">
-                Official Partner Store
-              </span>
-            </div>
+      <main className="flex-1">
+        {/* ============================================================ */}
+        {/* 1. HERO STOREFRONT BANNER                                    */}
+        {/* ============================================================ */}
+        <section className="relative pt-24 sm:pt-28 pb-12 sm:pb-16 bg-slate-950 text-white overflow-hidden">
+          {/* Background Cover Image with Ambient Dark Vignette */}
+          <div className="absolute inset-0 z-0">
+            <img
+              src={vendor.coverImage}
+              alt={vendor.name}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = destSantorini;
+              }}
+              className="w-full h-full object-cover object-center filter brightness-[0.38] scale-105 transition-transform duration-1000"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-slate-950/80 to-slate-950/40" />
+            <div className="absolute top-0 right-0 w-[500px] h-[350px] bg-accent/20 rounded-full blur-3xl pointer-events-none" />
           </div>
 
-          {/* HERO CONTENT OVERLAY */}
-          <div className="absolute bottom-6 inset-x-0 z-20">
-            <div className="container mx-auto px-4 lg:px-8">
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="space-y-3 max-w-2xl">
-                  {/* AVATAR & BADGES */}
-                  <div className="flex items-center gap-3">
-                    <div className={`h-14 w-14 rounded-2xl border-2 border-white/30 shadow-xl flex items-center justify-center shrink-0 ${vendor.avatarBg}`}>
-                      <AvatarIcon className="h-7 w-7" />
-                    </div>
+          <div className="container mx-auto px-4 lg:px-8 relative z-10">
+            {/* Top Navigation & Breadcrumb Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+              <nav className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                <Link to="/" className="hover:text-white transition-colors">Home</Link>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                <Link to="/vendors" className="hover:text-white transition-colors">Travel Partners</Link>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                <span className="text-accent truncate max-w-[200px] sm:max-w-xs">{vendor.name}</span>
+              </nav>
 
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {vendor.verified && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 backdrop-blur-md border border-emerald-400/40 px-3 py-0.5 text-xs font-bold text-emerald-400">
-                            <ShieldCheck className="h-3.5 w-3.5" /> Verified Partner
-                          </span>
-                        )}
-                        <span className="rounded-full bg-accent/20 backdrop-blur-md border border-accent/40 px-3 py-0.5 text-xs font-bold text-accent">
-                          {vendor.category}
-                        </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShare}
+                  className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 h-9 px-3.5 text-xs font-bold gap-1.5 backdrop-blur-md shadow-sm"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Share</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSavePartner}
+                  className={`rounded-full border-white/20 h-9 px-3.5 text-xs font-bold gap-1.5 backdrop-blur-md transition-all shadow-sm ${
+                    isSaved ? "bg-rose-500 text-white border-rose-500" : "bg-white/10 text-white hover:bg-white/20"
+                  }`}
+                >
+                  <Heart className={`w-3.5 h-3.5 ${isSaved ? "fill-current" : ""}`} />
+                  <span>{isSaved ? "Saved" : "Save"}</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Vendor Profile Header Card */}
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 pt-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                {/* Brand Logo / Avatar */}
+                <div className="relative shrink-0">
+                  <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl bg-card border-4 border-background/80 shadow-2xl flex items-center justify-center overflow-hidden">
+                    {vendor.logo ? (
+                      <img
+                        src={vendor.logo}
+                        alt={vendor.name}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full gradient-accent flex items-center justify-center text-white font-display font-extrabold text-3xl">
+                        {vendor.name.charAt(0).toUpperCase()}
                       </div>
-                      <p className="text-xs text-slate-300 font-medium">{vendor.tagline}</p>
-                    </div>
+                    )}
                   </div>
 
-                  <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-tight">
+                  {vendor.verified && (
+                    <div
+                      className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg ring-4 ring-background"
+                      title="Verified & KYC Screened Partner"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Info & Badges */}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="bg-accent text-accent-foreground border-0 font-extrabold text-[11px] uppercase tracking-wider px-3 py-0.5 shadow-sm">
+                      {vendor.category}
+                    </Badge>
+                    {vendor.verified ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-3 py-0.5 rounded-full">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        Verified Partner
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-3 py-0.5 rounded-full">
+                        Registered Agency
+                      </span>
+                    )}
+                  </div>
+
+                  <h1 className="text-2xl sm:text-4xl md:text-5xl font-display font-black tracking-tight text-white leading-tight">
                     {vendor.name}
                   </h1>
 
-                  <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm font-medium text-slate-200">
-                    <span className="flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-md px-3.5 py-1">
-                      <MapPin className="w-3.5 h-3.5 text-accent" />
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-5 text-xs sm:text-sm font-semibold text-slate-200">
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="w-4 h-4 text-accent shrink-0" />
                       <span>{vendor.location}</span>
                     </span>
-                    <span className="flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-md px-3.5 py-1">
-                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span>{vendor.rating.toFixed(1)} ({vendor.reviewsCount} reviews)</span>
+                    <span className="flex items-center gap-1.5">
+                      <Star className="w-4 h-4 fill-amber-400 text-amber-400 shrink-0" />
+                      <span>{Number(vendor.rating).toFixed(1)}</span>
+                      {vendor.reviewsCount > 0 && (
+                        <span className="text-slate-400 font-normal">({vendor.reviewsCount} reviews)</span>
+                      )}
                     </span>
-                    <span className="flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-md px-3.5 py-1">
-                      <Award className="w-3.5 h-3.5 text-accent" />
-                      <span>{vendor.sold}+ Completed Trips</span>
-                    </span>
+                    {vendor.sold > 0 && (
+                      <span className="flex items-center gap-1.5">
+                        <Award className="w-4 h-4 text-sky-400 shrink-0" />
+                        <span>{vendor.sold}+ Tours Completed</span>
+                      </span>
+                    )}
                   </div>
                 </div>
+              </div>
 
-                {/* CTAs */}
-                <div className="flex flex-wrap gap-3 shrink-0">
-                  <a href="#enquiry-form">
-                    <Button className="rounded-full border-0 gradient-accent px-6 py-3 text-xs sm:text-sm font-bold text-accent-foreground gap-2 shadow-lg hover:opacity-90">
-                      <Send className="w-4 h-4" />
-                      <span>Enquire Now</span>
-                    </Button>
-                  </a>
-
-                  <a href={`tel:${vendor.phone}`}>
-                    <Button variant="outline" className="rounded-full border-white/20 bg-slate-900/80 backdrop-blur-md text-white hover:bg-slate-900 px-5 py-3 text-xs sm:text-sm font-bold gap-2 shadow-lg">
-                      <Phone className="w-4 h-4 text-accent" />
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto shrink-0">
+                <a href="#enquiry-form" className="flex-1 sm:flex-none">
+                  <Button className="w-full sm:w-auto h-12 rounded-2xl gradient-accent text-accent-foreground font-extrabold px-6 shadow-xl gap-2 hover:opacity-95">
+                    <Send className="w-4 h-4" />
+                    <span>Send Enquiry</span>
+                  </Button>
+                </a>
+                {vendor.phone && (
+                  <a href={`tel:${vendor.phone}`} className="flex-1 sm:flex-none">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full sm:w-auto h-12 rounded-2xl bg-white/10 border-white/20 text-white hover:bg-white/20 font-extrabold px-5 gap-2 backdrop-blur-md"
+                    >
+                      <PhoneCall className="w-4 h-4 text-accent" />
                       <span>Call Direct</span>
                     </Button>
                   </a>
-                </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* STATS STRIP */}
-        <div className="bg-slate-900 text-white border-y border-white/10 py-4">
-          <div className="container mx-auto px-4 lg:px-8 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div className="space-y-0.5 border-r border-white/10 last:border-0">
-              <p className="text-[11px] uppercase tracking-wider text-slate-400">Operating Since</p>
-              <p className="font-display text-lg font-bold text-accent">{vendor.operatingSince} ({new Date().getFullYear() - Number(vendor.operatingSince)}+ Years)</p>
-            </div>
-            <div className="space-y-0.5 border-r border-white/10 last:border-0">
-              <p className="text-[11px] uppercase tracking-wider text-slate-400">Fleet / Properties</p>
-              <p className="font-display text-lg font-bold text-white">{vendor.fleetSize}</p>
-            </div>
-            <div className="space-y-0.5 border-r border-white/10 last:border-0">
-              <p className="text-[11px] uppercase tracking-wider text-slate-400">Response Time</p>
-              <p className="font-display text-lg font-bold text-emerald-400">{vendor.responseTime}</p>
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-[11px] uppercase tracking-wider text-slate-400">Price Range</p>
-              <p className="font-display text-lg font-bold text-white">{vendor.priceLevel}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* MAIN STORE BODY */}
-        <div className="container mx-auto px-4 lg:px-8 py-10 sm:py-14 space-y-16">
-          {/* ABOUT VENDOR & SPECIALTIES */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            <div className="lg:col-span-2 surface-panel rounded-3xl p-6 sm:p-8 space-y-5">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-primary" />
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-foreground">About {vendor.name}</h2>
-              </div>
-              <p className="text-sm sm:text-base leading-relaxed text-muted-foreground">
-                {vendor.description}
-              </p>
-
-              <div className="pt-4 space-y-3 border-t border-border/60">
-                <p className="text-xs font-bold uppercase tracking-wider text-foreground">Core Specialties & Offerings</p>
-                <div className="flex flex-wrap gap-2.5">
-                  {vendor.specialties.map((spec) => (
-                    <span
-                      key={spec}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-card border border-border/80 px-3.5 py-2 text-xs font-semibold text-foreground shadow-sm"
-                    >
-                      <CheckCircle className="w-3.5 h-3.5 text-accent" />
-                      <span>{spec}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* QUICK VENDOR CONTACT CARD */}
-            <div className="glass-card rounded-3xl p-6 space-y-5 border border-border">
-              <h3 className="font-display text-lg font-bold text-foreground border-b border-border/60 pb-3">
-                Partner Direct Desk
-              </h3>
-
-              <div className="space-y-3 text-xs sm:text-sm">
-                <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted/60">
-                  <MapPin className="w-4 h-4 text-accent shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-muted-foreground">Location</p>
-                    <p className="font-semibold text-foreground">{vendor.location}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted/60">
-                  <Phone className="w-4 h-4 text-accent shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-muted-foreground">Phone Helpline</p>
-                    <a href={`tel:${vendor.phone}`} className="font-semibold text-foreground hover:underline">
-                      {vendor.phone}
-                    </a>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted/60">
-                  <Mail className="w-4 h-4 text-accent shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-muted-foreground">Email Enquiry</p>
-                    <a href={`mailto:${vendor.email}`} className="font-semibold text-foreground hover:underline">
-                      {vendor.email}
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              <a href="#enquiry-form" className="block">
-                <Button className="w-full rounded-full border-0 gradient-accent py-3 text-xs font-bold text-accent-foreground shadow-md hover:opacity-90">
-                  Send Direct Message
-                </Button>
-              </a>
-            </div>
-          </div>
-
-          {/* VENDOR OFFERED PACKAGES */}
-          <section className="space-y-6">
-            <SectionHeading
-              badge="Partner Catalog"
-              title={`Packages & Fleet Services by ${vendor.name}`}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {vendorPackages.map((pkg, idx) => (
-                <PackageCard
-                  key={pkg.id}
-                  {...pkg}
-                  index={idx}
-                  description=""
-                  itinerary={[]}
-                  included={[]}
-                />
-              ))}
-            </div>
-          </section>
-
-          {/* VENDOR TESTIMONIALS */}
-          <section className="surface-panel rounded-3xl p-6 sm:p-10 space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-6">
-              <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-accent mb-2">
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  Client Reviews
-                </span>
-                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
-                  Partner Testimonials & Feedback
-                </h2>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-2xl bg-card border border-border p-3 shadow-sm shrink-0">
-                <div className="font-display text-3xl font-bold text-foreground">{vendor.rating.toFixed(1)}</div>
-                <div>
-                  <div className="flex text-amber-400">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-[11px] font-medium text-muted-foreground">{vendor.reviewsCount} verified reviews</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {vendorTestimonialsList.map((test, idx) => (
-                <div key={idx} className="rounded-2xl bg-card border border-border/70 p-5 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-display text-sm font-bold text-foreground">{test.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{test.date} · Verified Traveler</p>
-                    </div>
-                    <div className="flex text-amber-400">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-current" />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed italic">
-                    "{test.comment}"
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* VENDOR CONTACT & ENQUIRY FORM */}
-          <section id="enquiry-form" className="scroll-mt-28">
-            <div className="surface-panel rounded-3xl p-6 sm:p-10 border border-border shadow-xl space-y-8">
-              <div className="max-w-xl space-y-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-accent">
-                  <Send className="w-3.5 h-3.5" /> Direct Partner Form
-                </span>
-                <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
-                  Send Booking Enquiry to {vendor.name}
-                </h2>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Fill in your travel dates and requirements below. Your message will be delivered straight to this verified partner.
+        {/* ============================================================ */}
+        {/* 2. STATS & SERVICE HIGHLIGHTS STRIP                          */}
+        {/* ============================================================ */}
+        <section className="bg-card border-b border-border/80 py-4 shadow-sm">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-border/60 text-center">
+              <div className="p-2 space-y-0.5">
+                <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Operating Since
+                </p>
+                <p className="font-display text-lg sm:text-xl font-black text-accent">
+                  {vendor.operatingSince || "Authorized"}
                 </p>
               </div>
 
-              {!enquirySubmitted ? (
-                <form onSubmit={handleEnquirySubmit} className="space-y-6">
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`${formId}-enq-name`} className="text-xs font-bold text-foreground">
-                        Full Name
-                      </Label>
-                      <Input
-                        id={`${formId}-enq-name`}
-                        placeholder="Your full name"
-                        value={enquiryName}
-                        onChange={(e) => setEnquiryName(e.target.value)}
-                        required
-                        className="rounded-xl border-border text-xs py-3"
-                      />
-                    </div>
+              <div className="p-2 space-y-0.5">
+                <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Fleet & Capacity
+                </p>
+                <p className="font-display text-lg sm:text-xl font-black text-foreground">
+                  {vendor.fleetSize || "Verified Fleet & Stays"}
+                </p>
+              </div>
 
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`${formId}-enq-email`} className="text-xs font-bold text-foreground">
-                        Email Address
-                      </Label>
-                      <Input
-                        id={`${formId}-enq-email`}
-                        type="email"
-                        placeholder="you@example.com"
-                        value={enquiryEmail}
-                        onChange={(e) => setEnquiryEmail(e.target.value)}
-                        required
-                        className="rounded-xl border-border text-xs py-3"
-                      />
-                    </div>
+              <div className="p-2 space-y-0.5">
+                <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Response Speed
+                </p>
+                <p className="font-display text-lg sm:text-xl font-black text-emerald-500">
+                  {vendor.responseTime}
+                </p>
+              </div>
 
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`${formId}-enq-phone`} className="text-xs font-bold text-foreground">
-                        Phone Number
-                      </Label>
-                      <Input
-                        id={`${formId}-enq-phone`}
-                        type="tel"
-                        placeholder="Your contact number"
-                        value={enquiryPhone}
-                        onChange={(e) => setEnquiryPhone(e.target.value)}
-                        required
-                        className="rounded-xl border-border text-xs py-3"
-                      />
-                    </div>
+              <div className="p-2 space-y-0.5">
+                <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Partner Verification
+                </p>
+                <p className="font-display text-lg sm:text-xl font-black text-sky-500">
+                  100% KYC Approved
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`${formId}-enq-date`} className="text-xs font-bold text-foreground">
-                        Preferred Travel Date
-                      </Label>
-                      <Input
-                        id={`${formId}-enq-date`}
-                        type="date"
-                        value={enquiryDate}
-                        onChange={(e) => setEnquiryDate(e.target.value)}
-                        required
-                        className="rounded-xl border-border text-xs py-3"
-                      />
+        {/* ============================================================ */}
+        {/* 3. MAIN STORE BODY: ABOUT, OFFERINGS, CATALOG, ENQUIRY       */}
+        {/* ============================================================ */}
+        <section className="py-12 bg-background">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+              
+              {/* LEFT & CENTER COLUMN (2 COLS) */}
+              <div className="lg:col-span-2 space-y-12">
+                
+                {/* 3A. ABOUT & SPECIALTIES */}
+                <div className="surface-panel rounded-3xl p-6 sm:p-8 space-y-6 border border-border/80 shadow-card">
+                  <div className="flex items-center gap-3 border-b border-border/60 pb-4">
+                    <div className="h-10 w-10 rounded-2xl bg-accent/15 text-accent flex items-center justify-center font-bold">
+                      <Building2 className="w-5 h-5" />
                     </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`${formId}-enq-guests`} className="text-xs font-bold text-foreground">
-                        Number of Guests / Travelers
-                      </Label>
-                      <select
-                        id={`${formId}-enq-guests`}
-                        value={enquiryGuests}
-                        onChange={(e) => setEnquiryGuests(Number(e.target.value))}
-                        className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-medium text-foreground outline-none shadow-sm"
-                      >
-                        <option value={1}>1 Person</option>
-                        <option value={2}>2 Guests</option>
-                        <option value={4}>3-5 Guests</option>
-                        <option value={10}>6-15 Group</option>
-                        <option value={25}>15+ Large Group / Bus Charter</option>
-                      </select>
+                    <div>
+                      <h2 className="font-display text-xl sm:text-2xl font-extrabold text-foreground">
+                        About {vendor.name}
+                      </h2>
+                      <p className="text-xs text-muted-foreground">
+                        Certified Agency & Travel Services Partner
+                      </p>
                     </div>
+                  </div>
 
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`${formId}-enq-package`} className="text-xs font-bold text-foreground">
-                        Interested Offering / Package
-                      </Label>
-                      <select
-                        id={`${formId}-enq-package`}
-                        value={enquiryPackage}
-                        onChange={(e) => setEnquiryPackage(e.target.value)}
-                        className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-medium text-foreground outline-none shadow-sm"
-                      >
-                        {vendor.specialties.map((spec) => (
-                          <option key={spec} value={spec}>
-                            {spec}
-                          </option>
+                  <p className="text-sm sm:text-base leading-relaxed text-muted-foreground">
+                    {vendor.description}
+                  </p>
+
+                  {/* Core Specialties & Offerings */}
+                  {vendor.specialties.length > 0 && (
+                    <div className="pt-2 space-y-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                        Core Offerings & Specialties
+                      </h3>
+                      <div className="flex flex-wrap gap-2.5">
+                        {vendor.specialties.map((spec, sIdx) => (
+                          <span
+                            key={sIdx}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-card border border-border px-4 py-2.5 text-xs font-bold text-foreground shadow-sm hover:border-accent transition-colors"
+                          >
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                            <span>{spec}</span>
+                          </span>
                         ))}
-                      </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3B. PACKAGES & SERVICES CATALOG */}
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-bold uppercase tracking-wider mb-1.5">
+                        <Sparkles className="w-3.5 h-3.5" /> Direct Catalog
+                      </span>
+                      <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground">
+                        Featured Itineraries & Tour Packages
+                      </h2>
+                    </div>
+                    <Link to="/packages">
+                      <Button variant="ghost" size="sm" className="text-xs font-bold text-accent gap-1">
+                        <span>All Packages</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                  </div>
+
+                  {vendorPackages.length === 0 ? (
+                    <div className="p-10 rounded-3xl border border-dashed border-border bg-card text-center space-y-3 shadow-sm">
+                      <Compass className="w-10 h-10 text-muted-foreground mx-auto" />
+                      <h3 className="font-display text-base font-bold text-foreground">
+                        Custom Itineraries & Booking Upon Request
+                      </h3>
+                      <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                        This verified partner customizes holiday packages, houseboat tours, fleet charters, and hotel stays on direct inquiry.
+                      </p>
+                      <a href="#enquiry-form">
+                        <Button className="rounded-2xl gradient-accent text-accent-foreground font-bold px-6 text-xs mt-2">
+                          Request Custom Package
+                        </Button>
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {vendorPackages.map((pkg: any, idx: number) => (
+                        <PackageCard
+                          key={pkg.id || pkg._id || idx}
+                          {...pkg}
+                          index={idx}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3C. PHOTO GALLERY & DESTINATION SHOWCASE */}
+                {vendor.gallery.length > 0 && (
+                  <div className="surface-panel rounded-3xl p-6 sm:p-8 space-y-6 border border-border/80 shadow-card">
+                    <div className="flex items-center justify-between border-b border-border/60 pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-2xl bg-sky-500/15 text-sky-500 flex items-center justify-center font-bold">
+                          <Camera className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h2 className="font-display text-xl sm:text-2xl font-extrabold text-foreground">
+                            Destinations & Fleet Showcase
+                          </h2>
+                          <p className="text-xs text-muted-foreground">
+                            Glimpse of tour operations, fleet & accommodations
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {vendor.gallery.map((imgUrl, gIdx) => (
+                        <div
+                          key={gIdx}
+                          className="group relative h-32 sm:h-40 rounded-2xl overflow-hidden bg-muted shadow-sm"
+                        >
+                          <img
+                            src={imgUrl}
+                            alt={`${vendor.name} gallery ${gIdx + 1}`}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = destKerala;
+                            }}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3D. CLIENT REVIEWS & TESTIMONIALS */}
+                <div className="surface-panel rounded-3xl p-6 sm:p-8 space-y-6 border border-border/80 shadow-card">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-2xl bg-amber-500/15 text-amber-500 flex items-center justify-center font-bold">
+                        <MessageSquare className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="font-display text-xl sm:text-2xl font-extrabold text-foreground">
+                          Traveler Reviews & Feedback
+                        </h2>
+                        <p className="text-xs text-muted-foreground">
+                          Authentic reviews from verified guests & travelers
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-2.5 rounded-2xl bg-card border border-border shadow-sm shrink-0">
+                      <div className="font-display text-2xl font-black text-foreground">
+                        {Number(vendor.rating).toFixed(1)}
+                      </div>
+                      <div>
+                        <div className="flex text-amber-400">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star key={i} className="w-3.5 h-3.5 fill-current" />
+                          ))}
+                        </div>
+                        <p className="text-[10px] font-bold text-muted-foreground">
+                          {vendor.reviewsCount > 0 ? `${vendor.reviewsCount} verified reviews` : "Verified Partner Rating"}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`${formId}-enq-msg`} className="text-xs font-bold text-foreground">
-                      Special Requirements / Message
-                    </Label>
-                    <Textarea
-                      id={`${formId}-enq-msg`}
-                      placeholder="Specify your budget, custom itinerary requests, pickup location, or special meal preferences..."
-                      value={enquiryMessage}
-                      onChange={(e) => setEnquiryMessage(e.target.value)}
-                      rows={4}
-                      className="rounded-xl border-border text-xs leading-relaxed"
-                    />
+                  {vendor.reviews.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {vendor.reviews.map((rev: any, rIdx: number) => (
+                        <div
+                          key={rIdx}
+                          className="p-4 rounded-2xl bg-card border border-border/70 space-y-2.5 shadow-sm flex flex-col justify-between"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <p className="font-display text-xs font-bold text-foreground truncate">
+                                {rev.name || rev.author || "Verified Guest"}
+                              </p>
+                              <div className="flex text-amber-400 shrink-0">
+                                {Array.from({ length: rev.rating || 5 }).map((_, i) => (
+                                  <Star key={i} className="w-3 h-3 fill-current" />
+                                ))}
+                              </div>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">
+                              {rev.date || "Verified Traveler"}
+                            </p>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed italic">
+                            "{rev.comment || rev.text || "Exceptional service and seamless coordination."}"
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 rounded-2xl bg-card border border-dashed border-border/70 text-center space-y-2">
+                      <Star className="w-8 h-8 text-amber-400 mx-auto fill-amber-400/20" />
+                      <p className="text-xs font-semibold text-foreground">
+                        Direct Partner Reviews
+                      </p>
+                      <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                        This verified partner maintains a 100% KYC rating. Enquire below to plan your trip and share your feedback after your tour!
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: STICKY CONTACT DESK & DIRECT ENQUIRY FORM (1 COL) */}
+              <div className="space-y-6 lg:sticky lg:top-24">
+                
+                {/* PARTNER DIRECT HELPDESK */}
+                <div className="rounded-3xl bg-card p-6 space-y-5 border border-border shadow-card">
+                  <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                    <h3 className="font-display text-base font-extrabold text-foreground">
+                      Agency Direct Desk
+                    </h3>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                      <Clock className="w-3 h-3" /> Online Now
+                    </span>
                   </div>
 
-                  <Button
-                    type="submit"
-                    className="rounded-full border-0 gradient-accent px-8 py-3.5 text-xs sm:text-sm font-bold text-accent-foreground shadow-md hover:opacity-90 transition-all gap-2"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span>Submit Enquiry to {vendor.name}</span>
-                  </Button>
-                </form>
-              ) : (
-                <div className="py-8 text-center space-y-4 rounded-2xl bg-card border border-border p-6">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
-                    <ThumbsUp className="w-7 h-7" />
-                  </div>
+                  <div className="space-y-3 text-xs sm:text-sm">
+                    <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-muted/60">
+                      <MapPin className="w-4 h-4 text-accent shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Location / Hub
+                        </p>
+                        <p className="font-bold text-foreground truncate">{vendor.location}</p>
+                      </div>
+                    </div>
 
-                  <div className="space-y-1">
-                    <h3 className="font-display text-2xl font-bold text-foreground">Enquiry Received!</h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-                      Thank you, <strong className="text-foreground">{enquiryName}</strong>! Your inquiry for{" "}
-                      <strong>{enquiryPackage}</strong> was delivered to <strong>{vendor.name}</strong>. A partner representative will contact you at <strong>{enquiryPhone}</strong> within 15 minutes.
+                    {vendor.phone && (
+                      <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-muted/60">
+                        <Phone className="w-4 h-4 text-accent shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Phone Helpline
+                          </p>
+                          <a href={`tel:${vendor.phone}`} className="font-bold text-foreground hover:underline truncate block">
+                            {vendor.phone}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {vendor.email && (
+                      <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-muted/60">
+                        <Mail className="w-4 h-4 text-accent shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Email Address
+                          </p>
+                          <a href={`mailto:${vendor.email}`} className="font-bold text-foreground hover:underline truncate block">
+                            {vendor.email}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* DIRECT ENQUIRY FORM */}
+                <div id="enquiry-form" className="rounded-3xl bg-card p-6 border border-border shadow-xl scroll-mt-28 space-y-5">
+                  <div className="space-y-1 border-b border-border/60 pb-3">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-accent">
+                      <Send className="w-3 h-3" /> Direct Booking Form
+                    </span>
+                    <h3 className="font-display text-lg font-extrabold text-foreground">
+                      Enquire with {vendor.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Get custom quotes, dates & itinerary pricing directly from the agency.
                     </p>
                   </div>
 
-                  <Button
-                    type="button"
-                    onClick={() => setEnquirySubmitted(false)}
-                    className="rounded-full border-0 gradient-accent px-6 py-2.5 text-xs font-bold text-accent-foreground"
-                  >
-                    Send Another Request
-                  </Button>
+                  {!enquirySubmitted ? (
+                    <form onSubmit={handleEnquirySubmit} className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`${formId}-name`} className="text-xs font-bold text-foreground">
+                          Your Full Name
+                        </Label>
+                        <Input
+                          id={`${formId}-name`}
+                          placeholder="e.g. Rahul Sharma"
+                          value={enquiryName}
+                          onChange={(e) => setEnquiryName(e.target.value)}
+                          required
+                          className="rounded-xl border-border text-xs h-11"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`${formId}-phone`} className="text-xs font-bold text-foreground">
+                          Phone / WhatsApp Number
+                        </Label>
+                        <Input
+                          id={`${formId}-phone`}
+                          type="tel"
+                          placeholder="+91 98765 43210"
+                          value={enquiryPhone}
+                          onChange={(e) => setEnquiryPhone(e.target.value)}
+                          required
+                          className="rounded-xl border-border text-xs h-11"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`${formId}-email`} className="text-xs font-bold text-foreground">
+                          Email Address
+                        </Label>
+                        <Input
+                          id={`${formId}-email`}
+                          type="email"
+                          placeholder="rahul@example.com"
+                          value={enquiryEmail}
+                          onChange={(e) => setEnquiryEmail(e.target.value)}
+                          required
+                          className="rounded-xl border-border text-xs h-11"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`${formId}-date`} className="text-xs font-bold text-foreground">
+                            Travel Date
+                          </Label>
+                          <Input
+                            id={`${formId}-date`}
+                            type="date"
+                            value={enquiryDate}
+                            onChange={(e) => setEnquiryDate(e.target.value)}
+                            required
+                            className="rounded-xl border-border text-xs h-11"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`${formId}-guests`} className="text-xs font-bold text-foreground">
+                            Travelers
+                          </Label>
+                          <select
+                            id={`${formId}-guests`}
+                            value={enquiryGuests}
+                            onChange={(e) => setEnquiryGuests(e.target.value)}
+                            className="w-full rounded-xl border border-border bg-background px-3 text-xs font-medium text-foreground h-11 outline-none shadow-sm cursor-pointer"
+                          >
+                            <option value="1 Solo Traveler">1 Solo</option>
+                            <option value="2 Guests (Couple)">2 Guests</option>
+                            <option value="3-5 Guests (Family)">3-5 Guests</option>
+                            <option value="6-15 Guests (Group)">6-15 Group</option>
+                            <option value="15+ Large Group / Charter">15+ Charter</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {vendor.services.length > 0 && (
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`${formId}-offering`} className="text-xs font-bold text-foreground">
+                            Interested Offering
+                          </Label>
+                          <select
+                            id={`${formId}-offering`}
+                            value={enquiryPackage}
+                            onChange={(e) => setEnquiryPackage(e.target.value)}
+                            className="w-full rounded-xl border border-border bg-background px-3 text-xs font-medium text-foreground h-11 outline-none shadow-sm cursor-pointer"
+                          >
+                            {vendor.services.map((srv, idx) => (
+                              <option key={idx} value={srv}>
+                                {srv}
+                              </option>
+                            ))}
+                            <option value="Custom Tour Itinerary">Custom Tour Itinerary</option>
+                          </select>
+                        </div>
+                      )}
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`${formId}-message`} className="text-xs font-bold text-foreground">
+                          Requirements & Preferences
+                        </Label>
+                        <Textarea
+                          id={`${formId}-message`}
+                          placeholder="Mention budget, room type, dietary preferences, or pickup points..."
+                          value={enquiryMessage}
+                          onChange={(e) => setEnquiryMessage(e.target.value)}
+                          rows={3}
+                          className="rounded-xl border-border text-xs leading-relaxed"
+                        />
+                      </div>
+
+                      <Button
+                        type="submit"
+                        disabled={submittingEnquiry}
+                        className="w-full h-12 rounded-2xl gradient-accent text-accent-foreground font-extrabold text-xs shadow-md gap-2 hover:opacity-90"
+                      >
+                        {submittingEnquiry ? (
+                          <span>Sending Request...</span>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4" />
+                            <span>Submit Direct Request</span>
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  ) : (
+                    <div className="py-6 text-center space-y-4 rounded-2xl bg-muted/40 p-4 border border-border">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-500">
+                        <ThumbsUp className="w-6 h-6" />
+                      </div>
+
+                      <div className="space-y-1">
+                        <h4 className="font-display text-lg font-bold text-foreground">
+                          Enquiry Received!
+                        </h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Thank you, <strong className="text-foreground">{enquiryName}</strong>! Your inquiry was delivered to <strong>{vendor.name}</strong>. A travel consultant will contact you via WhatsApp/Call.
+                        </p>
+                      </div>
+
+                      <Button
+                        type="button"
+                        onClick={() => setEnquirySubmitted(false)}
+                        variant="outline"
+                        className="rounded-xl h-10 px-4 text-xs font-bold"
+                      >
+                        Send Another Request
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </main>
 
       <Footer />

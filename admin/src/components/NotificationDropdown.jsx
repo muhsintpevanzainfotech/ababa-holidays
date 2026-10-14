@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { Bell, Check, Trash2, Clock, Info, AlertTriangle, CheckCircle, XCircle, ChevronRight } from 'lucide-react';
+import { 
+  Bell, Check, Trash2, Clock, Info, AlertTriangle, 
+  CheckCircle, XCircle, ChevronRight, Briefcase, Building, 
+  Package, UserCheck, HelpCircle 
+} from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
 const NotificationDropdown = ({ isOpen, onClose, onUpdateCount }) => {
@@ -43,13 +47,14 @@ const NotificationDropdown = ({ isOpen, onClose, onUpdateCount }) => {
       return notif.link;
     }
     const cat = (notif?.category || '').toLowerCase();
+    const title = (notif?.title || '').toLowerCase();
+    if (cat.includes('vendor') || cat.includes('partner') || title.includes('vendor') || title.includes('partner')) return '/vendors';
     if (cat.includes('enquiry')) return '/website/enquiries';
     if (cat.includes('contact')) return '/website/contact-us';
     if (cat.includes('booking')) return '/bookings';
     if (cat.includes('request') || cat.includes('complaint')) return '/complaints';
     if (cat.includes('review') || cat.includes('testimonial')) return '/website/testimonials';
     if (cat.includes('payment') || cat.includes('wallet')) return '/payments';
-    if (cat.includes('vendor')) return '/vendors';
     if (cat.includes('user')) return '/users';
     return '/dashboard';
   };
@@ -95,7 +100,18 @@ const NotificationDropdown = ({ isOpen, onClose, onUpdateCount }) => {
     }
   };
 
-  const getIcon = (type) => {
+  const getIcon = (type, category = '', title = '') => {
+    const cat = (category || '').toLowerCase();
+    const t = (title || '').toLowerCase();
+    if (cat.includes('vendor') || cat.includes('partner') || t.includes('vendor') || t.includes('partner')) {
+      return <Briefcase size={16} color="var(--primary)" />;
+    }
+    if (cat.includes('booking') || t.includes('booking')) {
+      return <Package size={16} color="#10b981" />;
+    }
+    if (cat.includes('enquiry') || t.includes('enquiry')) {
+      return <HelpCircle size={16} color="#8b5cf6" />;
+    }
     switch (type) {
       case 'success': return <CheckCircle size={16} color="#10b981" />;
       case 'warning': return <AlertTriangle size={16} color="#f59e0b" />;
@@ -103,6 +119,25 @@ const NotificationDropdown = ({ isOpen, onClose, onUpdateCount }) => {
       default: return <Info size={16} color="#3b82f6" />;
     }
   };
+
+  const getCategoryBadge = (category = '', title = '') => {
+    const cat = (category || '').toLowerCase();
+    const t = (title || '').toLowerCase();
+    if (cat.includes('vendor') || cat.includes('partner') || t.includes('vendor') || t.includes('partner')) {
+      return { label: 'VENDOR', bg: 'rgba(var(--primary-rgb), 0.12)', color: 'var(--primary)' };
+    }
+    if (cat.includes('booking') || t.includes('booking')) {
+      return { label: 'BOOKING', bg: 'rgba(16, 185, 129, 0.12)', color: '#10b981' };
+    }
+    if (cat.includes('enquiry') || t.includes('enquiry')) {
+      return { label: 'ENQUIRY', bg: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' };
+    }
+    if (cat.includes('contact') || t.includes('contact')) {
+      return { label: 'CONTACT', bg: 'rgba(245, 158, 11, 0.12)', color: '#d97706' };
+    }
+    return null;
+  };
+
 
   const formatTime = (dateStr) => {
     if (!dateStr) return 'Recently';
@@ -218,15 +253,34 @@ const NotificationDropdown = ({ isOpen, onClose, onUpdateCount }) => {
                   <div style={{ position: 'absolute', left: '6px', top: '50%', transform: 'translateY(-50%)', width: '6px', height: '6px', borderRadius: '50%', background: '#3b82f6' }} />
                 )}
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                  <div style={{ marginTop: '2px', padding: '6px', borderRadius: '8px', background: 'var(--bg-main)' }}>
-                    {getIcon(notif.type)}
+                  <div style={{ marginTop: '2px', padding: '6px', borderRadius: '8px', background: 'var(--bg-main)', flexShrink: 0 }}>
+                    {getIcon(notif.type, notif.category, notif.title)}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '2px' }}>
-                      <p style={{ fontSize: '13px', fontWeight: '800', margin: 0, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {notif.title}
-                      </p>
-                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
+                        {(() => {
+                          const badge = getCategoryBadge(notif.category, notif.title);
+                          return badge ? (
+                            <span style={{ 
+                              fontSize: '9px', 
+                              fontWeight: '800', 
+                              padding: '1px 5px', 
+                              borderRadius: '4px', 
+                              background: badge.bg, 
+                              color: badge.color, 
+                              letterSpacing: '0.04em',
+                              flexShrink: 0 
+                            }}>
+                              {badge.label}
+                            </span>
+                          ) : null;
+                        })()}
+                        <p style={{ fontSize: '13px', fontWeight: '800', margin: 0, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {notif.title}
+                        </p>
+                      </div>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
                         <Clock size={10} /> {formatTime(notif.createdAt)}
                       </span>
                     </div>

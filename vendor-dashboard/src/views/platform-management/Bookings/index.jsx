@@ -36,6 +36,7 @@ import FilterChip from 'ui-component/extended/FilterChip';
 import DataTable from 'ui-component/extended/DataTable';
 import { gridSpacing } from 'store/constant';
 import api from 'utils/api';
+import useThemeMode from 'hooks/useThemeMode';
 
 // assets / icons
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
@@ -49,11 +50,9 @@ import SaveIcon from '@mui/icons-material/Save';
 import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
 
 const BookingsManagement = () => {
-    const theme = useTheme();
-    const isLightExplicit = theme.palette.mode === 'light' && document.documentElement.getAttribute('data-color-scheme') === 'light';
-    const isDark = !isLightExplicit;
+    const { isDark, theme } = useThemeMode();
 
-    const cardBgColor = isDark ? '#111827' : '#ffffff';
+    const cardBgColor = isDark ? '#16152b' : '#ffffff';
     const borderLineColor = isDark ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0';
 
     const [loading, setLoading] = useState(true);
@@ -285,7 +284,14 @@ const BookingsManagement = () => {
                             field: 'customer',
                             render: (row) => (
                                 <Stack direction="row" spacing={1.5} alignItems="center">
-                                    <Avatar sx={{ bgcolor: '#ff5252', fontWeight: 700, width: 34, height: 34, fontSize: '0.85rem' }}>
+                                    <Avatar sx={{ 
+                                        bgcolor: isDark ? 'rgba(65, 160, 174, 0.2)' : 'rgba(54, 102, 156, 0.12)', 
+                                        color: isDark ? '#41a0ae' : '#36669c',
+                                        fontWeight: 800, 
+                                        width: 34, 
+                                        height: 34, 
+                                        fontSize: '0.85rem' 
+                                    }}>
                                         {(row.contactDetails?.name || row.user?.name || 'C').charAt(0).toUpperCase()}
                                     </Avatar>
                                     <Box>

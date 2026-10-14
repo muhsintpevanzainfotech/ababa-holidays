@@ -23,7 +23,7 @@ const notificationSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['contact', 'enquiry', 'booking', 'request', 'review', 'payment', 'system'],
+    enum: ['contact', 'enquiry', 'booking', 'request', 'review', 'payment', 'system', 'vendor', 'package', 'auth', 'user'],
     default: 'system'
   },
   type: {

@@ -3,16 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronRight, ChevronLeft, Check, ShieldCheck, 
   X, CheckCircle, Briefcase, Building, MapPin, 
-  CreditCard, Search, Star, Plus, Minus
+  CreditCard, Search, Star, Plus, Minus, ArrowLeft
 } from 'lucide-react';
 
 import { useVendorForm } from './useVendorForm';
+import { useConfirm } from '../../context/ConfirmDialogContext';
 import { StepIndicator } from './components/StepIndicator';
 import { Lightbox } from './components/Lightbox';
 
 // Step Components
 import Step1Account from './steps/Step1Account';
-import Step2Business from './steps/Step2Business';
 import Step3Location from './steps/Step3Location';
 import Step4Compliance from './steps/Step4Compliance';
 import Step5Security from './steps/Step5Security';
@@ -21,21 +21,40 @@ import Step7Review from './steps/Step7Review';
 
 const VendorRegistration = ({ isPublic = false }) => {
   const formState = useVendorForm(isPublic);
+  const { confirm } = useConfirm();
   const { 
     formik, currentStep, handleNext, handlePrev, 
     lightbox, setLightbox, isFinalizing, isViewMode, 
-    loadingVendorData, navigate, id
+    loadingVendorData, navigate, id 
   } = formState;
+
+  const handleCancelExit = async () => {
+    if (isViewMode) {
+      navigate('/vendors');
+      return;
+    }
+    const isConfirmed = await confirm(
+      'Exit Vendor Onboarding?',
+      'Are you sure you want to exit? Any unsaved registration data will be lost.',
+      {
+        confirmText: 'Discard & Exit',
+        variant: 'warning'
+      }
+    );
+    if (isConfirmed) {
+      if (isPublic) navigate('/login');
+      else navigate('/vendors');
+    }
+  };
 
   const renderStep = () => {
     switch (currentStep) {
-      case 1: return <Step1Account {...formState} />;
-      case 2: return <Step2Business {...formState} />;
-      case 3: return <Step3Location {...formState} />;
-      case 4: return <Step4Compliance {...formState} />;
-      case 5: return <Step5Security {...formState} />;
-      case 6: return <Step6Services {...formState} />;
-      case 7: return <Step7Review {...formState} />;
+      case 1: return <Step1Account {...formState} isPublic={isPublic} />;
+      case 2: return <Step3Location {...formState} isPublic={isPublic} />;
+      case 3: return <Step4Compliance {...formState} isPublic={isPublic} />;
+      case 4: return <Step5Security {...formState} isPublic={isPublic} />;
+      case 5: return <Step6Services {...formState} isPublic={isPublic} />;
+      case 6: return <Step7Review {...formState} isPublic={isPublic} />;
       default: return null;
     }
   };
@@ -83,23 +102,34 @@ const VendorRegistration = ({ isPublic = false }) => {
             </AnimatePresence>
 
             {/* Navigation Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '40px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', flex: 1 }}>
-                Step {currentStep} of 7 &bull; All data encrypted & secure
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '40px', borderTop: '1px solid var(--border)', paddingTop: '24px', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', flex: '1 1 auto', minWidth: '160px' }}>
+                Step {currentStep} of 6 &bull; All data encrypted & secure
               </div>
+
+              {/* Exit / Cancel Button */}
+              <button
+                type="button"
+                className="btn"
+                onClick={handleCancelExit}
+                style={{ height: '48px', padding: '0 20px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontWeight: '700', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                title="Cancel and return"
+              >
+                <X size={16} /> Cancel
+              </button>
               
               {currentStep > 1 && (
                 <button 
                   type="button" 
                   className="btn" 
-                  style={{ height: '48px', padding: '0 28px', background: 'var(--bg-main)', border: '1px solid var(--border)', color: 'var(--text-main)', fontWeight: '700', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }} 
+                  style={{ height: '48px', padding: '0 24px', background: 'var(--bg-main)', border: '1px solid var(--border)', color: 'var(--text-main)', fontWeight: '700', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }} 
                   onClick={handlePrev}
                 >
                   <ChevronLeft size={18} /> Previous
                 </button>
               )}
 
-              {currentStep < 7 ? (
+              {currentStep < 6 ? (
                 <button 
                   type="button" 
                   className="btn btn-primary" 

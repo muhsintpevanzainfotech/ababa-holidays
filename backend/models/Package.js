@@ -20,10 +20,18 @@ const packageSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'SubService'
   },
+  subServices: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SubService'
+  }],
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category'
   },
+  categories: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category'
+  }],
   vendor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -96,6 +104,10 @@ const packageSchema = new mongoose.Schema({
     default: true
   },
   priceNotes: {
+    type: String,
+    default: ''
+  },
+  correctionNotes: {
     type: String,
     default: ''
   },
@@ -173,6 +185,13 @@ packageSchema.pre('validate', function() {
       this[field] = null;
     }
   });
+
+  if (Array.isArray(this.subServices)) {
+    this.subServices = this.subServices.filter(id => id && id !== '' && id !== 'null' && id !== 'undefined');
+  }
+  if (Array.isArray(this.categories)) {
+    this.categories = this.categories.filter(id => id && id !== '' && id !== 'null' && id !== 'undefined');
+  }
 });
 
 // Pre-save middleware: Auto-generate Custom ID, Sync service & serviceCategory, Sync status & isActive
@@ -182,6 +201,24 @@ packageSchema.pre('save', async function () {
       this[field] = null;
     }
   });
+
+  if (Array.isArray(this.subServices)) {
+    this.subServices = this.subServices.filter(id => id && id !== '' && id !== 'null' && id !== 'undefined');
+    if (!this.subService && this.subServices.length > 0) {
+      this.subService = this.subServices[0];
+    }
+  } else if (this.subService) {
+    this.subServices = [this.subService];
+  }
+
+  if (Array.isArray(this.categories)) {
+    this.categories = this.categories.filter(id => id && id !== '' && id !== 'null' && id !== 'undefined');
+    if (!this.category && this.categories.length > 0) {
+      this.category = this.categories[0];
+    }
+  } else if (this.category) {
+    this.categories = [this.category];
+  }
 
   // Sync serviceCategory and service references
   if (this.serviceCategory && !this.service) {

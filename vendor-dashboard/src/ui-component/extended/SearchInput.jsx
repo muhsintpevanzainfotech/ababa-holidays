@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import { TextField, InputAdornment, Box, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 import SearchIcon from '@mui/icons-material/Search';
 
 export default function SearchInput({
@@ -11,7 +12,7 @@ export default function SearchInput({
     showShortcut = true
 }) {
     const theme = useTheme();
-    const isDark = theme.palette.mode === 'dark';
+    const { isDark } = useThemeMode();
 
     return (
         <TextField
@@ -23,7 +24,7 @@ export default function SearchInput({
                 width: { xs: '100%', sm: width },
                 '& .MuiOutlinedInput-root': {
                     borderRadius: '8px',
-                    bgcolor: isDark ? '#1f2937' : '#ffffff',
+                    bgcolor: isDark ? '#212040' : '#ffffff',
                     fontSize: '0.875rem',
                     height: 38,
                     color: isDark ? '#f9fafb' : '#0f172a',
@@ -34,7 +35,7 @@ export default function SearchInput({
                         borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : '#cbd5e1'
                     },
                     '&.Mui-focused fieldset': {
-                        borderColor: '#ff5252'
+                        borderColor: isDark ? '#41a0ae' : '#36669c'
                     }
                 }
             }}

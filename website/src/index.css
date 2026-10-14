@@ -189,14 +189,21 @@
 
   .package-swiper .swiper-button-next,
   .package-swiper .swiper-button-prev {
-    @apply hidden h-11 w-11 rounded-full border border-border bg-card shadow-card md:flex;
-    color: hsl(var(--primary)) !important;
+    @apply hidden h-11 w-11 rounded-full border border-border/80 bg-card text-foreground shadow-md transition-all duration-200 md:flex items-center justify-center;
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .package-swiper .swiper-button-next:hover,
+  .package-swiper .swiper-button-prev:hover {
+    @apply scale-105 shadow-lg border-transparent;
+    background: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(var(--primary)) 100%) !important;
+    color: #ffffff !important;
   }
 
   .package-swiper .swiper-button-next::after,
   .package-swiper .swiper-button-prev::after {
-    font-size: 14px !important;
-    font-weight: 700;
+    font-size: 13px !important;
+    font-weight: 800;
   }
 
   .package-swiper .swiper-pagination-bullet {

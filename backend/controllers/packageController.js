@@ -13,6 +13,12 @@ const sanitizeObjectIds = (obj) => {
       obj[field] = null;
     }
   });
+  if (Array.isArray(obj.subServices)) {
+    obj.subServices = obj.subServices.filter(id => id && id !== '' && id !== 'null' && id !== 'undefined');
+  }
+  if (Array.isArray(obj.categories)) {
+    obj.categories = obj.categories.filter(id => id && id !== '' && id !== 'null' && id !== 'undefined');
+  }
   return obj;
 };
 
@@ -94,6 +100,8 @@ const getPackages = asyncHandler(async (req, res, next) => {
     .populate('serviceCategory service', 'title name customId description')
     .populate('subService', 'title name customId description')
     .populate('category', 'title name customId description')
+    .populate('subServices', 'title name customId description')
+    .populate('categories', 'title name customId description')
     .populate('vendor', 'name companyName email logo phone')
     .populate('createdBy', 'name email role managedBy');
 
@@ -156,6 +164,8 @@ const getPackage = asyncHandler(async (req, res, next) => {
     .populate('serviceCategory service', 'title name customId description')
     .populate('subService', 'title name customId description')
     .populate('category', 'title name customId description')
+    .populate('subServices', 'title name customId description')
+    .populate('categories', 'title name customId description')
     .populate('vendor', 'name companyName email logo phone')
     .populate('createdBy', 'name email role managedBy');
 
@@ -174,29 +184,39 @@ const createPackage = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Request body is missing', 400));
   }
 
-  const targetVendorId = req.user.effectiveVendorId || req.user.id;
+  const isSystemAdmin = req.user.role === 'Admin' || req.user.role === 'Sub-Admin';
+  let targetVendorId;
 
-  // Add vendor and createdBy to req.body
-  req.body.vendor = targetVendorId;
-  req.body.createdBy = req.body.createdBy || req.user.id;
+  if (isSystemAdmin) {
+    // If Admin, vendor can be explicitly assigned via req.body.vendor, or fallback to Admin ID
+    targetVendorId = req.body.vendor || req.user.id;
+    req.body.vendor = targetVendorId;
+    req.body.createdBy = req.body.createdBy || req.user.id;
+  } else {
+    targetVendorId = req.user.effectiveVendorId || req.user.id;
 
-  // Fetch vendor profile to check approval status and entitlements
-  const vendorProfile = await VendorProfile.findOne({ user: targetVendorId });
+    // Add vendor and createdBy to req.body
+    req.body.vendor = targetVendorId;
+    req.body.createdBy = req.body.createdBy || req.user.id;
 
-  if (!vendorProfile) {
-    return next(new ErrorResponse('Vendor profile not found for this user', 404));
-  }
+    // Fetch vendor profile to check approval status and entitlements
+    const vendorProfile = await VendorProfile.findOne({ user: targetVendorId });
 
-  // Check vendor approval status
-  if (!vendorProfile.isApproved) {
-    return next(new ErrorResponse('Vendor is not approved yet. Cannot create packages.', 403));
-  }
+    if (!vendorProfile) {
+      return next(new ErrorResponse('Vendor profile not found for this user', 404));
+    }
 
-  // Service entitlement check: Ensure vendor only creates packages for services they registered/handled
-  if (req.body.serviceCategory && vendorProfile.selectedServices && vendorProfile.selectedServices.length > 0) {
-    const allowedServiceIds = vendorProfile.selectedServices.map(s => (s._id ? s._id.toString() : s.toString()));
-    if (!allowedServiceIds.includes(req.body.serviceCategory.toString())) {
-      return next(new ErrorResponse('Vendor is only authorized to create packages for services they handle. Please update your handled services in Account Settings.', 403));
+    // Check vendor approval status
+    if (!vendorProfile.isApproved) {
+      return next(new ErrorResponse('Vendor is not approved yet. Cannot create packages.', 403));
+    }
+
+    // Service entitlement check: Ensure vendor only creates packages for services they registered/handled
+    if (req.body.serviceCategory && vendorProfile.selectedServices && vendorProfile.selectedServices.length > 0) {
+      const allowedServiceIds = vendorProfile.selectedServices.map(s => (s._id ? s._id.toString() : s.toString()));
+      if (!allowedServiceIds.includes(req.body.serviceCategory.toString())) {
+        return next(new ErrorResponse('Vendor is only authorized to create packages for services they handle. Please update your handled services in Account Settings.', 403));
+      }
     }
   }
 
@@ -247,6 +267,51 @@ const createPackage = asyncHandler(async (req, res, next) => {
     }
   }
 
+  // Normalize array fields from FormData
+  if (req.body.selectedSubServices) {
+    if (Array.isArray(req.body.selectedSubServices)) {
+      req.body.subServices = req.body.selectedSubServices;
+    } else if (typeof req.body.selectedSubServices === 'string') {
+      try { req.body.subServices = JSON.parse(req.body.selectedSubServices); }
+      catch (e) { req.body.subServices = req.body.selectedSubServices.split(',').map(s => s.trim()).filter(Boolean); }
+    }
+  }
+  if (req.body.selectedCategories) {
+    if (Array.isArray(req.body.selectedCategories)) {
+      req.body.categories = req.body.selectedCategories;
+    } else if (typeof req.body.selectedCategories === 'string') {
+      try { req.body.categories = JSON.parse(req.body.selectedCategories); }
+      catch (e) { req.body.categories = req.body.selectedCategories.split(',').map(s => s.trim()).filter(Boolean); }
+    }
+  }
+  if (typeof req.body.inclusions === 'string') {
+    try { req.body.inclusions = JSON.parse(req.body.inclusions); }
+    catch (e) { req.body.inclusions = req.body.inclusions.split(',').map(s => s.trim()).filter(Boolean); }
+  }
+  if (typeof req.body.exclusions === 'string') {
+    try { req.body.exclusions = JSON.parse(req.body.exclusions); }
+    catch (e) { req.body.exclusions = req.body.exclusions.split(',').map(s => s.trim()).filter(Boolean); }
+  }
+  const booleanFields = ['isFeatured', 'isTopPick', 'topRated', 'isTaxIncluded', 'isActive'];
+  booleanFields.forEach(boolField => {
+    if (req.body[boolField] !== undefined) {
+      req.body[boolField] = req.body[boolField] === true || req.body[boolField] === 'true';
+    }
+  });
+
+  if (typeof req.body.itinerary === 'string') {
+    try { req.body.itinerary = JSON.parse(req.body.itinerary); }
+    catch (e) {}
+  }
+  if (typeof req.body.seo === 'string') {
+    try { req.body.seo = JSON.parse(req.body.seo); }
+    catch (e) {}
+  }
+  if (typeof req.body.availabilityDates === 'string') {
+    try { req.body.availabilityDates = JSON.parse(req.body.availabilityDates); }
+    catch (e) { req.body.availabilityDates = req.body.availabilityDates.split(',').map(s => s.trim()).filter(Boolean); }
+  }
+
   sanitizeObjectIds(req.body);
   const pkg = await Package.create(req.body);
 
@@ -284,8 +349,8 @@ const updatePackage = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Only the creator of this package is authorized to edit it.', 403));
   }
 
-  // If service category is changing, check entitlements
-  if (req.body.serviceCategory && req.body.serviceCategory !== pkg.serviceCategory.toString()) {
+  // If service category is changing, check entitlements (for non-admins)
+  if (!isSystemAdmin && req.body.serviceCategory && req.body.serviceCategory !== pkg.serviceCategory?.toString()) {
      const vendorProfile = await VendorProfile.findOne({ user: targetVendorId });
      if (vendorProfile && vendorProfile.selectedServices && vendorProfile.selectedServices.length > 0) {
         const allowedServiceIds = vendorProfile.selectedServices.map(s => (s._id ? s._id.toString() : s.toString()));
@@ -341,6 +406,51 @@ const updatePackage = asyncHandler(async (req, res, next) => {
         req.body.customData = JSON.parse(req.body.customData);
       } catch (e) {}
     }
+  }
+
+  // Normalize array fields from FormData
+  if (req.body.selectedSubServices) {
+    if (Array.isArray(req.body.selectedSubServices)) {
+      req.body.subServices = req.body.selectedSubServices;
+    } else if (typeof req.body.selectedSubServices === 'string') {
+      try { req.body.subServices = JSON.parse(req.body.selectedSubServices); }
+      catch (e) { req.body.subServices = req.body.selectedSubServices.split(',').map(s => s.trim()).filter(Boolean); }
+    }
+  }
+  if (req.body.selectedCategories) {
+    if (Array.isArray(req.body.selectedCategories)) {
+      req.body.categories = req.body.selectedCategories;
+    } else if (typeof req.body.selectedCategories === 'string') {
+      try { req.body.categories = JSON.parse(req.body.selectedCategories); }
+      catch (e) { req.body.categories = req.body.selectedCategories.split(',').map(s => s.trim()).filter(Boolean); }
+    }
+  }
+  if (typeof req.body.inclusions === 'string') {
+    try { req.body.inclusions = JSON.parse(req.body.inclusions); }
+    catch (e) { req.body.inclusions = req.body.inclusions.split(',').map(s => s.trim()).filter(Boolean); }
+  }
+  if (typeof req.body.exclusions === 'string') {
+    try { req.body.exclusions = JSON.parse(req.body.exclusions); }
+    catch (e) { req.body.exclusions = req.body.exclusions.split(',').map(s => s.trim()).filter(Boolean); }
+  }
+  const booleanFields = ['isFeatured', 'isTopPick', 'topRated', 'isTaxIncluded', 'isActive'];
+  booleanFields.forEach(boolField => {
+    if (req.body[boolField] !== undefined) {
+      req.body[boolField] = req.body[boolField] === true || req.body[boolField] === 'true';
+    }
+  });
+
+  if (typeof req.body.itinerary === 'string') {
+    try { req.body.itinerary = JSON.parse(req.body.itinerary); }
+    catch (e) {}
+  }
+  if (typeof req.body.seo === 'string') {
+    try { req.body.seo = JSON.parse(req.body.seo); }
+    catch (e) {}
+  }
+  if (typeof req.body.availabilityDates === 'string') {
+    try { req.body.availabilityDates = JSON.parse(req.body.availabilityDates); }
+    catch (e) { req.body.availabilityDates = req.body.availabilityDates.split(',').map(s => s.trim()).filter(Boolean); }
   }
 
   sanitizeObjectIds(req.body);

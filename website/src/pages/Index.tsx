@@ -106,7 +106,7 @@ const Index = () => {
                 <span className="mb-3 inline-block rounded-full bg-accent/20 px-3 py-1 text-xs font-bold text-accent">🏪 VENDOR NETWORK</span>
                 <h3 className="mb-2 font-display text-xl font-bold text-on-image md:text-3xl">Become a Verified Travel Partner</h3>
                 <p className="mb-4 hidden text-sm text-on-image-muted sm:block">List your tour packages, hotels, buses, or transport services to reach thousands of travelers daily with zero listing fees.</p>
-                <Link to="/register">
+                <Link to="/vendor-register">
                   <Button className="gradient-accent border-0 text-accent-foreground hover:opacity-90 font-semibold gap-2">Become a Vendor</Button>
                 </Link>
               </div>

@@ -2,12 +2,12 @@ import { Paper, Typography, Button, Box, Alert, Stack } from '@mui/material';
 import LockIcon from '@mui/icons-material/Lock';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
-import { useColorScheme, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 
 const SubscriptionRestrictedCard = ({ featureName = 'This Feature', reason = 'permission' }) => {
   const theme = useTheme();
-  const { mode, systemMode } = useColorScheme();
-  const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
+  const { isDark: isDarkMode } = useThemeMode();
 
   const isLimit = reason === 'limit';
 
@@ -19,8 +19,8 @@ const SubscriptionRestrictedCard = ({ featureName = 'This Feature', reason = 'pe
         textAlign: 'center',
         borderRadius: '24px',
         border: '1px solid',
-        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : 'rgba(226, 232, 240, 0.8)',
-        backgroundColor: isDarkMode ? '#111936' : '#ffffff',
+        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(226, 232, 240, 0.8)',
+        backgroundColor: isDarkMode ? '#16152b' : '#ffffff',
         my: 3,
         boxShadow: isDarkMode 
           ? '0 12px 40px rgba(0, 0, 0, 0.35)' 

@@ -16,7 +16,15 @@ const packagesSlice = createSlice({
     },
     fetchPackagesSuccess: (state, action) => {
       state.loading = false;
-      state.packages = action.payload;
+      const raw = Array.isArray(action.payload) ? action.payload : (action.payload?.data || []);
+      const map = new Map();
+      raw.forEach(p => {
+        const key = (p._id || p.customId || '').toString();
+        if (key && !map.has(key)) {
+          map.set(key, p);
+        }
+      });
+      state.packages = Array.from(map.values());
     },
     fetchPackagesFailure: (state, action) => {
       state.loading = false;
@@ -27,7 +35,10 @@ const packagesSlice = createSlice({
     },
     addPackageSuccess: (state, action) => {
       state.loading = false;
-      state.packages = [action.payload, ...state.packages];
+      const newPkg = action.payload;
+      const newId = (newPkg._id || newPkg.customId || '').toString();
+      const existingFiltered = state.packages.filter(p => (p._id || p.customId || '').toString() !== newId);
+      state.packages = [newPkg, ...existingFiltered];
     },
     addPackageFailure: (state, action) => {
       state.loading = false;

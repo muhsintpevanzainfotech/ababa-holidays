@@ -10,29 +10,30 @@ import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import MainCard from 'ui-component/cards/MainCard';
+import useThemeMode from 'hooks/useThemeMode';
 
 const CardWrapper = styled(MainCard, {
   shouldForwardProp: (prop) => prop !== 'cardVariant' && prop !== 'colorScheme'
 })(({ theme, cardVariant = 'light', colorScheme = 'primary' }) => {
-  const isDark = theme.palette.mode === 'dark' || cardVariant === 'dark';
+  const isDark = theme.palette.mode === 'dark' || cardVariant === 'dark' || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-color-scheme') === 'dark');
   return {
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: isDark ? '#111827' : '#ffffff',
+    backgroundColor: isDark ? '#16152b' : '#ffffff',
     color: isDark ? '#e5e7eb' : theme.palette.text.primary,
     borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0',
-    borderRadius: '10px',
-    boxShadow: isDark ? '0 2px 10px rgba(0,0,0,0.2)' : '0 2px 8px rgba(15, 23, 42, 0.03)',
+    borderRadius: '12px',
+    boxShadow: isDark ? '0 4px 16px rgba(0,0,0,0.3)' : '0 2px 10px rgba(15, 23, 42, 0.04)',
     transition: 'all 0.2s ease-in-out',
     '&:hover': {
       transform: 'translateY(-2px)',
-      boxShadow: isDark ? '0 4px 14px rgba(0,0,0,0.3)' : '0 6px 16px rgba(15, 23, 42, 0.06)'
+      boxShadow: isDark ? '0 6px 20px rgba(0,0,0,0.45)' : '0 8px 20px rgba(15, 23, 42, 0.07)',
+      borderColor: isDark ? 'rgba(65, 160, 174, 0.35)' : 'rgba(54, 102, 156, 0.25)'
     }
   };
 });
 
-const getColorSchemePastel = (scheme = 'primary', theme) => {
-  const isDark = theme?.palette?.mode === 'dark';
+const getColorSchemePastel = (scheme = 'primary', isDark = false) => {
   switch (scheme) {
     case 'success':
       return { bg: isDark ? 'rgba(62, 201, 149, 0.15)' : '#e6f8f2', color: '#3ec995', border: isDark ? 'rgba(62, 201, 149, 0.3)' : '#77f07f' };
@@ -65,8 +66,8 @@ export default function StatCard({
   loading = false,
   sx = {}
 }) {
-  const theme = useTheme();
-  const schemePastel = getColorSchemePastel(colorScheme, theme);
+  const { isDark, theme } = useThemeMode();
+  const schemePastel = getColorSchemePastel(colorScheme, isDark);
   const isUp = changeType === 'up';
 
   if (loading) {

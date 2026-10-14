@@ -49,6 +49,7 @@ import FilterChip from 'ui-component/extended/FilterChip';
 import DataTable from 'ui-component/extended/DataTable';
 import { gridSpacing } from 'store/constant';
 import api from 'utils/api';
+import useThemeMode from 'hooks/useThemeMode';
 import FileUpload from 'ui-component/extended/FileUpload';
 
 const resolveImageUrl = (imgSrc) => {
@@ -80,16 +81,16 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
 
 const BannerManagement = () => {
-    const theme = useTheme();
+    const { isDark: isDarkMode, theme } = useThemeMode();
     const navigate = useNavigate();
-    const { mode, systemMode } = useColorScheme();
-    const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [banners, setBanners] = useState([]);
     const [subscription, setSubscription] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
     const [viewMode, setViewMode] = useState('grid');
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedBanner, setSelectedBanner] = useState(null);
@@ -295,9 +296,10 @@ const BannerManagement = () => {
     const activeCount = banners.filter(b => b.isActive).length;
     const inactiveCount = banners.length - activeCount;
 
-    const textColor = isDarkMode ? '#ffffff' : '#0f172a';
-    const subTextColor = isDarkMode ? '#cbd5e1' : '#64748b';
-    const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
+    const textColor = isDarkMode ? '#f9fafb' : '#0f172a';
+    const subTextColor = isDarkMode ? '#9ca3af' : '#64748b';
+    const cardBgColor = isDarkMode ? '#16152b' : '#ffffff';
+    const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0';
 
     return (
         <Box>
@@ -562,6 +564,13 @@ const BannerManagement = () => {
                         ]}
                         rows={filteredBanners}
                         loading={loading}
+                        page={page}
+                        rowsPerPage={rowsPerPage}
+                        totalCount={filteredBanners.length}
+                        onPageChange={(e, newPage) => setPage(newPage)}
+                        onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+                        emptyTitle="No Banners Found"
+                        emptySubtitle="No promotional banners match your search query."
                     />
                 </Box>
             )}

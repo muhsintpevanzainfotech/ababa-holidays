@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -38,10 +38,16 @@ import {
   Truck,
   Trees,
   ShieldCheck,
+  Instagram,
+  Facebook,
+  Twitter,
+  Youtube,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationPanel from "@/components/NotificationPanel";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
 import { ServiceCategoryItem } from "@/types/travel";
@@ -49,11 +55,13 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { fetchServicesStart, fetchSubServicesStart } from "@/store/slices/servicesSlice";
 import { logout } from "@/store/slices/authSlice";
 import { getImageUrl } from "@/lib/imageHelper";
+import { useSystemSettings, isAvailable } from "@/hooks/useSystemSettings";
 import destKerala from "@/assets/dest-kerala-backwaters.jpg";
 
 const mainLinks = [
   { label: "Service", path: "/services", icon: Briefcase, hasDropdown: true },
   { label: "Packages", path: "/packages", icon: Compass },
+  { label: "Partners", path: "/vendors", icon: ShieldCheck },
   { label: "AI Planner", path: "/planner", icon: Sparkles },
   { label: "Blog", path: "/blog", icon: BookOpen },
   { label: "Contact", path: "/contact", icon: PhoneCall },
@@ -128,12 +136,43 @@ const Navbar = () => {
   const { items } = useWishlist();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
+  const { unreadCount } = useNotifications();
   const heroMode = false;
 
   const dispatch = useAppDispatch();
   const { services: reduxServices, subServices: reduxSubServices } = useAppSelector((state) => state.services);
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
   const isUserLoggedIn = isAuthenticated || Boolean(user) || Boolean(localStorage.getItem("userToken"));
+
+  const { contactDetails, socialLinks } = useSystemSettings();
+  const topbarPhone = contactDetails?.primaryPhone || contactDetails?.supportPhone;
+  const isPhoneAvailable = isAvailable(topbarPhone);
+
+  const topbarSocials = useMemo(() => {
+    const list: Array<{ icon: any; label: string; url: string }> = [];
+    if (isAvailable(socialLinks.instagram)) {
+      list.push({ icon: Instagram, label: "Instagram", url: socialLinks.instagram! });
+    }
+    if (isAvailable(socialLinks.facebook)) {
+      list.push({ icon: Facebook, label: "Facebook", url: socialLinks.facebook! });
+    }
+    if (isAvailable(socialLinks.twitter)) {
+      list.push({ icon: Twitter, label: "Twitter / X", url: socialLinks.twitter! });
+    }
+    if (isAvailable(socialLinks.youtube)) {
+      list.push({ icon: Youtube, label: "YouTube", url: socialLinks.youtube! });
+    }
+    if (isAvailable(socialLinks.whatsapp)) {
+      list.push({
+        icon: MessageCircle,
+        label: "WhatsApp",
+        url: socialLinks.whatsapp!.startsWith("http")
+          ? socialLinks.whatsapp!
+          : `https://wa.me/${socialLinks.whatsapp!.replace(/[^0-9]/g, "")}`,
+      });
+    }
+    return list;
+  }, [socialLinks]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -334,14 +373,57 @@ const Navbar = () => {
                 </AnimatePresence>
               </div>
 
-              <a href="tel:+914711234567" className="hidden items-center gap-1.5 text-slate-300 transition-colors hover:text-white sm:flex">
+              {isPhoneAvailable ? (
+                <a
+                  href={`tel:${topbarPhone!.replace(/\s+/g, "")}`}
+                  className="hidden items-center gap-1.5 text-slate-300 transition-colors hover:text-white sm:flex"
+                >
+                  <span className="text-slate-600">|</span>
+                  <Phone className="h-3 w-3 text-accent" />
+                  <span>{topbarPhone}</span>
+                </a>
+              ) : (
+                <span className="hidden items-center gap-1.5 text-slate-400 sm:flex">
+                  <span className="text-slate-600">|</span>
+                  <Phone className="h-3 w-3 text-slate-500" />
+                  <span className="text-[11px] italic text-slate-400">Not available</span>
+                </span>
+              )}
+
+              {/* Official Social Media Links in Topbar */}
+              <div className="hidden lg:flex items-center gap-2">
                 <span className="text-slate-600">|</span>
-                <Phone className="h-3 w-3 text-accent" />
-                <span>+91 471 123 4567</span>
-              </a>
+                {topbarSocials.length > 0 ? (
+                  topbarSocials.map((s) => {
+                    const Icon = s.icon;
+                    return (
+                      <a
+                        key={s.label}
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={s.label}
+                        className="text-slate-400 transition-colors hover:text-accent"
+                      >
+                        <Icon className="h-3 w-3" />
+                      </a>
+                    );
+                  })
+                ) : (
+                  <span className="text-[10px] text-slate-500 italic">Social: Not available</span>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-4 text-slate-300">
+              <Link
+                to="/vendor-register"
+                className="hidden sm:inline-flex items-center gap-1.5 text-accent hover:text-white font-semibold text-[11px] transition-colors"
+              >
+                <Building2 className="h-3 w-3" />
+                <span>Become a Partner</span>
+              </Link>
+              <span className="hidden sm:inline text-slate-600">|</span>
               <span className="hidden items-center gap-1.5 sm:flex">
                 <Headphones className="h-3 w-3 text-accent" />
                 <span>24/7 Booking Support</span>
@@ -657,7 +739,11 @@ const Navbar = () => {
                 className={`relative ${iconButtonClass}`}
               >
                 <Bell className="h-4.5 w-4.5" />
-                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-accent" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground shadow-sm animate-pulse">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </button>
               <Link
                 to="/wishlist"
@@ -859,7 +945,11 @@ const Navbar = () => {
                 className={`relative ${iconButtonClass}`}
               >
                 <Bell className="h-4.5 w-4.5" />
-                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-accent" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground shadow-sm animate-pulse">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </button>
               <Link
                 to="/wishlist"
@@ -907,10 +997,15 @@ const Navbar = () => {
                   <button
                     type="button"
                     onClick={handleNotifications}
-                    className="flex items-center justify-center gap-2 rounded-2xl bg-muted px-4 py-3 text-sm font-medium text-foreground"
+                    className="relative flex items-center justify-center gap-2 rounded-2xl bg-muted px-4 py-3 text-sm font-medium text-foreground hover:bg-muted/80 transition-colors"
                   >
-                    <Bell className="h-4 w-4" />
-                    Notifications
+                    <Bell className="h-4 w-4 text-accent" />
+                    <span>Notifications</span>
+                    {unreadCount > 0 && (
+                      <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground shadow-sm">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
                   </button>
                   <Link
                     to="/wishlist"
@@ -1048,6 +1143,34 @@ const Navbar = () => {
                       Sign Up
                     </Button>
                   </Link>
+                </div>
+
+                {/* Mobile Official Contact & Socials Bar */}
+                <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-accent" />
+                    {isPhoneAvailable ? (
+                      <a href={`tel:${topbarPhone!.replace(/\s+/g, "")}`} className="font-semibold text-foreground hover:text-accent">
+                        {topbarPhone}
+                      </a>
+                    ) : (
+                      <span className="italic text-muted-foreground">Not available</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {topbarSocials.length > 0 ? (
+                      topbarSocials.map((s) => {
+                        const Icon = s.icon;
+                        return (
+                          <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-accent">
+                            <Icon className="h-3.5 w-3.5" />
+                          </a>
+                        );
+                      })
+                    ) : (
+                      <span className="text-[10px] italic">Not available</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>

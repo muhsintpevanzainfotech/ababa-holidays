@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloseIcon from '@mui/icons-material/Close';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import useThemeMode from 'hooks/useThemeMode';
 import ImageIcon from '@mui/icons-material/Image';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
@@ -20,13 +21,12 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 const DropzoneWrapper = styled(Box, {
     shouldForwardProp: (prop) => prop !== 'isDragActive' && prop !== 'isError'
 })(({ theme, isDragActive, isError }) => {
-    const isLightExplicit = theme.palette.mode === 'light' && document.documentElement.getAttribute('data-color-scheme') === 'light';
-    const isDark = !isLightExplicit;
-    const primaryMain = '#ff5252';
-    const primaryLight = isDark ? 'rgba(255, 82, 82, 0.15)' : 'rgba(255, 82, 82, 0.08)';
+    const isDark = theme.palette.mode === 'dark' || (typeof document !== 'undefined' && document.documentElement.getAttribute('data-color-scheme') === 'dark');
+    const primaryMain = '#41a0ae';
+    const primaryLight = isDark ? 'rgba(65, 160, 174, 0.18)' : 'rgba(54, 102, 156, 0.08)';
     const errorMain = '#ef4444';
-    const bgNormal = isDark ? '#111827' : '#f8fafc';
-    const borderNormal = isDark ? 'rgba(255, 255, 255, 0.15)' : '#cbd5e1';
+    const bgNormal = isDark ? '#16152b' : '#f8fafc';
+    const borderNormal = isDark ? 'rgba(255, 255, 255, 0.12)' : '#cbd5e1';
 
     return {
         width: '100%',
@@ -59,9 +59,7 @@ const FileUpload = ({
     value = null,
     previewUrl = null
 }) => {
-    const theme = useTheme();
-    const isLightExplicit = theme.palette.mode === 'light' && document.documentElement.getAttribute('data-color-scheme') === 'light';
-    const isDark = !isLightExplicit;
+    const { isDark } = useThemeMode();
     const [files, setFiles] = useState([]);
 
     const initialPreview = previewUrl || value;
@@ -131,12 +129,12 @@ const FileUpload = ({
                             width: 56,
                             height: 56,
                             borderRadius: '50%',
-                            bgcolor: isDark ? 'rgba(255, 82, 82, 0.15)' : 'rgba(255, 82, 82, 0.1)',
+                            bgcolor: isDark ? 'rgba(65, 160, 174, 0.15)' : 'rgba(54, 102, 156, 0.1)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             mb: 1.5,
-                            color: '#ff5252'
+                            color: isDark ? '#41a0ae' : '#36669c'
                         }}
                     >
                         <CloudUploadIcon sx={{ fontSize: 30 }} />
@@ -169,7 +167,7 @@ const FileUpload = ({
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
-                                    bgcolor: isDark ? '#1f2937' : '#ffffff',
+                                    bgcolor: isDark ? '#16152b' : '#ffffff',
                                     boxShadow: isDark ? '0 2px 10px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.04)'
                                 }}>
                                     <Stack direction="row" spacing={2} alignItems="center" sx={{ overflow: 'hidden' }}>
@@ -189,7 +187,7 @@ const FileUpload = ({
                                                     flexShrink: 0, 
                                                     border: '1px solid', 
                                                     borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : '#cbd5e1',
-                                                    bgcolor: isDark ? '#111827' : '#f1f5f9'
+                                                    bgcolor: isDark ? '#212040' : '#f1f5f9'
                                                 }}
                                             />
                                         ) : (
@@ -197,13 +195,13 @@ const FileUpload = ({
                                                 width: 56, 
                                                 height: 56, 
                                                 borderRadius: '8px', 
-                                                bgcolor: isDark ? 'rgba(255, 82, 82, 0.15)' : 'rgba(255, 82, 82, 0.1)', 
+                                                bgcolor: isDark ? 'rgba(65, 160, 174, 0.2)' : 'rgba(54, 102, 156, 0.12)', 
                                                 display: 'flex', 
                                                 alignItems: 'center', 
                                                 justifyContent: 'center', 
                                                 flexShrink: 0 
                                             }}>
-                                                <InsertDriveFileIcon sx={{ color: '#ff5252' }} />
+                                                <InsertDriveFileIcon sx={{ color: isDark ? '#41a0ae' : '#36669c' }} />
                                             </Box>
                                         )}
                                         <Box sx={{ overflow: 'hidden' }}>

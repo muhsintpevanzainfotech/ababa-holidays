@@ -99,25 +99,28 @@ export default function NavGroup({ item, lastItem, remItems, lastItemId, setSele
               gutterBottom
               sx={{
                 display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                color: 'text.heading',
-                padding: 0.75,
-                textTransform: 'capitalize',
-                marginTop: 1.25
+                fontSize: '0.6875rem',
+                fontWeight: 800,
+                color: 'text.secondary',
+                letterSpacing: '0.8px',
+                padding: '12px 14px 4px 14px',
+                textTransform: 'uppercase',
+                opacity: 0.85
               }}
             >
               {currentItem.title}
               {currentItem.caption && (
                 <Typography
-                  gutterBottom
+                  component="span"
                   sx={{
                     display: 'block',
-                    fontSize: '0.6875rem',
+                    fontSize: '0.65rem',
                     fontWeight: 500,
                     color: 'text.secondary',
-                    textTransform: 'capitalize',
-                    lineHeight: 1.66
+                    textTransform: 'none',
+                    letterSpacing: 'normal',
+                    lineHeight: 1.4,
+                    mt: 0.25
                   }}
                 >
                   {currentItem.caption}
@@ -132,7 +135,7 @@ export default function NavGroup({ item, lastItem, remItems, lastItemId, setSele
 
       {/* group divider */}
       <Activity mode={drawerOpen ? 'visible' : 'hidden'}>
-        <Divider sx={{ mt: 0.25, mb: 1.25 }} />
+        <Divider sx={{ mt: 0.75, mb: 1.25, opacity: 0.6 }} />
       </Activity>
     </>
   );

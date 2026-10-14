@@ -55,9 +55,14 @@ const DashboardPage = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    const token = localStorage.getItem("userToken") || localStorage.getItem("token");
+    if (!token) {
+      navigate("/login?redirect=/dashboard", { replace: true });
+      return;
+    }
     dispatch(fetchProfileStart());
     dispatch(fetchUserBookingsStart());
-  }, [dispatch]);
+  }, [dispatch, navigate]);
 
   useEffect(() => {
     if (user) {

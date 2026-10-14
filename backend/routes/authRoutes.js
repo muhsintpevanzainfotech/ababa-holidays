@@ -18,6 +18,9 @@ const router = express.Router();
 const vendorUploadFields = [
   { name: 'avatar', maxCount: 1 },
   { name: 'coverBanner', maxCount: 1 },
+  { name: 'coverBannerFile', maxCount: 1 },
+  { name: 'coverImage', maxCount: 1 },
+  { name: 'banner', maxCount: 1 },
   { name: 'idCard', maxCount: 1 },
   { name: 'idCardFile', maxCount: 1 },
   { name: 'tinUpload', maxCount: 1 },
@@ -32,6 +35,9 @@ const vendorUploadFields = [
   { name: 'passbookFile', maxCount: 1 },
   { name: 'tradeLicenseUpload', maxCount: 1 },
   { name: 'tradeLicenseFile', maxCount: 1 },
+  { name: 'logo', maxCount: 1 },
+  { name: 'logoFile', maxCount: 1 },
+  { name: 'companyLogo', maxCount: 1 },
   { name: 'logoS', maxCount: 1 },
   { name: 'logoM', maxCount: 1 },
   { name: 'logoL', maxCount: 1 }

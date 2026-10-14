@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -17,54 +17,170 @@ import {
   Send,
   Sparkles,
   MessageCircle,
-  Globe,
   Award,
   CheckCircle2,
   Lock,
+  Building2,
+  Link2,
+  Linkedin,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { fetchServicesStart } from "@/store/slices/servicesSlice";
+import { getServicesApi } from "@/api/endpoints";
+import { useSystemSettings, isAvailable } from "@/hooks/useSystemSettings";
 
-const serviceLinks = [
-  { label: "Tour Packages", path: "/services?category=Tour+Packages" },
-  { label: "Hotel & Resort Booking", path: "/services?category=Hotel+%26+Resourt" },
-  { label: "Tourist Bus Rentals", path: "/services?category=Tourist+Bus+Booking" },
-  { label: "Wedding Trip Logistics", path: "/services?category=Wedding+Trip+Booking" },
-  { label: "Transport & Cabs", path: "/services?category=Transport+Booking" },
-  { label: "Hajj & Umrah Packages", path: "/services?category=Hajj+%26+Umrah+Packages" },
-  { label: "Flight Tickets & Visas", path: "/services?category=Ticket+%26+Visa+Services" },
+const fallbackServiceLinks = [
+  { label: "Tour Packages", path: "/services?category=Tour+Packages", id: "s-1" },
+  { label: "Hotel & Resort Booking", path: "/services?category=Hotel+%26+Resourt", id: "s-2" },
+  { label: "Tourist Bus Rentals", path: "/services?category=Tourist+Bus+Booking", id: "s-3" },
+  { label: "Wedding Trip Logistics", path: "/services?category=Wedding+Trip+Booking", id: "s-4" },
+  { label: "Transport & Cabs", path: "/services?category=Transport+Booking", id: "s-5" },
+  { label: "Hajj & Umrah Packages", path: "/services?category=Hajj+%26+Umrah+Packages", id: "s-6" },
+  { label: "Flight Tickets & Visas", path: "/services?category=Ticket+%26+Visa+Services", id: "s-7" },
 ];
 
-const topDestinations = [
-  { label: "Munnar Tea Hills", path: "/packages?destination=Munnar" },
-  { label: "Alleppey Backwaters", path: "/packages?destination=Alleppey" },
-  { label: "Wayanad Rainforests", path: "/packages?destination=Wayanad" },
-  { label: "Kochi Heritage City", path: "/packages?destination=Kochi" },
-  { label: "Dubai & Desert Safari", path: "/packages?destination=Dubai" },
-  { label: "Kashmir Snow Valleys", path: "/packages?destination=Kashmir" },
-  { label: "Goa Coastal Escapes", path: "/packages?destination=Goa" },
+const quickLinks = [
+  { label: "Home", path: "/" },
+  { label: "About", path: "/about" },
+  { label: "Service", path: "/services" },
+  { label: "Packages", path: "/packages" },
+  { label: "Contact", path: "/contact" },
+  { label: "Terms & Conditions", path: "/terms" },
+  { label: "Refund & Cancellation", path: "/refund" },
+  { label: "Privacy Policy", path: "/privacy" },
+  { label: "Partner Terms", path: "/terms?target=Vendor" },
 ];
 
 const companyLinks = [
   { label: "About dotravels", path: "/about" },
   { label: "AI Smart Trip Planner", path: "/planner" },
-  { label: "Verified Fleet & Vendors", path: "/#vendors" },
+  { label: "Verified Travel Partners", path: "/vendors" },
   { label: "Travel Stories & Blog", path: "/blog" },
   { label: "Saved Wishlist", path: "/wishlist" },
   { label: "Customer Reviews", path: "/#testimonials" },
-  { label: "Terms & Privacy Policy", path: "/about" },
+  { label: "Terms & Conditions", path: "/terms" },
+  { label: "Refund & Cancellation", path: "/refund" },
+  { label: "Privacy Policy", path: "/privacy" },
+  { label: "Partner Terms & SLA", path: "/terms?target=Vendor" },
 ];
 
-const socialLinks = [
-  { icon: Instagram, label: "Instagram", href: "https://instagram.com", hoverColor: "hover:bg-gradient-to-tr hover:from-amber-500 hover:via-pink-500 hover:to-purple-600 hover:text-white" },
-  { icon: Facebook, label: "Facebook", href: "https://facebook.com", hoverColor: "hover:bg-blue-600 hover:text-white" },
-  { icon: Twitter, label: "Twitter / X", href: "https://twitter.com", hoverColor: "hover:bg-slate-800 hover:text-white" },
-  { icon: Youtube, label: "YouTube", href: "https://youtube.com", hoverColor: "hover:bg-red-600 hover:text-white" },
-];
+
+
 
 const Footer = () => {
   const [email, setEmail] = useState("");
   const [isSubscribing, setIsSubscribing] = useState(false);
+  const [apiServices, setApiServices] = useState<any[]>([]);
   const { toast } = useToast();
+
+  const dispatch = useAppDispatch();
+  const { services: reduxServices } = useAppSelector(
+    (state) => state.services
+  );
+
+  const { contactDetails, socialLinks: systemSocials } = useSystemSettings();
+
+  const activeSocialList = useMemo(() => {
+    const list: Array<{ icon: any; label: string; href: string; hoverColor: string }> = [];
+    if (isAvailable(systemSocials.instagram)) {
+      list.push({ icon: Instagram, label: "Instagram", href: systemSocials.instagram!, hoverColor: "hover:bg-gradient-to-tr hover:from-amber-500 hover:via-pink-500 hover:to-purple-600 hover:text-white" });
+    }
+    if (isAvailable(systemSocials.facebook)) {
+      list.push({ icon: Facebook, label: "Facebook", href: systemSocials.facebook!, hoverColor: "hover:bg-blue-600 hover:text-white" });
+    }
+    if (isAvailable(systemSocials.twitter)) {
+      list.push({ icon: Twitter, label: "Twitter / X", href: systemSocials.twitter!, hoverColor: "hover:bg-slate-800 hover:text-white" });
+    }
+    if (isAvailable(systemSocials.youtube)) {
+      list.push({ icon: Youtube, label: "YouTube", href: systemSocials.youtube!, hoverColor: "hover:bg-red-600 hover:text-white" });
+    }
+    if (isAvailable(systemSocials.whatsapp)) {
+      list.push({ icon: MessageCircle, label: "WhatsApp", href: systemSocials.whatsapp!.startsWith("http") ? systemSocials.whatsapp! : `https://wa.me/${systemSocials.whatsapp!.replace(/[^0-9]/g, "")}`, hoverColor: "hover:bg-emerald-600 hover:text-white" });
+    }
+    if (isAvailable(systemSocials.linkedin)) {
+      list.push({ icon: Linkedin, label: "LinkedIn", href: systemSocials.linkedin!, hoverColor: "hover:bg-sky-600 hover:text-white" });
+    }
+    if (Array.isArray(systemSocials.customLinks)) {
+      systemSocials.customLinks.forEach((c) => {
+        if (isAvailable(c.url)) {
+          list.push({ icon: Link2, label: c.title || "Custom", href: c.url, hoverColor: "hover:bg-indigo-600 hover:text-white" });
+        }
+      });
+    }
+    return list;
+  }, [systemSocials]);
+
+  // Support details availability
+  const isWhatsappAvailable = isAvailable(systemSocials.whatsapp) || isAvailable(contactDetails.supportPhone) || isAvailable(contactDetails.primaryPhone);
+  const whatsappNumber = isAvailable(contactDetails.supportPhone)
+    ? contactDetails.supportPhone!
+    : isAvailable(contactDetails.primaryPhone)
+    ? contactDetails.primaryPhone!
+    : isAvailable(systemSocials.whatsapp)
+    ? systemSocials.whatsapp!
+    : "Not available";
+  const whatsappUrl = isAvailable(systemSocials.whatsapp) && systemSocials.whatsapp!.startsWith("http")
+    ? systemSocials.whatsapp!
+    : isAvailable(contactDetails.supportPhone || contactDetails.primaryPhone)
+    ? `https://wa.me/${(contactDetails.supportPhone || contactDetails.primaryPhone)!.replace(/[^0-9]/g, "")}`
+    : "#";
+
+  const directPhone = contactDetails.primaryPhone || contactDetails.supportPhone;
+  const isPhoneAvailable = isAvailable(directPhone);
+
+  const officialEmail = contactDetails.primaryEmail || contactDetails.supportEmail;
+  const isEmailAvailable = isAvailable(officialEmail);
+
+  const officialAddress = contactDetails.address;
+  const isAddressAvailable = isAvailable(officialAddress);
+
+  // Fetch services from Redux and direct API on mount
+  useEffect(() => {
+    if (!reduxServices || reduxServices.length === 0) {
+      dispatch(fetchServicesStart());
+    }
+  }, [dispatch, reduxServices]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadServices = async () => {
+      try {
+        const rawServices = await getServicesApi();
+        if (isMounted && Array.isArray(rawServices) && rawServices.length > 0) {
+          setApiServices(rawServices);
+        }
+      } catch {
+        // Fallback gracefully to default links
+      }
+    };
+
+    if (!reduxServices || reduxServices.length === 0) {
+      loadServices();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [reduxServices]);
+
+  // Compute active dynamic services list from API
+  const activeServices = useMemo(() => {
+    const list = reduxServices && reduxServices.length > 0 ? reduxServices : apiServices;
+    if (Array.isArray(list) && list.length > 0) {
+      const active = list.filter((s: any) => s.isActive !== false);
+      if (active.length > 0) {
+        return active.map((s: any, idx: number) => ({
+          label: s.title || s.name || `Service ${idx + 1}`,
+          path: `/services?category=${encodeURIComponent(s.title || s.name)}`,
+          id: s._id || s.customId || `service-${idx}`,
+        }));
+      }
+    }
+    return fallbackServiceLinks;
+  }, [reduxServices, apiServices]);
+
+
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,10 +224,14 @@ const Footer = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               {/* Left text */}
               <div className="lg:col-span-7 space-y-2.5">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/15 border border-accent/30 text-accent text-xs font-bold uppercase tracking-wider">
-                  <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-                  <span>Travel Deals & AI Itineraries</span>
-                </div>
+                <Link
+                  to="/vendor-register"
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent/15 border border-accent/30 text-accent text-xs font-bold uppercase tracking-wider hover:bg-accent/25 hover:border-accent/50 transition-all duration-200 group"
+                >
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span>Become A Partner</span>
+                  <ArrowRight className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </Link>
                 <h3 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
                   Get exclusive discounts & customized holiday plans
                 </h3>
@@ -197,61 +317,65 @@ const Footer = () => {
             <div className="space-y-2 pt-1">
               <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Connect With Us</p>
               <div className="flex flex-wrap gap-2.5">
-                {socialLinks.map((item, index) => {
-                  const Icon = item.icon;
-                  return (
-                    <a
-                      key={index}
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={item.label}
-                      className={`flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 transition-all duration-300 shadow-sm hover:scale-110 hover:shadow-lg ${item.hoverColor}`}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </a>
-                  );
-                })}
+                {activeSocialList.length > 0 ? (
+                  activeSocialList.map((item, index) => {
+                    const Icon = item.icon;
+                    return (
+                      <a
+                        key={index}
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={item.label}
+                        className={`flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 transition-all duration-300 shadow-sm hover:scale-110 hover:shadow-lg ${item.hoverColor}`}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </a>
+                    );
+                  })
+                ) : (
+                  <span className="text-xs text-slate-500 italic">Not available</span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* COL 2: SERVICES DIRECTORY (2.5 Cols) */}
+          {/* COL 2: SERVICES DIRECTORY FROM SERVICE API (3 Cols) */}
           <div className="lg:col-span-3 space-y-4">
             <h4 className="font-display text-xs font-bold uppercase tracking-[0.18em] text-white flex items-center gap-2">
               <Award className="h-4 w-4 text-accent" />
               <span>Core Services</span>
             </h4>
             <ul className="space-y-2.5 text-xs sm:text-sm">
-              {serviceLinks.map((link) => (
-                <li key={link.label}>
+              {activeServices.map((service) => (
+                <li key={service.id || service.label}>
                   <Link
-                    to={link.path}
+                    to={service.path}
                     className="group flex items-center gap-2 text-slate-400 transition-colors duration-200 hover:text-white"
                   >
-                    <ArrowRight className="h-3 w-3 text-slate-600 transition-all duration-200 group-hover:translate-x-1 group-hover:text-accent" />
-                    <span className="truncate">{link.label}</span>
+                    <ArrowRight className="h-3 w-3 text-slate-600 transition-all duration-200 group-hover:translate-x-1 group-hover:text-accent shrink-0" />
+                    <span className="truncate">{service.label}</span>
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* COL 3: TOP DESTINATIONS (2.5 Cols) */}
+          {/* COL 3: QUICK LINKS (2.5 Cols) */}
           <div className="lg:col-span-2 space-y-4">
             <h4 className="font-display text-xs font-bold uppercase tracking-[0.18em] text-white flex items-center gap-2">
-              <Globe className="h-4 w-4 text-accent" />
-              <span>Top Escapes</span>
+              <Link2 className="h-4 w-4 text-accent" />
+              <span>Quick Links</span>
             </h4>
             <ul className="space-y-2.5 text-xs sm:text-sm">
-              {topDestinations.map((dest) => (
-                <li key={dest.label}>
+              {quickLinks.map((link) => (
+                <li key={link.label}>
                   <Link
-                    to={dest.path}
+                    to={link.path}
                     className="group flex items-center gap-2 text-slate-400 transition-colors duration-200 hover:text-white"
                   >
-                    <ArrowRight className="h-3 w-3 text-slate-600 transition-all duration-200 group-hover:translate-x-1 group-hover:text-accent" />
-                    <span className="truncate">{dest.label}</span>
+                    <ArrowRight className="h-3 w-3 text-slate-600 transition-all duration-200 group-hover:translate-x-1 group-hover:text-accent shrink-0" />
+                    <span className="truncate">{link.label}</span>
                   </Link>
                 </li>
               ))}
@@ -267,56 +391,94 @@ const Footer = () => {
 
             <div className="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950 p-4 space-y-3.5 text-xs shadow-xl backdrop-blur-md">
               {/* WhatsApp Fast CTA */}
-              <a
-                href="https://wa.me/919895100000"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-xl bg-emerald-600/15 border border-emerald-500/30 p-2.5 text-emerald-400 transition-all hover:bg-emerald-600/25 hover:border-emerald-500"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500 text-slate-950 font-bold">
-                    <MessageCircle className="h-4 w-4" />
+              {isWhatsappAvailable ? (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between rounded-xl bg-emerald-600/15 border border-emerald-500/30 p-2.5 text-emerald-400 transition-all hover:bg-emerald-600/25 hover:border-emerald-500"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500 text-slate-950 font-bold">
+                      <MessageCircle className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-medium text-emerald-300 uppercase tracking-wider">Fast WhatsApp Help</span>
+                      <span className="block font-bold text-xs">{whatsappNumber}</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="block text-[10px] font-medium text-emerald-300 uppercase tracking-wider">Fast WhatsApp Help</span>
-                    <span className="block font-bold text-xs">+91 98951 00000</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </a>
+              ) : (
+                <div className="flex items-center justify-between rounded-xl bg-slate-900/60 border border-slate-800 p-2.5 text-slate-500">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-slate-600">
+                      <MessageCircle className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider">Fast WhatsApp Help</span>
+                      <span className="block font-bold text-xs text-slate-500">Not available</span>
+                    </div>
                   </div>
                 </div>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </a>
+              )}
 
               {/* Direct Call */}
-              <a
-                href="tel:+914711234567"
-                className="flex items-center gap-2.5 text-slate-300 transition-colors hover:text-white group"
-              >
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-sky-400 group-hover:bg-sky-500 group-hover:text-slate-950 transition-colors">
-                  <Phone className="h-3.5 w-3.5" />
+              {isPhoneAvailable ? (
+                <a
+                  href={`tel:${directPhone!.replace(/\s+/g, "")}`}
+                  className="flex items-center gap-2.5 text-slate-300 transition-colors hover:text-white group"
+                >
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-sky-400 group-hover:bg-sky-500 group-hover:text-slate-950 transition-colors">
+                    <Phone className="h-3.5 w-3.5" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] text-slate-400">Direct Reservations Hotline</span>
+                    <span className="font-semibold text-slate-200 group-hover:text-white">{directPhone}</span>
+                  </div>
+                </a>
+              ) : (
+                <div className="flex items-center gap-2.5 text-slate-500">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-slate-600">
+                    <Phone className="h-3.5 w-3.5" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] text-slate-500">Direct Reservations Hotline</span>
+                    <span className="font-semibold text-slate-500">Not available</span>
+                  </div>
                 </div>
-                <div>
-                  <span className="block text-[10px] text-slate-400">Direct Reservations Hotline</span>
-                  <span className="font-semibold text-slate-200 group-hover:text-white">+91 471 123 4567</span>
-                </div>
-              </a>
+              )}
 
               {/* Official Email */}
-              <a
-                href="mailto:hello@ababatravels.com"
-                className="flex items-center gap-2.5 text-slate-300 transition-colors hover:text-white group"
-              >
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-accent group-hover:bg-accent group-hover:text-slate-950 transition-colors">
-                  <Mail className="h-3.5 w-3.5" />
+              {isEmailAvailable ? (
+                <a
+                  href={`mailto:${officialEmail}`}
+                  className="flex items-center gap-2.5 text-slate-300 transition-colors hover:text-white group"
+                >
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-accent group-hover:bg-accent group-hover:text-slate-950 transition-colors">
+                    <Mail className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-[10px] text-slate-400">Official Inquiries & Support</span>
+                    <span className="font-semibold text-slate-200 group-hover:text-white truncate block">{officialEmail}</span>
+                  </div>
+                </a>
+              ) : (
+                <div className="flex items-center gap-2.5 text-slate-500">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-slate-600">
+                    <Mail className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-[10px] text-slate-500">Official Inquiries & Support</span>
+                    <span className="font-semibold text-slate-500 truncate block">Not available</span>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <span className="block text-[10px] text-slate-400">Official Inquiries & Support</span>
-                  <span className="font-semibold text-slate-200 group-hover:text-white truncate block">hello@ababatravels.com</span>
-                </div>
-              </a>
+              )}
 
               {/* Location */}
               <div className="flex items-start gap-2.5 pt-1 border-t border-slate-800/80 text-[11px] text-slate-400">
                 <MapPin className="mt-0.5 h-3.5 w-3.5 text-accent shrink-0" />
-                <span>MG Road, North End, Kochi, Kerala 682016, India</span>
+                <span>{isAddressAvailable ? officialAddress : "Not available"}</span>
               </div>
             </div>
           </div>
@@ -361,26 +523,37 @@ const Footer = () => {
             © {new Date().getFullYear()} <span className="font-semibold text-slate-200">dotravels</span>. All rights reserved. Crafted for seamless journeys.
           </p>
 
-          <div className="flex items-center gap-5 flex-wrap justify-center">
-            {companyLinks.slice(0, 4).map((link) => (
-              <Link
-                key={link.label}
-                to={link.path}
-                className="hover:text-white transition-colors duration-150"
-              >
-                {link.label}
-              </Link>
-            ))}
+          <div className="flex items-center gap-4 sm:gap-5 flex-wrap justify-center text-[11px] sm:text-xs">
+            <Link to="/about" className="hover:text-white transition-colors duration-150">
+              About
+            </Link>
+            <span className="text-slate-700">·</span>
+            <Link to="/terms" className="hover:text-white transition-colors duration-150">
+              Terms & Conditions
+            </Link>
+            <span className="text-slate-700">·</span>
+            <Link to="/refund" className="hover:text-white transition-colors duration-150">
+              Refund & Cancellation
+            </Link>
+            <span className="text-slate-700">·</span>
+            <Link to="/privacy" className="hover:text-white transition-colors duration-150">
+              Privacy Policy
+            </Link>
+            <span className="text-slate-700">·</span>
+            <Link to="/terms?target=Vendor" className="hover:text-accent transition-colors duration-150 font-medium">
+              Partner Terms
+            </Link>
 
             <button
               type="button"
               onClick={scrollToTop}
               aria-label="Back to top"
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 border border-slate-800 text-slate-300 transition-all duration-200 hover:bg-accent hover:border-accent hover:text-accent-foreground hover:scale-105 active:scale-95 shadow-md ml-1"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 border border-slate-800 text-slate-300 transition-all duration-200 hover:bg-accent hover:border-accent hover:text-accent-foreground hover:scale-105 active:scale-95 shadow-md ml-2"
             >
               <ArrowUp className="h-4 w-4" />
             </button>
           </div>
+
         </div>
       </div>
     </footer>

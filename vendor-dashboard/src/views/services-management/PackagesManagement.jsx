@@ -8,9 +8,10 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, MenuItem,
   Card, CardContent, CardMedia, Divider, CircularProgress, Avatar,
   Snackbar, Alert, ToggleButton, ToggleButtonGroup, Radio, RadioGroup,
-  FormControlLabel, FormControl, FormLabel, Autocomplete
+  FormControlLabel, FormControl, FormLabel, Autocomplete, Checkbox
 } from '@mui/material';
-import { useTheme, useColorScheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -49,6 +50,15 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import TuneIcon from '@mui/icons-material/Tune';
 import SellIcon from '@mui/icons-material/Sell';
 import CategoryIcon from '@mui/icons-material/Category';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import PublicIcon from '@mui/icons-material/Public';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
+import VerifiedIcon from '@mui/icons-material/Verified';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import CloseIcon from '@mui/icons-material/Close';
+import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
+import CheckIcon from '@mui/icons-material/Check';
 
 const getFullImageUrl = (path) => {
   const baseUrl = import.meta.env.VITE_APP_API_URL
@@ -64,8 +74,7 @@ const getFullImageUrl = (path) => {
 
 const PackagesManagement = () => {
   const theme = useTheme();
-  const { mode, systemMode } = useColorScheme();
-  const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
+  const { isDark: isDarkMode } = useThemeMode();
   const { user } = useSelector((state) => state.auth);
   const isAdminUser = ['Admin', 'Sub-Admin', 'Staff'].includes(user?.role);
   const isSystemAdmin = ['Admin', 'Sub-Admin'].includes(user?.role);
@@ -130,9 +139,10 @@ const PackagesManagement = () => {
   const [dynamicValues, setDynamicValues] = useState({});
   const [customFiles, setCustomFiles] = useState({});
 
-  // Form State for Package (supporting multiple images + file uploads)
+  // Form State for Package (supporting full backend schema)
   const [formData, setFormData] = useState({
     title: '',
+    packageName: '',
     serviceCategory: '',
     selectionMode: 'single', // 'single' | 'multiple'
     subService: '',
@@ -150,11 +160,22 @@ const PackagesManagement = () => {
     duration: '',
     location: '',
     description: '',
+    packageDescription: '',
     inclusions: '',
     exclusions: '',
     status: 'Active',
+    badge: '',
+    isFeatured: true,
+    isTopPick: false,
+    topRated: true,
     images: [],
-    newUrlInput: ''
+    newUrlInput: '',
+    itinerary: [],
+    availabilityDates: [],
+    newDateInput: '',
+    seoTitle: '',
+    seoDescription: '',
+    seoKeywords: ''
   });
 
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -179,9 +200,19 @@ const PackagesManagement = () => {
       }
 
       if (packagesRes.success || packagesRes.data) {
-        const loadedPkgs = packagesRes.data || packagesRes || [];
-        setPackages(loadedPkgs);
-        const loadedUnits = loadedPkgs.map(p => p.priceType).filter(Boolean);
+        const rawPkgs = packagesRes.data || packagesRes || [];
+        const loadedPkgs = Array.isArray(rawPkgs) ? rawPkgs : (Array.isArray(rawPkgs.data) ? rawPkgs.data : []);
+        // Deduplicate packages by ID to prevent repeated data items
+        const uniqueMap = new Map();
+        loadedPkgs.forEach((p) => {
+          const key = (p._id || p.customId || '').toString();
+          if (key && !uniqueMap.has(key)) {
+            uniqueMap.set(key, p);
+          }
+        });
+        const uniquePkgs = Array.from(uniqueMap.values());
+        setPackages(uniquePkgs);
+        const loadedUnits = uniquePkgs.map(p => p.priceType).filter(Boolean);
         if (loadedUnits.length > 0) {
           setCustomUnits(prev => Array.from(new Set([...prev, ...loadedUnits])));
         }
@@ -324,11 +355,28 @@ const PackagesManagement = () => {
       statusFilter === 'All'
         ? true
         : statusFilter === 'Active'
-          ? pkg.status === 'Active' || pkg.isActive
-          : pkg.status === statusFilter;
+          ? (pkg.status === 'Active' || (pkg.status === undefined && pkg.isActive)) && pkg.status !== 'Correction'
+          : statusFilter === 'Correction'
+            ? pkg.status === 'Correction'
+            : pkg.status === statusFilter;
 
     return matchesService && matchesUserCreator && matchesSearch && matchesStatus;
   });
+
+  // Filter categories for the Package Form Dialog based on selected serviceCategory and subService
+  const formFilteredCategories = categories.filter((c) => {
+    if (formData.subService) {
+      const catSubId = (c.subService?._id || c.subService || '').toString();
+      if (catSubId && catSubId === formData.subService.toString()) return true;
+    }
+    if (formData.serviceCategory) {
+      const catSvcId = (c.service?._id || c.service || '').toString();
+      if (catSvcId && catSvcId === formData.serviceCategory.toString()) return true;
+    }
+    if (!formData.serviceCategory && !formData.subService) return true;
+    return false;
+  });
+  const categoriesForForm = formFilteredCategories.length > 0 ? formFilteredCategories : categories;
 
   const paginatedPackages = filteredPackages.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
@@ -360,6 +408,28 @@ const PackagesManagement = () => {
     }
   };
 
+  const standardFieldKeys = new Set([
+    'title', 'packagename', 'package_name', 'name',
+    'price', 'regularprice', 'originalprice', 'original_price', 'discountprice', 'discount_price',
+    'pricetype', 'price_type', 'pricingunit', 'currency', 'taxrate', 'tax_rate', 'taxpercentage', 'tax_percentage', 'taxpolicy', 'tax_policy',
+    'pricenotes', 'price_notes',
+    'duration', 'days', 'nights',
+    'location', 'destination', 'city', 'country',
+    'description', 'packagedescription', 'package_description', 'overview', 'details',
+    'inclusions', 'inclusion', 'exclusions', 'exclusion',
+    'image', 'images', 'photos', 'gallery',
+    'itinerary', 'schedule', 'dayschedule',
+    'availability', 'availabilitydates', 'dates', 'departure_dates',
+    'badge', 'tag', 'featured', 'isfeatured', 'toppick', 'istoppick', 'toprated',
+    'status', 'isactive', 'active',
+    'seotitle', 'seo_title', 'seodescription', 'seo_description', 'seokeywords', 'seo_keywords'
+  ]);
+
+  const uniqueCustomFields = configuredFields.filter((f) => {
+    const key = (f.fieldName || f.name || f.key || f.label || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return !standardFieldKeys.has(key);
+  });
+
   // Open Create/Edit Package Dialog
   const handleOpenForm = (pkg = null) => {
     setSelectedPackage(pkg);
@@ -387,6 +457,7 @@ const PackagesManagement = () => {
         description: pkg.description || pkg.packageDescription || '',
         inclusions: Array.isArray(pkg.inclusions) ? pkg.inclusions.join(', ') : pkg.inclusions || '',
         exclusions: Array.isArray(pkg.exclusions) ? pkg.exclusions.join(', ') : pkg.exclusions || '',
+        correctionNotes: pkg.correctionNotes || '',
         status: pkg.status || 'Active'
       }
       : {
@@ -400,6 +471,7 @@ const PackagesManagement = () => {
         description: '',
         inclusions: '',
         exclusions: '',
+        correctionNotes: '',
         status: 'Active'
       };
 
@@ -434,14 +506,35 @@ const PackagesManagement = () => {
       taxPolicy: pkg?.taxPolicy || 'inclusive',
       priceNotes: pkg?.priceNotes || '',
       duration: pkg?.duration || '',
-      location: pkg?.location || '',
+      location: pkg?.location || pkg?.destination || '',
       packageDescription: pkg?.packageDescription || pkg?.description || '',
       description: pkg?.description || pkg?.packageDescription || '',
-      inclusions: Array.isArray(pkg?.inclusions) ? pkg.inclusions.join(', ') : pkg?.inclusions || '',
-      exclusions: Array.isArray(pkg?.exclusions) ? pkg.exclusions.join(', ') : pkg?.exclusions || '',
+      inclusions: Array.isArray(pkg?.inclusions) ? pkg.inclusions.join(', ') : (pkg?.inclusions || ''),
+      exclusions: Array.isArray(pkg?.exclusions) ? pkg.exclusions.join(', ') : (pkg?.exclusions || ''),
+      correctionNotes: pkg?.correctionNotes || '',
       status: pkg?.status || 'Active',
+      badge: pkg?.badge || '',
+      isFeatured: pkg?.isFeatured !== undefined ? pkg.isFeatured : true,
+      isTopPick: pkg?.isTopPick !== undefined ? pkg.isTopPick : false,
+      topRated: pkg?.topRated !== undefined ? pkg.topRated : true,
       images: existingImages,
-      newUrlInput: ''
+      newUrlInput: '',
+      itinerary: Array.isArray(pkg?.itinerary) && pkg.itinerary.length > 0
+        ? pkg.itinerary.map((item, idx) => ({
+            day: item.day || idx + 1,
+            title: item.title || '',
+            description: item.description || ''
+          }))
+        : [],
+      availabilityDates: Array.isArray(pkg?.availabilityDates)
+        ? pkg.availabilityDates.map(d => typeof d === 'string' ? d.split('T')[0] : new Date(d).toISOString().split('T')[0])
+        : [],
+      newDateInput: '',
+      seoTitle: pkg?.seo?.title || pkg?.seoTitle || '',
+      seoDescription: pkg?.seo?.description || pkg?.seoDescription || '',
+      seoKeywords: Array.isArray(pkg?.seo?.keywords)
+        ? pkg.seo.keywords.join(', ')
+        : (pkg?.seo?.keywords || pkg?.seoKeywords || '')
     });
 
     setDynamicValues(initialDynamic);
@@ -467,6 +560,56 @@ const PackagesManagement = () => {
 
   const handleDynamicFileChange = (fieldName, filesArr) => {
     setCustomFiles((prev) => ({ ...prev, [fieldName]: filesArr }));
+  };
+
+  // Itinerary Handlers
+  const handleAddItineraryDay = () => {
+    const nextDay = (formData.itinerary?.length || 0) + 1;
+    setFormData((prev) => ({
+      ...prev,
+      itinerary: [
+        ...(prev.itinerary || []),
+        { day: nextDay, title: `Day ${nextDay}: `, description: '' }
+      ]
+    }));
+  };
+
+  const handleUpdateItineraryDay = (index, field, value) => {
+    setFormData((prev) => {
+      const updated = [...(prev.itinerary || [])];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, itinerary: updated };
+    });
+  };
+
+  const handleRemoveItineraryDay = (index) => {
+    setFormData((prev) => {
+      const updated = (prev.itinerary || [])
+        .filter((_, i) => i !== index)
+        .map((item, i) => ({ ...item, day: i + 1 }));
+      return { ...prev, itinerary: updated };
+    });
+  };
+
+  // Availability / Departure Dates Handlers
+  const handleAddAvailabilityDate = () => {
+    if (!formData.newDateInput) return;
+    if ((formData.availabilityDates || []).includes(formData.newDateInput)) {
+      setFormData((prev) => ({ ...prev, newDateInput: '' }));
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      availabilityDates: [...(prev.availabilityDates || []), prev.newDateInput].sort(),
+      newDateInput: ''
+    }));
+  };
+
+  const handleRemoveAvailabilityDate = (dateToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      availabilityDates: (prev.availabilityDates || []).filter((d) => d !== dateToRemove)
+    }));
   };
 
   // Image Form Handlers
@@ -520,40 +663,53 @@ const PackagesManagement = () => {
 
     setSubmitting(true);
     try {
-      const titleVal =
-        dynamicValues.packageName ||
-        dynamicValues.package_name ||
-        dynamicValues.title ||
-        dynamicValues.name ||
-        dynamicValues.package_title ||
-        dynamicValues.title_name ||
-        formData.packageName ||
-        formData.title ||
-        'Package Listing';
+      const titleVal = (formData.packageName || formData.title || dynamicValues.packageName || dynamicValues.title || '').trim();
+      if (!titleVal) {
+        showToast('Please enter a Package Name / Title', 'error');
+        setSubmitting(false);
+        return;
+      }
 
-      const descVal =
-        dynamicValues.packageDescription ||
-        dynamicValues.package_description ||
-        dynamicValues.description ||
-        formData.packageDescription ||
-        formData.description ||
-        '';
+      const descVal = (formData.packageDescription || formData.description || dynamicValues.packageDescription || dynamicValues.description || '').trim();
+      const rawPrice = Number(formData.price) || Number(formData.discountPrice) || 0;
+      const rawDiscount = Number(formData.discountPrice) || 0;
+      const rawOriginal = Number(formData.originalPrice) || (rawDiscount > 0 ? rawPrice : 0);
+      const finalPrice = rawDiscount > 0 ? rawDiscount : rawPrice;
+      const finalOriginal = rawOriginal > 0 ? rawOriginal : finalPrice;
 
-      const priceVal = Number(
-        dynamicValues.price || dynamicValues.rate || dynamicValues.amount || formData.price || 0
-      );
-
-      const inclusionsArr = typeof dynamicValues.inclusions === 'string'
-        ? dynamicValues.inclusions.split(',').map((s) => s.trim()).filter(Boolean)
-        : Array.isArray(dynamicValues.inclusions)
-          ? dynamicValues.inclusions
+      const inclusionsArr = typeof formData.inclusions === 'string'
+        ? formData.inclusions.split(',').map((s) => s.trim()).filter(Boolean)
+        : Array.isArray(formData.inclusions)
+          ? formData.inclusions
           : [];
 
-      const exclusionsArr = typeof dynamicValues.exclusions === 'string'
-        ? dynamicValues.exclusions.split(',').map((s) => s.trim()).filter(Boolean)
-        : Array.isArray(dynamicValues.exclusions)
-          ? dynamicValues.exclusions
+      const exclusionsArr = typeof formData.exclusions === 'string'
+        ? formData.exclusions.split(',').map((s) => s.trim()).filter(Boolean)
+        : Array.isArray(formData.exclusions)
+          ? formData.exclusions
           : [];
+
+      const cleanItinerary = (formData.itinerary || [])
+        .filter((item) => item.title?.trim() || item.description?.trim())
+        .map((item, idx) => ({
+          day: Number(item.day) || idx + 1,
+          title: item.title?.trim() || `Day ${idx + 1}`,
+          description: item.description?.trim() || ''
+        }));
+
+      const cleanAvailabilityDates = (formData.availabilityDates || []).filter(Boolean);
+
+      const seoKeywordsArr = typeof formData.seoKeywords === 'string'
+        ? formData.seoKeywords.split(',').map((k) => k.trim()).filter(Boolean)
+        : Array.isArray(formData.seoKeywords)
+          ? formData.seoKeywords
+          : [];
+
+      const seoObj = {
+        title: formData.seoTitle?.trim() || titleVal,
+        description: formData.seoDescription?.trim() || (descVal.length > 160 ? descVal.substring(0, 157) + '...' : descVal),
+        keywords: seoKeywordsArr
+      };
 
       const hasFiles = selectedFiles.length > 0 || Object.keys(customFiles).length > 0;
       const payloadCustomData = { ...dynamicValues };
@@ -566,13 +722,14 @@ const PackagesManagement = () => {
         fd.append('service', formData.serviceCategory);
         if (formData.subService) fd.append('subService', formData.subService);
         if (formData.category) fd.append('category', formData.category);
-        fd.append('price', priceVal);
-        fd.append('originalPrice', Number(formData.originalPrice || dynamicValues.originalPrice) || 0);
-        fd.append('discountPrice', Number(formData.discountPrice || dynamicValues.discountPrice) || 0);
-        fd.append('priceType', formData.priceType || dynamicValues.priceType || 'Per Person');
+        fd.append('price', finalPrice);
+        fd.append('originalPrice', finalOriginal);
+        fd.append('discountPrice', rawDiscount);
+        fd.append('priceType', formData.priceType || 'Per Person');
         if (formData.priceNotes) fd.append('priceNotes', formData.priceNotes);
-        fd.append('duration', dynamicValues.duration || formData.duration || '');
-        fd.append('location', dynamicValues.location || formData.location || '');
+        fd.append('duration', formData.duration || dynamicValues.duration || 'N/A');
+        fd.append('location', formData.location || dynamicValues.location || 'N/A');
+        fd.append('destination', formData.location || dynamicValues.location || 'N/A');
         fd.append('packageDescription', descVal);
         fd.append('description', descVal);
         fd.append('selectionMode', formData.selectionMode || 'single');
@@ -584,16 +741,30 @@ const PackagesManagement = () => {
         }
         fd.append('currency', formData.currency || 'INR (₹)');
         fd.append('taxRate', Number(formData.taxRate) || 0);
+        fd.append('taxPercentage', Number(formData.taxRate) || 0);
         fd.append('taxPolicy', formData.taxPolicy || 'inclusive');
-        fd.append('status', formData.status || dynamicValues.status || 'Active');
+        fd.append('isTaxIncluded', formData.taxPolicy === 'inclusive');
+        fd.append('status', formData.status || 'Active');
+        fd.append('isActive', formData.status === 'Active');
+        fd.append('correctionNotes', formData.correctionNotes || '');
+        fd.append('badge', formData.badge?.trim() || '');
+        fd.append('isFeatured', Boolean(formData.isFeatured));
+        fd.append('isTopPick', Boolean(formData.isTopPick));
+        fd.append('topRated', Boolean(formData.topRated));
+        fd.append('itinerary', JSON.stringify(cleanItinerary));
+        fd.append('availabilityDates', JSON.stringify(cleanAvailabilityDates));
+        fd.append('seo', JSON.stringify(seoObj));
+        fd.append('inclusions', JSON.stringify(inclusionsArr));
+        fd.append('exclusions', JSON.stringify(exclusionsArr));
         fd.append('customData', JSON.stringify(payloadCustomData));
 
-        inclusionsArr.forEach((inc) => fd.append('inclusions', inc));
-        exclusionsArr.forEach((exc) => fd.append('exclusions', exc));
+        // Existing remote images
+        fd.append('images', JSON.stringify(formData.images || []));
 
-        formData.images.forEach((img) => fd.append('images', img));
+        // Newly selected image files from local disk
         selectedFiles.forEach((file) => fd.append('images', file));
 
+        // Custom data files
         Object.keys(customFiles).forEach((fName) => {
           const filesArr = customFiles[fName];
           if (Array.isArray(filesArr)) {
@@ -617,22 +788,34 @@ const PackagesManagement = () => {
           subServices: formData.selectionMode === 'multiple' ? formData.subServices : undefined,
           category: formData.category || undefined,
           categories: formData.selectionMode === 'multiple' ? formData.categories : undefined,
-          price: priceVal,
-          originalPrice: Number(formData.originalPrice || dynamicValues.originalPrice) || 0,
-          discountPrice: Number(formData.discountPrice || dynamicValues.discountPrice) || 0,
-          priceType: formData.priceType || dynamicValues.priceType || 'Per Person',
+          price: finalPrice,
+          originalPrice: finalOriginal,
+          discountPrice: rawDiscount,
+          priceType: formData.priceType || 'Per Person',
           currency: formData.currency || 'INR (₹)',
           taxRate: Number(formData.taxRate) || 0,
+          taxPercentage: Number(formData.taxRate) || 0,
           taxPolicy: formData.taxPolicy || 'inclusive',
+          isTaxIncluded: formData.taxPolicy === 'inclusive',
           priceNotes: formData.priceNotes || '',
-          duration: dynamicValues.duration || formData.duration || '',
-          location: dynamicValues.location || formData.location || '',
+          duration: formData.duration || dynamicValues.duration || 'N/A',
+          location: formData.location || dynamicValues.location || 'N/A',
+          destination: formData.location || dynamicValues.location || 'N/A',
           packageDescription: descVal,
           description: descVal,
-          status: formData.status || dynamicValues.status || 'Active',
+          status: formData.status || 'Active',
+          isActive: formData.status === 'Active',
+          correctionNotes: formData.correctionNotes || '',
+          badge: formData.badge?.trim() || '',
+          isFeatured: Boolean(formData.isFeatured),
+          isTopPick: Boolean(formData.isTopPick),
+          topRated: Boolean(formData.topRated),
+          itinerary: cleanItinerary,
+          availabilityDates: cleanAvailabilityDates,
+          seo: seoObj,
           inclusions: inclusionsArr,
           exclusions: exclusionsArr,
-          images: formData.images,
+          images: formData.images || [],
           customData: payloadCustomData
         };
 
@@ -709,15 +892,15 @@ const PackagesManagement = () => {
           textAlign: 'center',
           borderRadius: '16px',
           border: '1px solid',
-          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e2e8f0',
-          backgroundColor: theme.palette.mode === 'dark' ? '#111936' : '#ffffff',
+          borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0',
+          backgroundColor: isDarkMode ? '#16152b' : '#ffffff',
           mt: 3
         }}
       >
         <Typography variant="h3" color="error" gutterBottom sx={{ fontWeight: 800 }}>
           Access Denied
         </Typography>
-        <Typography variant="body1" sx={{ color: theme.palette.mode === 'dark' ? '#cbd5e1' : '#64748b', mb: 3 }}>
+        <Typography variant="body1" sx={{ color: isDarkMode ? '#cbd5e1' : '#64748b', mb: 3 }}>
           Your staff account does not have authorization to access Packages &amp; Listings management.
         </Typography>
         <Button variant="contained" color="primary" onClick={() => window.location.href = '/dashboard'} sx={{ borderRadius: '10px', fontWeight: 700 }}>
@@ -800,6 +983,36 @@ const PackagesManagement = () => {
           </Paper>
         </Grid>
 
+        {(selectedPackage?.status === 'Correction' || selectedPackage?.correctionNotes || formData.status === 'Correction') && (
+          <Grid size={12}>
+            <Alert 
+              severity="warning" 
+              variant="outlined"
+              sx={{ 
+                borderRadius: '14px', 
+                bgcolor: 'rgba(245, 158, 11, 0.08)', 
+                borderColor: '#f59e0b',
+                p: 2
+              }}
+            >
+              <Typography variant="subtitle1" fontWeight={800} color="#b45309" gutterBottom>
+                🟠 Correction Mode / Admin Review Feedback
+              </Typography>
+              <Typography variant="body2" color="#78350f" sx={{ mb: 1.5 }}>
+                {selectedPackage?.correctionNotes || 'This package has been flagged for correction by the admin. Please update the relevant sections (pricing, photos, specifications) and submit your changes.'}
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                label="Correction Notes / Response to Reviewer"
+                value={formData.correctionNotes || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, correctionNotes: e.target.value }))}
+                placeholder="Note actions taken or changes made for the reviewer..."
+              />
+            </Alert>
+          </Grid>
+        )}
+
         {/* CARD 1: PACKAGE SPECIFICATIONS, SERVICES & CATEGORIES */}
         <Grid size={12}>
           <MainCard title="Package Specifications, Services & Categories">
@@ -867,8 +1080,10 @@ const PackagesManagement = () => {
                     handleDynamicValueChange('status', e.target.value);
                   }}
                 >
-                  <MenuItem value="Active">🟢 Active & Published</MenuItem>
+                  <MenuItem value="Active">🟢 Active &amp; Published</MenuItem>
+                  <MenuItem value="Correction">🟠 Needs Correction</MenuItem>
                   <MenuItem value="Draft">🟡 Draft</MenuItem>
+                  <MenuItem value="Pending">🔵 Pending Review</MenuItem>
                   <MenuItem value="Inactive">🔴 Inactive</MenuItem>
                 </TextField>
               </Grid>
@@ -977,9 +1192,9 @@ const PackagesManagement = () => {
                 {formData.selectionMode === 'multiple' ? (
                   <Autocomplete
                     multiple
-                    options={categories}
+                    options={categoriesForForm}
                     getOptionLabel={(option) => option.name || option.title || ''}
-                    value={categories.filter((c) => (formData.categories || []).includes(c._id))}
+                    value={categoriesForForm.filter((c) => (formData.categories || []).includes(c._id))}
                     onChange={(e, newValues) => {
                       setFormData((prev) => ({
                         ...prev,
@@ -1005,13 +1220,370 @@ const PackagesManagement = () => {
                     onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value, categories: [e.target.value] }))}
                   >
                     <MenuItem value="">-- Select Category --</MenuItem>
-                    {categories.map((c) => (
+                    {categoriesForForm.map((c) => (
                       <MenuItem key={c._id} value={c._id}>
                         {c.name || c.title}
                       </MenuItem>
                     ))}
                   </TextField>
                 )}
+              </Grid>
+
+              {/* Inclusions & Exclusions */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <TextField
+                  fullWidth
+                  label="Inclusions (Comma-Separated)"
+                  value={formData.inclusions}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, inclusions: e.target.value }))}
+                  placeholder="e.g. 4-Star Hotel, Breakfast & Dinner, Cab Transfers, Sightseeing Guide"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <CheckCircleIcon sx={{ color: '#16a34a' }} fontSize="small" />
+                      </InputAdornment>
+                    )
+                  }}
+                  helperText="Features, amenities, and complimentary services included"
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 6 }}>
+                <TextField
+                  fullWidth
+                  label="Exclusions (Comma-Separated)"
+                  value={formData.exclusions}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, exclusions: e.target.value }))}
+                  placeholder="e.g. Airfare, Personal Expenses, Lunch, Entry Tickets, GST Extra"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <CloseIcon sx={{ color: '#dc2626' }} fontSize="small" />
+                      </InputAdornment>
+                    )
+                  }}
+                  helperText="Services and items not covered by this package rate"
+                />
+              </Grid>
+
+              {/* Promotional Badges & Showcase Highlights */}
+              <Grid size={12}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    borderRadius: '12px',
+                    bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : '#f8fafc',
+                    borderColor: 'divider'
+                  }}
+                >
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }} flexWrap="wrap" gap={1}>
+                    <Typography variant="subtitle2" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <WorkspacePremiumIcon color="secondary" fontSize="small" /> Promotional Badges & Showcase Visibility
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Attract more bookings with front-end ribbons and homepage highlights
+                    </Typography>
+                  </Stack>
+
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Promotional Ribbon Badge"
+                        value={formData.badge}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, badge: e.target.value }))}
+                        placeholder="e.g. BESTSELLER, HOT DEAL, TRENDING"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <BookmarkIcon color="secondary" fontSize="small" />
+                            </InputAdornment>
+                          )
+                        }}
+                      />
+                      <Stack direction="row" spacing={0.8} sx={{ mt: 1 }} flexWrap="wrap">
+                        {['BESTSELLER', 'HOT DEAL', 'TRENDING', 'TOP CHOICE', 'LIMITED SEATS', 'LUXURY'].map((tag) => (
+                          <Chip
+                            key={tag}
+                            label={`+${tag}`}
+                            size="small"
+                            onClick={() => setFormData((prev) => ({ ...prev, badge: tag }))}
+                            variant={formData.badge === tag ? 'filled' : 'outlined'}
+                            color={formData.badge === tag ? 'secondary' : 'default'}
+                            sx={{ fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', mb: 0.5 }}
+                          />
+                        ))}
+                        {formData.badge && (
+                          <Chip
+                            label="Clear"
+                            size="small"
+                            onClick={() => setFormData((prev) => ({ ...prev, badge: '' }))}
+                            color="error"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', mb: 0.5 }}
+                          />
+                        )}
+                      </Stack>
+                    </Grid>
+
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <Stack spacing={1}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={formData.isFeatured}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, isFeatured: e.target.checked }))}
+                              color="secondary"
+                              size="small"
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <StarIcon sx={{ color: '#f59e0b', fontSize: 16 }} /> Featured Experience (Homepage Showcase)
+                            </Typography>
+                          }
+                        />
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={formData.isTopPick}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, isTopPick: e.target.checked }))}
+                              color="success"
+                              size="small"
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <VerifiedIcon sx={{ color: '#10b981', fontSize: 16 }} /> Top Pick (Curated Recommended Choice)
+                            </Typography>
+                          }
+                        />
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={formData.topRated}
+                              onChange={(e) => setFormData((prev) => ({ ...prev, topRated: e.target.checked }))}
+                              color="primary"
+                              size="small"
+                            />
+                          }
+                          label={
+                            <Typography variant="body2" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <WorkspacePremiumIcon sx={{ color: '#3b82f6', fontSize: 16 }} /> Top Rated (High Review Badge)
+                            </Typography>
+                          }
+                        />
+                      </Stack>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </Grid>
+
+              {/* Photo Gallery & Media Section */}
+              <Grid size={12}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    borderRadius: '12px',
+                    bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : '#f8fafc',
+                    borderColor: 'divider'
+                  }}
+                >
+                  <Typography variant="subtitle2" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                    <PhotoLibraryIcon color="secondary" fontSize="small" /> Package Photo Gallery & Media
+                  </Typography>
+
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<CloudUploadIcon />}
+                      color="secondary"
+                      sx={{ borderRadius: '10px', fontWeight: 700, whiteSpace: 'nowrap', py: 1 }}
+                    >
+                      Choose Images from Device
+                      <input type="file" multiple accept="image/*" hidden onChange={handleSelectFiles} />
+                    </Button>
+
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Or Add External Image URL"
+                      placeholder="e.g. https://images.unsplash.com/..."
+                      value={formData.newUrlInput}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, newUrlInput: e.target.value }))}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <Button
+                              variant="contained"
+                              color="secondary"
+                              size="small"
+                              onClick={handleAddImageUrl}
+                              disabled={!formData.newUrlInput.trim()}
+                              sx={{ fontWeight: 700, borderRadius: '8px' }}
+                            >
+                              Add URL
+                            </Button>
+                          </InputAdornment>
+                        )
+                      }}
+                    />
+                  </Stack>
+
+                  {/* Previews Grid */}
+                  {(formData.images.length > 0 || selectedFiles.length > 0) ? (
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                        gap: 1.5,
+                        p: 1.5,
+                        borderRadius: '10px',
+                        bgcolor: isDarkMode ? 'rgba(0,0,0,0.2)' : '#f1f5f9'
+                      }}
+                    >
+                      {/* Existing remote images */}
+                      {formData.images.map((img, idx) => (
+                        <Box
+                          key={`remote-${idx}`}
+                          sx={{
+                            position: 'relative',
+                            height: 100,
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            border: idx === 0 ? '2px solid' : '1px solid',
+                            borderColor: idx === 0 ? 'secondary.main' : 'divider',
+                            bgcolor: '#e2e8f0'
+                          }}
+                        >
+                          <img
+                            src={getFullImageUrl(img)}
+                            alt={`Package image ${idx + 1}`}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => { e.target.src = '/public/defaults/default_travel.png'; }}
+                          />
+                          {idx === 0 && (
+                            <Chip
+                              label="COVER"
+                              size="small"
+                              color="secondary"
+                              sx={{
+                                position: 'absolute',
+                                top: 4,
+                                left: 4,
+                                height: 18,
+                                fontSize: '9px',
+                                fontWeight: 800
+                              }}
+                            />
+                          )}
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRemoveExistingImage(idx)}
+                            sx={{
+                              position: 'absolute',
+                              top: 4,
+                              right: 4,
+                              bgcolor: 'rgba(220, 38, 38, 0.9)',
+                              color: '#fff',
+                              width: 22,
+                              height: 22,
+                              '&:hover': { bgcolor: '#dc2626' }
+                            }}
+                            title="Remove image"
+                          >
+                            <CloseIcon sx={{ fontSize: 13 }} />
+                          </IconButton>
+                          {idx > 0 && (
+                            <Button
+                              size="small"
+                              onClick={() => handleSetPrimaryImage(idx)}
+                              sx={{
+                                position: 'absolute',
+                                bottom: 2,
+                                left: 2,
+                                right: 2,
+                                fontSize: '9px',
+                                fontWeight: 800,
+                                py: 0.2,
+                                bgcolor: 'rgba(0,0,0,0.6)',
+                                color: '#fff',
+                                '&:hover': { bgcolor: 'rgba(0,0,0,0.85)' }
+                              }}
+                            >
+                              Make Cover
+                            </Button>
+                          )}
+                        </Box>
+                      ))}
+
+                      {/* Newly selected files from device */}
+                      {selectedFiles.map((file, idx) => {
+                        const blobUrl = URL.createObjectURL(file);
+                        return (
+                          <Box
+                            key={`local-${idx}`}
+                            sx={{
+                              position: 'relative',
+                              height: 100,
+                              borderRadius: '8px',
+                              overflow: 'hidden',
+                              border: '1.5px dashed',
+                              borderColor: 'secondary.main',
+                              bgcolor: '#e2e8f0'
+                            }}
+                          >
+                            <img
+                              src={blobUrl}
+                              alt={`Selected ${idx + 1}`}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                            <Chip
+                              label="NEW FILE"
+                              size="small"
+                              color="primary"
+                              sx={{
+                                position: 'absolute',
+                                top: 4,
+                                left: 4,
+                                height: 18,
+                                fontSize: '8px',
+                                fontWeight: 800
+                              }}
+                            />
+                            <IconButton
+                              size="small"
+                              onClick={() => handleRemoveSelectedFile(idx)}
+                              sx={{
+                                position: 'absolute',
+                                top: 4,
+                                right: 4,
+                                bgcolor: 'rgba(220, 38, 38, 0.9)',
+                                color: '#fff',
+                                width: 22,
+                                height: 22,
+                                '&:hover': { bgcolor: '#dc2626' }
+                              }}
+                              title="Remove selected file"
+                            >
+                              <CloseIcon sx={{ fontSize: 13 }} />
+                            </IconButton>
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  ) : (
+                    <Box sx={{ p: 2, textAlign: 'center', borderRadius: '8px', border: '1px dashed', borderColor: 'divider' }}>
+                      <Typography variant="caption" color="text.secondary">
+                        No photos added yet. Upload high-resolution images from your device or paste image URLs to attract travellers.
+                      </Typography>
+                    </Box>
+                  )}
+                </Paper>
               </Grid>
             </Grid>
           </MainCard>
@@ -1201,7 +1773,7 @@ const PackagesManagement = () => {
                     p: 2.5,
                     borderRadius: '16px',
                     background: isDarkMode
-                      ? 'linear-gradient(135deg, #090d16 0%, #1e1b4b 100%)'
+                      ? 'linear-gradient(135deg, #16152b 0%, #212040 100%)'
                       : 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)',
                     border: '1.5px solid',
                     borderColor: isDarkMode ? 'rgba(124,58,237,0.4)' : 'secondary.main',
@@ -1376,16 +1948,263 @@ const PackagesManagement = () => {
           </MainCard>
         </Grid>
 
-        {/* CARD 3: FORM SETUP FIELDS CONFIGURED BY ADMIN */}
+        {/* CARD 3: DAY-BY-DAY TOUR ITINERARY & SCHEDULE */}
         <Grid size={12}>
-          <MainCard title="Form Setup Fields & Packages Specifications">
+          <MainCard title="Day-by-Day Tour Itinerary & Schedule">
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+              <Box>
+                <Typography variant="h4" fontWeight="800" sx={{ color: 'secondary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <FormatListNumberedIcon /> Day-by-Day Tour Itinerary &amp; Schedule
+                </Typography>
+                <Typography variant="caption" sx={{ color: isDarkMode ? '#94a3b8' : 'text.secondary', display: 'block', mt: 0.5 }}>
+                  Outline the chronological travel plan, daily sightseeing spots, meal plans and activities for travellers.
+                </Typography>
+              </Box>
+              <Button
+                variant="outlined"
+                color="secondary"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={handleAddItineraryDay}
+                sx={{ borderRadius: '8px', fontWeight: 700 }}
+              >
+                Add Day {(formData.itinerary?.length || 0) + 1}
+              </Button>
+            </Box>
+
+            {formData.itinerary && formData.itinerary.length > 0 ? (
+              <Stack spacing={2}>
+                {formData.itinerary.map((item, idx) => (
+                  <Paper
+                    key={idx}
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      borderRadius: '12px',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      bgcolor: isDarkMode ? 'background.default' : '#f8fafc'
+                    }}
+                  >
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid size={{ xs: 12, sm: 'auto' }}>
+                        <Chip
+                          label={`Day ${item.day || idx + 1}`}
+                          color="secondary"
+                          sx={{ fontWeight: 800, borderRadius: '8px', px: 1 }}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: true }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label={`Day ${item.day || idx + 1} Title / Heading`}
+                          placeholder={`e.g. Day ${item.day || idx + 1}: Arrival, Transfer & Evening Sightseeing`}
+                          value={item.title}
+                          onChange={(e) => handleUpdateItineraryDay(idx, 'title', e.target.value)}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 'auto' }}>
+                        <Tooltip title="Remove this day from itinerary">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRemoveItineraryDay(idx)}
+                            sx={{ color: '#ef4444', bgcolor: 'rgba(239, 68, 68, 0.1)', '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.2)' } }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Grid>
+                      <Grid size={12}>
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={2}
+                          size="small"
+                          label="Day Plan & Sightseeing Highlights"
+                          placeholder="Describe the day's schedule, key sights visited, included meals (breakfast/dinner), and stay details..."
+                          value={item.description}
+                          onChange={(e) => handleUpdateItineraryDay(idx, 'description', e.target.value)}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                ))}
+
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  color="secondary"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddItineraryDay}
+                  sx={{
+                    py: 1.5,
+                    borderRadius: '10px',
+                    borderStyle: 'dashed',
+                    borderWidth: 1.5,
+                    fontWeight: 700
+                  }}
+                >
+                  Add Day {(formData.itinerary?.length || 0) + 1} to Itinerary
+                </Button>
+              </Stack>
+            ) : (
+              <Box
+                sx={{
+                  p: 4,
+                  textAlign: 'center',
+                  borderRadius: '12px',
+                  border: '1.5px dashed',
+                  borderColor: 'divider',
+                  bgcolor: isDarkMode ? 'background.default' : '#f8fafc'
+                }}
+              >
+                <CalendarMonthIcon sx={{ fontSize: 40, color: 'secondary.main', mb: 1, opacity: 0.8 }} />
+                <Typography variant="subtitle1" fontWeight="700">
+                  No itinerary days added yet
+                </Typography>
+                <Typography variant="caption" sx={{ color: isDarkMode ? '#94a3b8' : 'text.secondary', display: 'block', mb: 2 }}>
+                  Adding a day-by-day travel itinerary helps travellers visualize their trip and increases bookings.
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddItineraryDay}
+                  sx={{ borderRadius: '8px', fontWeight: 700 }}
+                >
+                  Add Day 1 Plan
+                </Button>
+              </Box>
+            )}
+          </MainCard>
+        </Grid>
+
+        {/* CARD 4: FORM SETUP FIELDS & CUSTOM CATEGORY SPECIFICATIONS */}
+        <Grid size={12}>
+          <MainCard title="Form Setup Fields & Custom Category Specifications">
+            <Typography variant="h4" fontWeight="800" sx={{ mb: 1, color: 'secondary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+              <TuneIcon /> Additional Category Specifications
+            </Typography>
+            <Typography variant="caption" sx={{ color: isDarkMode ? '#94a3b8' : 'text.secondary', display: 'block', mb: 2 }}>
+              Custom specifications configured by the administrator for this specific travel service category.
+            </Typography>
             <DynamicPackageForm
-              fields={configuredFields}
+              fields={uniqueCustomFields}
               values={dynamicValues}
               onChange={handleDynamicValueChange}
               onFileChange={handleDynamicFileChange}
               loading={loadingFields}
             />
+          </MainCard>
+        </Grid>
+
+        {/* CARD 5: SEARCH ENGINE OPTIMIZATION (SEO CONSOLE) */}
+        <Grid size={12}>
+          <MainCard title="Search Engine Optimization (SEO Console & Google SERP)">
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+              <Box>
+                <Typography variant="h4" fontWeight="800" sx={{ color: 'secondary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <PublicIcon /> SEO Console &amp; Google Snippet Preview
+                </Typography>
+                <Typography variant="caption" sx={{ color: isDarkMode ? '#94a3b8' : 'text.secondary', display: 'block', mt: 0.5 }}>
+                  Configure search engine meta tags and keywords to improve organic search rankings on Google and social shares.
+                </Typography>
+              </Box>
+              <Chip label="Meta &amp; Indexing" size="small" variant="outlined" sx={{ fontWeight: 700 }} />
+            </Box>
+
+            <Grid container spacing={2.5}>
+              <Grid size={12}>
+                <TextField
+                  fullWidth
+                  label="SEO Meta Title"
+                  placeholder={formData.packageName || formData.title || 'e.g. 5 Days Luxury Kashmir Tour Package | Ababa Travels'}
+                  value={formData.seoTitle || ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, seoTitle: e.target.value }))}
+                  helperText={`${formData.seoTitle?.length || 0}/60 characters (Recommended: 50-60 characters)`}
+                />
+              </Grid>
+
+              <Grid size={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  label="SEO Meta Description"
+                  placeholder={formData.packageDescription || formData.description || 'Book your unforgettable holiday package with Ababa Travels. Top hotels, verified tours and 24/7 support.'}
+                  value={formData.seoDescription || ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, seoDescription: e.target.value }))}
+                  helperText={`${formData.seoDescription?.length || 0}/160 characters (Recommended: 120-160 characters)`}
+                />
+              </Grid>
+
+              <Grid size={12}>
+                <TextField
+                  fullWidth
+                  label="SEO Keywords (Comma-Separated)"
+                  placeholder="e.g. kashmir tour, srinagar package, dal lake houseboat, gulmarg gondola, holiday package"
+                  value={formData.seoKeywords || ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, seoKeywords: e.target.value }))}
+                  helperText="Separate keywords with commas to boost search discoverability"
+                />
+              </Grid>
+
+              {/* Google SERP Live Snippet Box */}
+              <Grid size={12}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2.5,
+                    borderRadius: '12px',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: isDarkMode ? 'background.default' : '#f8fafc'
+                  }}
+                >
+                  <Typography variant="caption" fontWeight="800" sx={{ textTransform: 'uppercase', letterSpacing: '0.5px', color: 'text.secondary', display: 'block', mb: 1 }}>
+                    Google Search Snippet Preview
+                  </Typography>
+                  <Box sx={{ maxWidth: 650 }}>
+                    <Typography variant="caption" sx={{ color: '#202124', display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                      <Box component="span" sx={{ color: 'secondary.main', fontWeight: 700 }}>
+                        ababaholidays.com
+                      </Box>
+                      <Box component="span" sx={{ color: isDarkMode ? '#94a3b8' : '#5f6368' }}>
+                        › packages › {((formData.packageName || formData.title || 'package-name')).toLowerCase().replace(/[^a-z0-9]+/g, '-')}
+                      </Box>
+                    </Typography>
+                    <Typography
+                      variant="h4"
+                      sx={{
+                        color: isDarkMode ? '#90caf9' : '#1a0dab',
+                        fontWeight: 600,
+                        lineHeight: 1.3,
+                        mb: 0.5,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {formData.seoTitle || formData.packageName || formData.title || 'Package Title | Ababa Travels'}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: isDarkMode ? '#cbd5e1' : '#4d5156',
+                        fontSize: '13px',
+                        lineHeight: 1.5
+                      }}
+                    >
+                      {formData.seoDescription || (
+                        (formData.packageDescription || formData.description)
+                          ? (formData.packageDescription || formData.description).substring(0, 155) + '...'
+                          : 'Book your unforgettable holiday package with Ababa Travels. Top hotels, verified tours and 24/7 support.'
+                      )}
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Grid>
+            </Grid>
           </MainCard>
         </Grid>
 
@@ -1518,12 +2337,14 @@ const PackagesManagement = () => {
                 >
                   <MenuItem value="All">All Statuses</MenuItem>
                   <MenuItem value="Active">🟢 Active &amp; Published</MenuItem>
+                  <MenuItem value="Correction">🟠 Needs Correction</MenuItem>
                   <MenuItem value="Draft">🟡 Draft</MenuItem>
+                  <MenuItem value="Pending">🔵 Pending Review</MenuItem>
                   <MenuItem value="Inactive">🔴 Inactive</MenuItem>
                 </TextField>
 
                 {/* VIEW MODE SWITCHER */}
-                <Stack direction="row" alignItems="center" spacing={0.5} sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'grey.100', borderRadius: '10px', p: 0.5 }}>
+                <Stack direction="row" alignItems="center" spacing={0.5} sx={{ bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'grey.100', borderRadius: '10px', p: 0.5 }}>
                   <Button
                     size="small"
                     variant={viewMode === 'grid' ? 'contained' : 'text'}
@@ -1655,9 +2476,9 @@ const PackagesManagement = () => {
                           />
                         )}
                         <Chip
-                          label={pkg.status || (pkg.isActive ? 'Active' : 'Inactive')}
+                          label={pkg.status === 'Correction' ? 'Needs Correction' : (pkg.status || (pkg.isActive ? 'Active' : 'Inactive'))}
                           size="small"
-                          color={pkg.status === 'Active' || pkg.isActive ? 'success' : 'default'}
+                          color={pkg.status === 'Active' || (pkg.status === undefined && pkg.isActive) ? 'success' : pkg.status === 'Correction' ? 'warning' : 'default'}
                           sx={{ fontWeight: 800, borderRadius: '8px' }}
                         />
                       </Stack>
@@ -1711,6 +2532,14 @@ const PackagesManagement = () => {
 
                     <CardContent sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <Box>
+                        {pkg.status === 'Correction' && (
+                          <Box sx={{ mb: 1.5, p: 1, bgcolor: 'rgba(245, 158, 11, 0.1)', border: '1px solid #f59e0b', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <TuneIcon sx={{ fontSize: 16, color: '#b45309' }} />
+                            <Typography variant="caption" fontWeight={800} color="#b45309">
+                              Correction Required {pkg.correctionNotes ? `• ${pkg.correctionNotes.slice(0, 45)}...` : ''}
+                            </Typography>
+                          </Box>
+                        )}
                         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
                           <Typography variant="caption" color="text.secondary" fontWeight={700}>
                             {pkg.customId || 'PKG-LISTING'}
@@ -1952,8 +2781,8 @@ const PackagesManagement = () => {
         )}
       </Grid>
 
-      {/* PAGINATION */}
-      {!loading && filteredPackages.length > 0 && (
+      {/* PAGINATION FOR GRID CARDS VIEW (Table View uses built-in DataTable pagination) */}
+      {!loading && filteredPackages.length > 0 && viewMode === 'grid' && (
         <Grid size={12}>
           <Paper elevation={0} sx={{ borderRadius: '12px', border: '1px solid', borderColor: 'divider' }}>
             <TablePagination
@@ -2010,6 +2839,12 @@ const PackagesManagement = () => {
             </DialogTitle>
             <Divider />
             <DialogContent dividers sx={{ p: 3 }}>
+              {selectedPackage.correctionNotes && (
+                <Alert severity="warning" sx={{ mb: 2.5, borderRadius: '10px' }}>
+                  <Typography variant="subtitle2" fontWeight={800}>Correction Feedback &amp; Required Changes</Typography>
+                  <Typography variant="body2">{selectedPackage.correctionNotes}</Typography>
+                </Alert>
+              )}
               {(() => {
                 const viewImages = Array.isArray(selectedPackage.images) && selectedPackage.images.length > 0 ? selectedPackage.images : [];
                 const currentViewPath = viewImages.length > 0 ? viewImages[viewImageIndex] || viewImages[0] : null;
@@ -2128,7 +2963,7 @@ const PackagesManagement = () => {
                           <Typography variant="body2" sx={{ mt: 0.5 }}><strong>Custom Package ID:</strong> {selectedPackage.customId || 'N/A'}</Typography>
                         </Box>
 
-                        <Box sx={{ p: 1.5, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : '#f8fafc', borderRadius: '10px', border: '1px solid', borderColor: 'divider' }}>
+                        <Box sx={{ p: 1.5, bgcolor: isDarkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc', borderRadius: '10px', border: '1px solid', borderColor: 'divider' }}>
                           <Typography variant="subtitle2" fontWeight="800" color="text.secondary" sx={{ mb: 0.8 }}>
                             Ownership &amp; Vendor Info
                           </Typography>

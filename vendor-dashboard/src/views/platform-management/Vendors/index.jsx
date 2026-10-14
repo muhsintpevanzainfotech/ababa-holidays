@@ -53,6 +53,7 @@ import FilterChip from 'ui-component/extended/FilterChip';
 import DataTable from 'ui-component/extended/DataTable';
 import { gridSpacing } from 'store/constant';
 import api from 'utils/api';
+import useThemeMode from 'hooks/useThemeMode';
 import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestrictedCard';
 
 // assets
@@ -82,9 +83,7 @@ const AVAILABLE_PERMISSIONS = [
 ];
 
 const VendorStaffManagement = () => {
-    const theme = useTheme();
-    const { mode, systemMode } = useColorScheme();
-    const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
+    const { isDark: isDarkMode, theme } = useThemeMode();
 
     const authUser = useSelector((state) => state.auth?.user) || (() => {
         try {
@@ -103,8 +102,8 @@ const VendorStaffManagement = () => {
                     textAlign: 'center',
                     borderRadius: '16px',
                     border: '1px solid',
-                    borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : '#e2e8f0',
-                    backgroundColor: isDarkMode ? '#111936' : '#ffffff',
+                    borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0',
+                    backgroundColor: isDarkMode ? '#16152b' : '#ffffff',
                     mt: 3
                 }}
             >
@@ -356,11 +355,11 @@ const VendorStaffManagement = () => {
         return matchesSearch && matchesStatus;
     });
 
-    const textColor = isDarkMode ? '#ffffff' : '#0f172a';
-    const subTextColor = isDarkMode ? '#cbd5e1' : '#64748b';
-    const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
-    const surfaceBgColor = isDarkMode ? '#090d16' : '#f8fafc';
-    const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0';
+    const textColor = isDarkMode ? '#f9fafb' : '#0f172a';
+    const subTextColor = isDarkMode ? '#9ca3af' : '#64748b';
+    const cardBgColor = isDarkMode ? '#16152b' : '#ffffff';
+    const surfaceBgColor = isDarkMode ? '#212040' : '#f8fafc';
+    const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0';
 
     if (!loading && !isStaffAllowed) {
         return (

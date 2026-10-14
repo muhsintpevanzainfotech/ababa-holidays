@@ -30,7 +30,8 @@ import {
     DialogContent,
     DialogActions
 } from '@mui/material';
-import { useColorScheme, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import useThemeMode from 'hooks/useThemeMode';
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
@@ -58,8 +59,7 @@ import SubscriptionRestrictedCard from 'ui-component/cards/SubscriptionRestricte
 
 const EnquiryManagement = () => {
     const theme = useTheme();
-    const { mode, systemMode } = useColorScheme();
-    const isDarkMode = (mode === 'system' ? systemMode : mode) === 'dark';
+    const { isDark: isDarkMode } = useThemeMode();
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -172,9 +172,9 @@ const EnquiryManagement = () => {
 
     const textColor = isDarkMode ? '#ffffff' : '#0f172a';
     const subTextColor = isDarkMode ? '#cbd5e1' : '#64748b';
-    const cardBgColor = isDarkMode ? '#111936' : '#ffffff';
-    const surfaceBgColor = isDarkMode ? '#090d16' : '#f8fafc';
-    const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0';
+    const cardBgColor = isDarkMode ? '#16152b' : '#ffffff';
+    const surfaceBgColor = isDarkMode ? '#212040' : '#f8fafc';
+    const borderLineColor = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0';
 
     if (!loading && !isEnquiriesAllowed) {
         return (
@@ -459,7 +459,17 @@ const EnquiryManagement = () => {
             </Drawer>
 
             {/* Delete Modal */}
-            <Dialog open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
+            <Dialog 
+                open={deleteModalOpen} 
+                onClose={() => setDeleteModalOpen(false)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: '16px',
+                        backgroundColor: cardBgColor,
+                        color: textColor
+                    }
+                }}
+            >
                 <DialogTitle sx={{ fontWeight: 800, color: textColor }}>Remove Enquiry?</DialogTitle>
                 <DialogContent>
                     <Typography variant="body1" sx={{ color: subTextColor }}>
