@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationPanel from "@/components/NotificationPanel";
+import LocationMapModal from "@/components/LocationMapModal";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -68,16 +69,8 @@ const mainLinks = [
 ];
 
 const locationsList = [
+  "Select on Map 🗺️",
   "Use My Location",
-  "Kochi, Kerala",
-  "Thiruvananthapuram, Kerala",
-  "Kozhikode, Kerala",
-  "Munnar, Kerala",
-  "Wayanad, Kerala",
-  "Bengaluru, India",
-  "Chennai, India",
-  "Mumbai, India",
-  "Dubai, UAE",
 ];
 
 const getIconByName = (name: string) => {
@@ -126,7 +119,10 @@ const Navbar = () => {
   const [serviceDropdownOpen, setServiceDropdownOpen] = useState(false);
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
   const [mobileServicesExpanded, setMobileServicesExpanded] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState("Kochi, Kerala");
+  const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(() => {
+    return localStorage.getItem("userLocation") || "Kochi, Kerala";
+  });
   const [scrolled, setScrolled] = useState(false);
   const [navHidden, setNavHidden] = useState(false);
   const lastScrollY = useRef(0);
@@ -266,6 +262,16 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
+    const handleLocationChange = (e: any) => {
+      if (e?.detail) {
+        setCurrentLocation(e.detail);
+      }
+    };
+    window.addEventListener("userLocationChanged", handleLocationChange);
+    return () => window.removeEventListener("userLocationChanged", handleLocationChange);
+  }, []);
+
+  useEffect(() => {
     setMobileOpen(false);
     setLocationOpen(false);
     setNotificationOpen(false);
@@ -285,6 +291,12 @@ const Navbar = () => {
   };
 
   const handleLocationSelect = (selectedLocation: string) => {
+    if (selectedLocation === "Select on Map 🗺️" || selectedLocation === "Select on Map") {
+      setMapModalOpen(true);
+      setLocationOpen(false);
+      return;
+    }
+
     if (selectedLocation === "Use My Location") {
       if (!navigator.geolocation) {
         setCurrentLocation("Location not supported");
@@ -293,17 +305,33 @@ const Navbar = () => {
       }
 
       navigator.geolocation.getCurrentPosition(
-        () => {
-          setCurrentLocation("Current Location");
-          toast({ title: "Location updated", description: "We will show travel options closest to you." });
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`)
+            .then((r) => r.json())
+            .then((data) => {
+              const city = data.address?.city || data.address?.town || data.address?.state_district || "Current Location";
+              const state = data.address?.state || "";
+              const label = state && !city.includes(state) ? `${city}, ${state}` : city;
+              setCurrentLocation(label);
+              localStorage.setItem("userLocation", label);
+              toast({ title: "Location updated", description: `Top bar location set to ${label}` });
+            })
+            .catch(() => {
+              setCurrentLocation("Current Location");
+              localStorage.setItem("userLocation", "Current Location");
+              toast({ title: "Location updated", description: "Using your GPS location." });
+            });
         },
         () => {
           setCurrentLocation("Location unavailable");
-          toast({ title: "Location denied", description: "Please allow location access or pick a city manually." });
+          toast({ title: "Location denied", description: "Please allow location access or select on map." });
         }
       );
     } else {
       setCurrentLocation(selectedLocation);
+      localStorage.setItem("userLocation", selectedLocation);
     }
 
     setLocationOpen(false);
@@ -1186,6 +1214,16 @@ const Navbar = () => {
       </motion.header>
 
       <NotificationPanel open={notificationOpen} onOpenChange={setNotificationOpen} />
+      <LocationMapModal
+        isOpen={mapModalOpen}
+        onClose={() => setMapModalOpen(false)}
+        currentLocation={currentLocation}
+        onSelectLocation={(loc) => {
+          setCurrentLocation(loc);
+          localStorage.setItem("userLocation", loc);
+          toast({ title: "Location Updated", description: `Top bar set to ${loc}` });
+        }}
+      />
     </>
   );
 };

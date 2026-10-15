@@ -481,6 +481,7 @@ export default function PlannerWorkspace({ activeThreadId }: { activeThreadId?: 
   }, [activeThread, activeThreadId, navigate]);
 
   const [activeStopIndex, setActiveStopIndex] = useState(0);
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
 
   if (!activeThread) return null;
 
@@ -498,6 +499,11 @@ export default function PlannerWorkspace({ activeThreadId }: { activeThreadId?: 
     }
     return base;
   }, [activeThread.destination, reduxPackages]);
+
+  const currentStop = useMemo(() => {
+    if (!destination.stops || destination.stops.length === 0) return null;
+    return destination.stops[activeStopIndex] || destination.stops[0];
+  }, [destination.stops, activeStopIndex]);
 
   const createTrip = () => {
     const thread = history.createThread();
@@ -592,24 +598,130 @@ Planned with dotravels AI Trip Studio.`;
           </Button>
         </div>
 
-        {/* Center: Dynamic Active Trip Badge */}
-        <div className="hidden md:flex items-center gap-2 rounded-full border border-border/80 bg-muted/40 px-3.5 py-1 shadow-2xs">
-          <MapPin className="h-3.5 w-3.5 text-accent shrink-0" />
-          <span className="font-display text-xs font-bold text-foreground truncate max-w-[180px] lg:max-w-[280px]">
-            {destination.destination}
-          </span>
-          <span className="text-[11px] text-muted-foreground font-medium">•</span>
-          <span className="text-[11px] text-muted-foreground font-medium">
-            {destination.durationDays || 4} Days
-          </span>
-          <span className="text-[11px] text-muted-foreground font-medium">•</span>
-          <span className="text-[11px] font-bold text-accent">
-            ₹{(destination.totalEstimatedPrice || 14999).toLocaleString("en-IN")}
-          </span>
-          <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold ml-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Synced
-          </span>
+        {/* Center: Dynamic Active Location & Trip Selector (Synced with Map Selection) */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setLocationDropdownOpen((prev) => !prev)}
+            className="flex items-center gap-2 rounded-full border border-border/80 bg-muted/50 hover:bg-muted/80 px-3.5 py-1.5 shadow-2xs transition-all group max-w-[280px] sm:max-w-[420px] lg:max-w-none"
+            title="Click to view all route stops or switch active location on map"
+            aria-label="Active Map Location"
+          >
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/20 text-accent group-hover:scale-110 transition-transform shrink-0">
+              <MapPin className="h-3 w-3" />
+            </div>
+
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-display text-xs font-bold text-foreground truncate">
+                {currentStop?.name ? currentStop.name : destination.destination}
+              </span>
+              <span className="text-[11px] text-muted-foreground truncate hidden sm:inline">
+                ({destination.destination})
+              </span>
+              {destination.stops && destination.stops.length > 0 && (
+                <span className="rounded-full bg-accent/15 px-2 py-0.2 text-[10px] font-bold text-accent shrink-0">
+                  Stop {activeStopIndex + 1}/{destination.stops.length}
+                </span>
+              )}
+            </div>
+
+            <span className="text-muted-foreground hidden md:inline">•</span>
+            <span className="text-[11px] text-muted-foreground font-medium hidden md:inline shrink-0">
+              Day {currentStop?.dayNumber || activeStopIndex + 1}
+            </span>
+
+            <span className="text-muted-foreground hidden lg:inline">•</span>
+            <span className="text-[11px] font-bold text-accent hidden lg:inline shrink-0">
+              ₹{(destination.totalEstimatedPrice || 14999).toLocaleString("en-IN")}
+            </span>
+
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold ml-0.5 shrink-0">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live
+            </span>
+
+            <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform ml-0.5 shrink-0", locationDropdownOpen && "rotate-180")} />
+          </button>
+
+          {/* Interactive Route Waypoints Dropdown */}
+          {locationDropdownOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setLocationDropdownOpen(false)}
+              />
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 sm:w-96 rounded-2xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl p-2.5 z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+                <div className="flex items-center justify-between px-2 py-1.5 border-b border-border/60 mb-1.5">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-accent">
+                      {destination.destination} Journey Route
+                    </span>
+                    <p className="text-xs font-bold text-foreground">
+                      Select Stop to Fly on Map
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-medium text-muted-foreground">
+                    {destination.stops?.length || 0} Waypoints
+                  </span>
+                </div>
+
+                <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
+                  {(destination.stops || []).map((stop, idx) => {
+                    const isSelected = activeStopIndex === idx;
+                    return (
+                      <button
+                        key={stop.id || idx}
+                        type="button"
+                        onClick={() => {
+                          setActiveStopIndex(idx);
+                          setLocationDropdownOpen(false);
+                          if (mobileView === "chat") setMobileView("map");
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between p-2 rounded-xl text-left transition-all border",
+                          isSelected
+                            ? "bg-accent/15 border-accent text-foreground shadow-xs font-bold"
+                            : "bg-muted/30 border-transparent hover:border-border hover:bg-muted/70 text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span
+                            className={cn(
+                              "flex h-6 w-6 items-center justify-center rounded-lg text-xs font-bold shrink-0",
+                              isSelected
+                                ? "bg-accent text-accent-foreground"
+                                : "bg-card border border-border/70 text-foreground"
+                            )}
+                          >
+                            {idx + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-bold text-foreground">
+                              {stop.name}
+                            </p>
+                            <p className="truncate text-[10px] text-muted-foreground">
+                              Day {stop.dayNumber} · {stop.driveFromPrev || "Starting Hub"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {isSelected ? (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-accent shrink-0">
+                            <span className="h-1.5 w-1.5 rounded-full bg-accent animate-ping" />
+                            Active on Map
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground shrink-0 group-hover:text-accent">
+                            Select ➔
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right: Actions & Theme & Mobile Toggle */}

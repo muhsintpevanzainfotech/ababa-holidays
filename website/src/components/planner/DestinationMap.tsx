@@ -141,15 +141,15 @@ export default function DestinationMap({
         };
       case "dark":
         return {
-          url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-          subdomains: "abcd",
+          url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          subdomains: "abc",
           maxZoom: 19,
         };
       case "voyager":
       default:
         return {
-          url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-          subdomains: "abcd",
+          url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+          subdomains: "",
           maxZoom: 19,
         };
     }
