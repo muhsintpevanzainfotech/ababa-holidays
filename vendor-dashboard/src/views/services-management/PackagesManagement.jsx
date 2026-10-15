@@ -63,7 +63,7 @@ import CheckIcon from '@mui/icons-material/Check';
 const getFullImageUrl = (path) => {
   const baseUrl = import.meta.env.VITE_APP_API_URL
     ? import.meta.env.VITE_APP_API_URL.replace(/\/api\/?$/, '')
-    : 'http://localhost:9000';
+    : '';
 
   if (!path || typeof path !== 'string') return `${baseUrl}/public/defaults/default_travel.png`;
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;

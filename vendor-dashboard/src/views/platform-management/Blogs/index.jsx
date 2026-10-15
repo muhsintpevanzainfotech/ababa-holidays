@@ -66,7 +66,7 @@ const resolveImageUrl = (imgSrc) => {
         return imgSrc;
     }
     const envApi = import.meta.env.VITE_APP_API_URL || '';
-    const baseUrl = envApi ? envApi.replace(/\/api\/?$/, '') : 'http://localhost:9000';
+    const baseUrl = envApi ? envApi.replace(/\/api\/?$/, '') : '';
     const path = imgSrc.startsWith('/') ? imgSrc : `/${imgSrc}`;
     return `${baseUrl}${path}`;
 };

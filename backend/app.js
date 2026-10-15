@@ -1,9 +1,12 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-// Load environment variables (Configured in server.js)
-// dotenv.config();
+const connectDB = require('./config/db');
+
+// Connect to Database immediately
+connectDB().catch((err) => console.warn('Initial DB connection attempt warning:', err.message));
 
 const app = express();
 
@@ -12,6 +15,16 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(cors());
+
+// Ensure Database is connected for every request (essential for Vercel Serverless Functions)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+  } catch (err) {
+    console.warn('DB connection middleware warning:', err.message);
+  }
+  next();
+});
 
 // Rate Limiting
 const limiter = rateLimit({

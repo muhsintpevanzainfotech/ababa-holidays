@@ -9,7 +9,7 @@ import { getFieldError } from '../components/SharedUI';
 const Step6Services = ({ 
   formik, isViewMode, subscriptions = [], subsLoading, services = [], servicesLoading, handleArrayToggle 
 }) => {
-  const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000';
+  const API_URL = import.meta.env.VITE_IMAGE_BASE_URL || (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '');
 
   // Filter subscriptions loaded via API by visibility and active status (respect isVisible property)
   // If a vendor already has an assigned plan, retain it so it remains visible

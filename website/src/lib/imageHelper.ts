@@ -1,6 +1,6 @@
 export const BACKEND_IMAGE_URL = (
   import.meta.env.VITE_IMAGE_BASE_URL ||
-  (import.meta.env.VITE_API_URL || "http://localhost:9000/api").replace(/\/api\/?$/, "")
+  (import.meta.env.VITE_API_URL || "").replace(/\/api\/?$/, "")
 ).replace(/\/$/, "");
 
 export const getImageUrl = (src?: string | null, fallback = "/favicon.png"): string => {

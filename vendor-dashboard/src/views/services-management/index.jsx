@@ -46,7 +46,7 @@ const getFullImageUrl = (path) => {
     if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
     const baseUrl = import.meta.env.VITE_APP_API_URL 
         ? import.meta.env.VITE_APP_API_URL.replace(/\/api\/?$/, '') 
-        : 'http://localhost:9000';
+        : '';
     const cleanPath = path.replace(/\\/g, '/').replace(/^\/+/, '');
     return `${baseUrl}/${cleanPath}`;
 };

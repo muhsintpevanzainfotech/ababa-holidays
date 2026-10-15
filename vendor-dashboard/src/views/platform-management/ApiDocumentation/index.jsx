@@ -130,7 +130,7 @@ export default function ApiDocumentation() {
   const currentApiKey = apiKeyData.apiKey || 'ababa_live_sec_demo1234567890abcdef';
   const maskedApiKey = showKey ? currentApiKey : currentApiKey.replace(/(?<=^ababa_live_sec_).*(?=.+$)/, '••••••••••••••••••••');
 
-  const baseUrl = import.meta.env.VITE_APP_API_URL ? import.meta.env.VITE_APP_API_URL.replace(/\/api\/?$/, '') : 'http://localhost:9000';
+  const baseUrl = import.meta.env.VITE_APP_API_URL ? import.meta.env.VITE_APP_API_URL.replace(/\/api\/?$/, '') : '';
 
   // Complete List of All 11 Vendor Website API Endpoints
   const allEndpoints = [

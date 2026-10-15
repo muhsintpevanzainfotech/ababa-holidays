@@ -16,27 +16,49 @@ try {
   console.warn('DNS server override warning:', err.message);
 }
 
+let cachedPromise = null;
+
 const connectDB = async () => {
+  // If already connected, reuse existing connection
+  if (mongoose.connection && mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  // If connection is in progress, wait for it
+  if (cachedPromise) {
+    return cachedPromise;
+  }
+
   const uri = process.env.MONGO_URI;
 
   if (!uri) {
     console.error('CRITICAL ERROR: MONGO_URI is not defined in environment variables.');
-    process.exit(1);
+    return null;
   }
 
   try {
-    const conn = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 30000,
-      connectTimeoutMS: 30000,
+    cachedPromise = mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 15000,
+      connectTimeoutMS: 15000,
       socketTimeoutMS: 45000,
       maxPoolSize: 10,
       minPoolSize: 1,
       retryWrites: true,
       w: 'majority'
+    }).then((conn) => {
+      console.log(`MongoDB Connected (Atlas): ${conn.connection.host} / Database: ${conn.connection.name}`);
+      return conn;
+    }).catch((err) => {
+      cachedPromise = null;
+      console.error(`MongoDB Atlas Connection Error: ${err.message}`);
+      throw err;
     });
-    console.log(`MongoDB Connected (Atlas): ${conn.connection.host} / Database: ${conn.connection.name}`);
+
+    return await cachedPromise;
   } catch (error) {
-    console.error(`MongoDB Atlas Connection Error: ${error.message}`);
+    cachedPromise = null;
+    console.error(`MongoDB connection failed: ${error.message}`);
+    throw error;
   }
 };
 
@@ -45,7 +67,8 @@ mongoose.connection.on('error', (err) => {
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.warn('MongoDB disconnected. Waiting for network reconnection...');
+  cachedPromise = null;
+  console.warn('MongoDB disconnected. Waiting for reconnection...');
 });
 
 mongoose.connection.on('reconnected', () => {

@@ -57,7 +57,7 @@ const SubmitTestimonial = () => {
         if (values.image) formData.append('image', values.image);
 
         // We use axios directly to bypass the protected API interceptor if needed
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:9000/api';
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '';
         await axios.post(`${apiUrl}/testimonials/submit`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
