@@ -688,6 +688,8 @@ const Navbar = () => {
                                       </div>
                                       <Link
                                         to="/planner"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         onClick={() => setServiceDropdownOpen(false)}
                                         className="rounded-full bg-white/20 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-white hover:bg-white/30 transition-colors shrink-0"
                                       >
@@ -708,6 +710,8 @@ const Navbar = () => {
                     <Link
                       key={link.label}
                       to={link.path}
+                      target={link.path === "/planner" ? "_blank" : undefined}
+                      rel={link.path === "/planner" ? "noopener noreferrer" : undefined}
                       className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium transition-all xl:px-4 xl:py-2 xl:text-sm ${
                         active
                           ? "bg-primary text-primary-foreground shadow-sm"
@@ -1116,6 +1120,9 @@ const Navbar = () => {
                           <Link
                             key={link.label}
                             to={link.path}
+                            target={link.path === "/planner" ? "_blank" : undefined}
+                            rel={link.path === "/planner" ? "noopener noreferrer" : undefined}
+                            onClick={() => setMobileOpen(false)}
                             className={`flex items-center gap-2.5 rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${
                               location.pathname === link.path
                                 ? "bg-primary text-primary-foreground"

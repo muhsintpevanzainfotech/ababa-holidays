@@ -229,6 +229,8 @@ const AboutPage = () => {
               </Link>
               <Link
                 to="/planner"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-2xl border border-border bg-card/80 px-6 py-3.5 text-xs sm:text-sm font-bold text-foreground hover:bg-muted/70 hover:border-accent/40 transition-all shadow-sm"
               >
                 <Sparkles className="h-4 w-4 text-accent" />

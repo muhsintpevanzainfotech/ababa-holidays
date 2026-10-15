@@ -98,7 +98,17 @@ const PackageDetailsPage = () => {
     }
   }, [id, dispatch, reduxPackages]);
 
-  const rawPkg = selectedPackage;
+  const rawPkg =
+    selectedPackage ||
+    (Array.isArray(reduxPackages)
+      ? reduxPackages.find(
+          (p: any) =>
+            p._id === id ||
+            p.id === id ||
+            p.customId === id ||
+            (p.title && id && p.title.toLowerCase().includes(id.toLowerCase()))
+        )
+      : null);
   const pkg = rawPkg ? {
     ...rawPkg,
     id: rawPkg._id || rawPkg.id || "",

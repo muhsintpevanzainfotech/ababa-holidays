@@ -1,6 +1,36 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { CalendarDays, Compass, Copy, MapPin, Plus, RotateCcw, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  CalendarDays,
+  Compass,
+  Copy,
+  MapPin,
+  Plus,
+  RotateCcw,
+  Trash2,
+  Printer,
+  Sparkles,
+  Car,
+  Hotel,
+  Tag,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  Share2,
+  ChevronDown,
+  ChevronUp,
+  Maximize2,
+  Minimize2,
+  PanelLeft,
+  PanelLeftClose,
+  MessageSquare,
+  Map as MapIcon,
+  Sun,
+  Moon,
+  ArrowLeft,
+  X,
+  Check,
+} from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Conversation,
@@ -25,61 +55,46 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
-import { usePlannerHistory, type PlannerDestination, type PlannerThread } from "@/hooks/use-planner-history";
+import { usePlannerHistory, type PlannerDestination, type PlannerThread, defaultKeralaDestination } from "@/hooks/use-planner-history";
+import { detectDestinationMatch, matchApiPackages } from "@/data/plannerDatabase";
 import DestinationMap from "./DestinationMap";
-
-const DESTINATION_DATABASE: Record<string, PlannerDestination> = {
-  munnar: { destination: "Munnar", country: "India", latitude: 10.0889, longitude: 77.0595, highlights: ["Tea Gardens", "Eravikulam Park", "Mattupetty Dam", "Top Station"] },
-  kochi: { destination: "Kochi", country: "India", latitude: 9.9312, longitude: 76.2673, highlights: ["Fort Kochi", "Chinese Fishing Nets", "Mattancherry Palace", "Marine Drive"] },
-  alappuzha: { destination: "Alappuzha", country: "India", latitude: 9.4981, longitude: 76.3388, highlights: ["Backwater Houseboat", "Alappuzha Beach", "Punnamada Lake", "Kuttanad Fields"] },
-  alleppey: { destination: "Alappuzha", country: "India", latitude: 9.4981, longitude: 76.3388, highlights: ["Backwater Houseboat", "Alappuzha Beach", "Punnamada Lake", "Kuttanad Fields"] },
-  wayanad: { destination: "Wayanad", country: "India", latitude: 11.6854, longitude: 76.1320, highlights: ["Edakkal Caves", "Banasura Sagar", "Chembra Peak", "Kuruva Island"] },
-  thekkady: { destination: "Thekkady", country: "India", latitude: 9.6031, longitude: 77.1612, highlights: ["Periyar Reserve", "Spice Plantations", "Elephant Junction", "Kathakali Show"] },
-  varkala: { destination: "Varkala", country: "India", latitude: 8.7379, longitude: 76.7163, highlights: ["Varkala Cliff", "Papanasam Beach", "Janardhana Temple", "Black Beach"] },
-  kovalam: { destination: "Kovalam", country: "India", latitude: 8.4004, longitude: 76.9787, highlights: ["Lighthouse Beach", "Hawah Beach", "Samudra Beach", "Vizhinjam Port"] },
-  kerala: { destination: "Kerala", country: "India", latitude: 10.1632, longitude: 76.6413, highlights: ["Fort Kochi", "Munnar Tea Hills", "Alleppey Houseboat", "Varkala Cliff"] },
-  maldives: { destination: "Maldives", country: "Maldives", latitude: 3.2028, longitude: 73.2207, highlights: ["Malé City", "Overwater Bungalows", "Maafushi Island", "Snorkeling Reefs"] },
-  goa: { destination: "Goa", country: "India", latitude: 15.2993, longitude: 74.1240, highlights: ["Calangute Beach", "Fort Aguada", "Dudhsagar Falls", "Panaji Quarter"] },
-  bali: { destination: "Bali", country: "Indonesia", latitude: -8.4095, longitude: 115.1889, highlights: ["Ubud Forest", "Tegallalang Terraces", "Uluwatu Temple", "Seminyak Beach"] },
-  paris: { destination: "Paris", country: "France", latitude: 48.8566, longitude: 2.3522, highlights: ["Eiffel Tower", "Louvre Museum", "Seine River Cruise", "Montmartre"] },
-  tokyo: { destination: "Tokyo", country: "Japan", latitude: 35.6762, longitude: 139.6503, highlights: ["Shibuya Crossing", "Senso-ji Temple", "Mount Fuji View", "Akihabara"] },
-  dubai: { destination: "Dubai", country: "United Arab Emirates", latitude: 25.2048, longitude: 55.2708, highlights: ["Burj Khalifa", "Dubai Mall & Fountains", "Desert Safari", "Palm Jumeirah"] },
-  kashmir: { destination: "Srinagar", country: "India", latitude: 34.0837, longitude: 74.7973, highlights: ["Dal Lake Shikara", "Gulmarg Gondola", "Pahalgam Valley", "Mughal Gardens"] },
-};
-
-function detectDestination(prompt: string): PlannerDestination {
-  const lower = prompt.toLowerCase();
-  for (const key of Object.keys(DESTINATION_DATABASE)) {
-    if (lower.includes(key)) {
-      return DESTINATION_DATABASE[key];
-    }
-  }
-  // Generic fallback based on title words
-  const words = prompt.split(/\s+/).filter(w => w.length > 3);
-  const placeName = words.length > 0 ? words[0].charAt(0).toUpperCase() + words[0].slice(1) : "Kerala";
-  return {
-    destination: placeName,
-    country: "India",
-    latitude: 10.1632,
-    longitude: 76.6413,
-    highlights: [`${placeName} Sightseeing`, "Local Cultural Tour", "Scenic Views", "Relaxation & Dining"]
-  };
-}
+import { useAppDispatch, useAppSelector } from "@/store";
+import { fetchPackagesStart } from "@/store/slices/packagesSlice";
+import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/contexts/ThemeContext";
+import { cn } from "@/lib/utils";
 
 function generateNilaReply(prompt: string, destination: PlannerDestination): string {
-  return `### 🌴 Custom Trip Itinerary for ${destination.destination} (${destination.country})
+  const price = destination.totalEstimatedPrice || 14999;
+  const stops = destination.stops || [];
+  const daysPlan = destination.daysPlan || [];
 
-Here is a curated, hassle-free travel plan tailored for your visit to **${destination.destination}**:
+  return `### 🌴 AI Travel Blueprint: ${destination.destination} (${destination.country})
 
-#### 📍 Suggested Day-by-Day Plan
-${destination.highlights.map((h, i) => `- **Day ${i + 1}:** Explore **${h}** with local sightseeing, food tasting, and evening leisure.`).join("\n")}
+I have crafted a complete, verified route itinerary for your trip to **${destination.destination}**, arranged sequentially for smooth driving and zero backtrack.
 
-#### 💡 Local Tips & Budget Guidance
-- **Best Time to Visit:** October to March for pleasant, comfortable weather.
-- **Estimated Budget:** ₹12,000 – ₹25,000 per person (depending on hotel luxury & transport choice).
-- **Travel Tip:** Pre-book cabs or local transfers through dotravels for seamless pickups.
+#### 📍 Route & Waypoints Overview
+${stops.map((s, i) => `${i + 1}. **${s.name}** (Day ${s.dayNumber}) — *${s.driveFromPrev || "Starting Hub"}*`).join("\n")}
 
-*Would you like me to adjust the duration, suggest top-rated family hotels, or arrange airport transfers for ${destination.destination}?*`;
+#### 📅 Day-by-Day Journey Itinerary
+${daysPlan
+  .map(
+    (d) => `##### Day ${d.day}: ${d.title} (${d.location})
+- **Morning:** ${d.morning}
+- **Afternoon:** ${d.afternoon}
+- **Evening:** ${d.evening}
+- **Recommended Stay:** 🏨 *${d.stay}*
+- **Local Tip:** 💡 *${d.travelTip}*`
+  )
+  .join("\n\n")}
+
+#### 💰 Verified Package Pricing & Budget Breakdown
+- **Estimated Package Rate:** **₹${price.toLocaleString("en-IN")}** / person (Special ABA Promo Applied)
+- **Accommodation (Resorts & Houseboat):** ₹${(destination.priceBreakdown?.stay || 7200).toLocaleString("en-IN")}
+- **Private Chauffeur & AC Transfers:** ₹${(destination.priceBreakdown?.transport || 4800).toLocaleString("en-IN")}
+- **Activities & Entry Permits:** ₹${(destination.priceBreakdown?.activities || 2100).toLocaleString("en-IN")}
+
+*Explore the interactive route map, inspect each stop's coordinates, or book matching packages directly from the live trip view.*`;
 }
 
 const getText = (message: any) => {
@@ -90,78 +105,105 @@ const getText = (message: any) => {
     .join("");
 };
 
-const formatDate = (timestamp: number) => new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(timestamp);
+const formatDate = (timestamp: number) =>
+  new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(timestamp);
 
-function ItineraryCards({ destination }: { destination?: PlannerDestination }) {
-  const place = destination ?? { destination: "Kerala", country: "India", latitude: 10.1632, longitude: 76.6413, highlights: ["Kochi", "Munnar", "Alappuzha", "Varkala"] };
-  return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label={`Suggested ${place.destination} itinerary`}>
-      {place.highlights.map((highlight, index) => (
-        <div key={`${highlight}-${index}`} className="rounded-lg border border-border/70 bg-card/90 p-3 shadow-card backdrop-blur-md">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-[11px] font-bold uppercase text-primary">Day {index + 1}</span>
-            <CalendarDays className="h-3.5 w-3.5 text-accent" />
-          </div>
-          <p className="truncate text-sm font-semibold text-foreground">{highlight}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Explore & unwind</p>
-        </div>
-      ))}
-    </div>
-  );
-}
+const quickIdeas = [
+  { label: "🌴 4-Day Classic Kerala Circuit", query: "Plan a 4-day trip to Kerala covering Kochi, Munnar, Thekkady, and Alleppey houseboat" },
+  { label: "⛰️ 3-Day Munnar Mist & Tea Hills", query: "Plan 3 days in Munnar visiting tea gardens, waterfalls, and Top Station" },
+  { label: "🛶 3-Day Alleppey Houseboat & Beach", query: "Plan 3 days in Alleppey with private backwater houseboat stay and Marari beach" },
+  { label: "🐅 3-Day Wayanad Rainforest & Safari", query: "Plan 3 days in Wayanad with Banasura Dam, treehouse stay, and Edakkal caves" },
+  { label: "🏖️ 4-Day Goa Beaches & Forts", query: "Plan 4 days in Goa with beach watersports, Portuguese churches, and Mandovi cruise" },
+  { label: "❄️ 4-Day Kashmir Snow & Valley", query: "Plan 4 days in Kashmir with Dal lake houseboat, Gulmarg gondola, and Pahalgam" },
+  { label: "🏙️ 4-Day Dubai Desert & Marina", query: "Plan 4 days in Dubai with Burj Khalifa, desert safari BBQ, and Marina yacht cruise" },
+];
 
-function PlannerChat({ thread, updateThread }: { thread: PlannerThread; updateThread: ReturnType<typeof usePlannerHistory>["updateThread"] }) {
+function PlannerChat({
+  thread,
+  updateThread,
+  onSelectDestination,
+  apiPackages,
+}: {
+  thread: PlannerThread;
+  updateThread: ReturnType<typeof usePlannerHistory>["updateThread"];
+  onSelectDestination: (dest: PlannerDestination) => void;
+  apiPackages?: any[];
+}) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [messages, setMessages] = useState<any[]>(thread.messages || []);
   const [isThinking, setIsThinking] = useState(false);
+  const [isChatFullscreen, setIsChatFullscreen] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isChatFullscreen) {
+        setIsChatFullscreen(false);
+      }
+    };
+    if (isChatFullscreen) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isChatFullscreen]);
 
   useEffect(() => {
     setMessages(thread.messages || []);
   }, [thread.id]);
 
-  const submit = useCallback(async ({ text }: PromptInputMessage) => {
-    const clean = text.trim();
-    if (!clean || isThinking) return;
+  const submit = useCallback(
+    async ({ text }: PromptInputMessage) => {
+      const clean = text.trim();
+      if (!clean || isThinking) return;
 
-    const userMsg = {
-      id: crypto.randomUUID(),
-      role: "user" as const,
-      parts: [{ type: "text" as const, text: clean }]
-    };
-
-    const nextMessages = [...messages, userMsg];
-    setMessages(nextMessages);
-    setIsThinking(true);
-
-    if (messages.length === 0) {
-      updateThread(thread.id, { title: clean.slice(0, 42) });
-    }
-
-    setTimeout(() => {
-      const dest = detectDestination(clean);
-      const replyText = generateNilaReply(clean, dest);
-
-      const assistantMsg = {
+      const userMsg = {
         id: crypto.randomUUID(),
-        role: "assistant" as const,
-        parts: [
-          {
-            type: "tool-set_destination",
-            state: "output-available",
-            input: { destination: dest.destination, country: dest.country },
-            output: dest
-          },
-          { type: "text" as const, text: replyText }
-        ]
+        role: "user" as const,
+        parts: [{ type: "text" as const, text: clean }],
       };
 
-      const finalMessages = [...nextMessages, assistantMsg];
-      setMessages(finalMessages);
-      setIsThinking(false);
-      updateThread(thread.id, { messages: finalMessages, destination: dest });
-      window.setTimeout(() => textareaRef.current?.focus({ preventScroll: true }), 50);
-    }, 600);
-  }, [isThinking, messages, thread.id, updateThread]);
+      const nextMessages = [...messages, userMsg];
+      setMessages(nextMessages);
+      setIsThinking(true);
+
+      if (messages.length === 0) {
+        updateThread(thread.id, { title: clean.slice(0, 42) });
+      }
+
+      setTimeout(() => {
+        const dest = detectDestinationMatch(clean, apiPackages);
+        const replyText = generateNilaReply(clean, dest);
+
+        const assistantMsg = {
+          id: crypto.randomUUID(),
+          role: "assistant" as const,
+          parts: [
+            {
+              type: "tool-set_destination",
+              state: "output-available",
+              input: { destination: dest.destination, country: dest.country },
+              output: dest,
+            },
+            { type: "text" as const, text: replyText },
+          ],
+        };
+
+        const finalMessages = [...nextMessages, assistantMsg];
+        setMessages(finalMessages);
+        setIsThinking(false);
+        updateThread(thread.id, { messages: finalMessages, destination: dest });
+        onSelectDestination(dest);
+        window.setTimeout(() => textareaRef.current?.focus({ preventScroll: true }), 50);
+      }, 550);
+    },
+    [isThinking, messages, onSelectDestination, thread.id, updateThread, apiPackages]
+  );
 
   const regenerate = useCallback(() => {
     if (messages.length === 0 || isThinking) return;
@@ -176,74 +218,236 @@ function PlannerChat({ thread, updateThread }: { thread: PlannerThread; updateTh
   }, [isThinking, messages, submit]);
 
   return (
-    <div className="flex min-h-[600px] min-w-0 flex-col bg-card lg:h-[720px] lg:min-h-0">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
-        <div className="min-w-0">
-          <p className="truncate font-display text-base font-semibold text-foreground">{thread.title}</p>
-          <p className="text-xs text-muted-foreground">Nila · Personal trip planner</p>
-        </div>
-        {messages.length > 0 && (
-          <Button variant="ghost" size="icon" onClick={regenerate} aria-label="Regenerate last answer">
-            <RotateCcw className="h-4 w-4" />
-          </Button>
+    <div
+      className={cn(
+        "flex h-full w-full min-w-0 flex-col bg-card/60 backdrop-blur-sm transition-all duration-300",
+        isChatFullscreen && "fixed inset-0 z-50 h-screen w-screen border-0 shadow-2xl overflow-hidden bg-background"
+      )}
+    >
+      {/* Chat Header */}
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5 backdrop-blur-md",
+          isChatFullscreen ? "bg-card/95 py-3.5 px-6 shadow-sm sticky top-0 z-30" : "bg-card"
         )}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent/15 text-accent border border-accent/25 shrink-0">
+            <Compass className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="truncate font-display text-base font-semibold text-foreground">
+                {thread.title}
+              </p>
+              {isChatFullscreen && (
+                <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-accent/15 px-2.5 py-0.5 text-[10px] font-bold text-accent shrink-0">
+                  <Sparkles className="h-3 w-3" />
+                  Full Screen
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Nila · AI Travel Specialist</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {messages.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={regenerate}
+              aria-label="Regenerate trip plan"
+              title="Regenerate trip plan"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          )}
+
+          <Button
+            variant={isChatFullscreen ? "default" : "ghost"}
+            size={isChatFullscreen ? "sm" : "icon"}
+            onClick={() => setIsChatFullscreen((prev) => !prev)}
+            aria-label={isChatFullscreen ? "Exit Fullscreen" : "Fullscreen Chat"}
+            title={isChatFullscreen ? "Exit Fullscreen (Esc)" : "Expand AI Chat to Fullscreen"}
+            className={cn(
+              "transition-all",
+              isChatFullscreen
+                ? "h-8 px-3 gap-1.5 rounded-full gradient-accent text-accent-foreground font-bold text-xs shadow-sm"
+                : "h-8 w-8 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {isChatFullscreen ? (
+              <>
+                <Minimize2 className="h-3.5 w-3.5" />
+                <span>Exit Fullscreen</span>
+                <kbd className="hidden sm:inline-block rounded bg-black/20 px-1 py-0.2 text-[9px] uppercase">Esc</kbd>
+              </>
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </div>
 
-      <Conversation className="min-h-0">
-        <ConversationContent className="gap-5 px-4 py-5 sm:px-5">
+      {/* Quick Prompts Strip */}
+      <div
+        className={cn(
+          "border-b border-border/60 bg-muted/30 px-3 py-2 overflow-x-auto scrollbar-hide",
+          isChatFullscreen ? "px-6 py-2.5 bg-muted/40" : ""
+        )}
+      >
+        <div className={cn("flex items-center gap-1.5 min-w-max", isChatFullscreen && "max-w-4xl mx-auto w-full")}>
+          <span className="text-[10px] font-bold text-accent uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+            <Sparkles className="h-3 w-3" />
+            Ideas:
+          </span>
+          {quickIdeas.map((idea) => (
+            <button
+              key={idea.label}
+              type="button"
+              onClick={() => submit({ text: idea.query, files: [] })}
+              className="shrink-0 text-[11px] font-medium rounded-full bg-background border border-border/80 px-2.5 py-1 text-foreground hover:border-accent hover:text-accent transition-colors shadow-2xs"
+            >
+              {idea.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Conversation Messages */}
+      <Conversation className="min-h-0 flex-1">
+        <ConversationContent
+          className={cn(
+            "gap-5 px-4 py-5 sm:px-5",
+            isChatFullscreen && "max-w-4xl mx-auto w-full px-6 py-8"
+          )}
+        >
           {messages.length === 0 ? (
             <ConversationEmptyState
-              icon={<div className="flex h-12 w-12 items-center justify-center rounded-lg gradient-accent text-accent-foreground"><Compass className="h-6 w-6" /></div>}
-              title="Where would you like to go?"
-              description="Share a destination, dates, budget, or travel style."
+              icon={
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 text-accent border border-accent/30 shadow-md">
+                  <Compass className="h-6 w-6" />
+                </div>
+              }
+              title="Where would you like to travel?"
+              description="Tell Nila any destination, duration, budget, or travel style to see your interactive route map and package rates come to life."
             >
-              <div className="w-full space-y-4">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg gradient-accent text-accent-foreground"><Compass className="h-6 w-6" /></div>
-                <div><h3 className="font-display text-lg font-semibold text-foreground">Plan with Nila</h3><p className="mt-1 text-sm text-muted-foreground">Share a destination, dates, budget, or travel style.</p></div>
+              <div className="w-full space-y-4 max-w-md mx-auto pt-2">
                 <div className="flex flex-wrap justify-center gap-2">
-                  {["4 days in Munnar", "Kerala family trip", "Maldives honeymoon"].map((idea) => (
-                    <Button key={idea} type="button" variant="outline" size="sm" onClick={() => submit({ text: idea, files: [] })}>{idea}</Button>
+                  {quickIdeas.slice(0, 4).map((idea) => (
+                    <Button
+                      key={idea.label}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => submit({ text: idea.query, files: [] })}
+                      className="rounded-full text-xs font-semibold gap-1 hover:border-accent hover:text-accent"
+                    >
+                      {idea.label}
+                    </Button>
                   ))}
                 </div>
               </div>
             </ConversationEmptyState>
-          ) : messages.map((message) => (
-            <Message key={message.id} from={message.role}>
-              <MessageContent>
-                {message.parts.map((part: any, index: number) => {
-                  if (part.type === "text") return <MessageResponse key={`${message.id}-${index}`}>{part.text}</MessageResponse>;
-                  if (part.type === "tool-set_destination") return (
-                    <Tool key={`${message.id}-${index}`} defaultOpen={false}>
-                      <ToolHeader type={part.type} state={part.state} title="Updating destination map" />
-                      <ToolContent>
-                        <ToolInput input={part.input} />
-                        <ToolOutput output={part.state === "output-available" ? part.output : undefined} errorText={part.state === "output-error" ? part.errorText : undefined} />
-                      </ToolContent>
-                    </Tool>
-                  );
-                  return null;
-                })}
-              </MessageContent>
-              {message.role === "assistant" && getText(message) && (
-                <MessageActions>
-                  <MessageAction tooltip="Copy answer" onClick={() => navigator.clipboard.writeText(getText(message))}><Copy className="h-3.5 w-3.5" /></MessageAction>
-                </MessageActions>
-              )}
-            </Message>
-          ))}
-          {isThinking && <Shimmer className="text-sm">Thinking through your trip...</Shimmer>}
+          ) : (
+            messages.map((message) => (
+              <Message key={message.id} from={message.role}>
+                <MessageContent>
+                  {message.parts.map((part: any, index: number) => {
+                    if (part.type === "text")
+                      return (
+                        <MessageResponse key={`${message.id}-${index}`}>
+                          {part.text}
+                        </MessageResponse>
+                      );
+                    if (part.type === "tool-set_destination")
+                      return (
+                        <Tool key={`${message.id}-${index}`} defaultOpen={false}>
+                          <ToolHeader
+                            type={part.type}
+                            state={part.state}
+                            title="Interactive Route Map & Packages Synced"
+                          />
+                          <ToolContent>
+                            <ToolInput input={part.input} />
+                            <ToolOutput
+                              output={
+                                part.state === "output-available" ? part.output : undefined
+                              }
+                              errorText={
+                                part.state === "output-error" ? part.errorText : undefined
+                              }
+                            />
+                          </ToolContent>
+                        </Tool>
+                      );
+                    return null;
+                  })}
+                </MessageContent>
+                {message.role === "assistant" && getText(message) && (
+                  <MessageActions>
+                    <MessageAction
+                      tooltip="Copy full trip itinerary"
+                      onClick={() => {
+                        navigator.clipboard.writeText(getText(message));
+                        toast({
+                          title: "Itinerary Copied",
+                          description: "Plan copied to your clipboard.",
+                        });
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </MessageAction>
+                  </MessageActions>
+                )}
+              </Message>
+            ))
+          )}
+          {isThinking && (
+            <Shimmer className="text-sm py-2 text-accent">
+              Nila is plotting your route, waypoints, and package prices...
+            </Shimmer>
+          )}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
 
-      <div className="border-t border-border bg-background/70 p-3 sm:p-4">
-        <PromptInput onSubmit={submit} className="rounded-lg border-border bg-card shadow-card">
-          <PromptInputTextarea ref={textareaRef} placeholder="Ask Nila to plan your next trip..." className="min-h-[76px]" />
-          <PromptInputFooter>
-            <PromptInputTools><span className="px-1 text-xs text-muted-foreground">Enter to send · Shift + Enter for a new line</span></PromptInputTools>
-            <PromptInputSubmit status={isThinking ? "submitted" : "ready"} disabled={isThinking} className="shrink-0 rounded-md" />
-          </PromptInputFooter>
-        </PromptInput>
+      {/* Chat Prompt Input Bar */}
+      <div
+        className={cn(
+          "border-t border-border bg-background/80 p-3 sm:p-4 backdrop-blur-md",
+          isChatFullscreen && "p-4 sm:p-6 bg-background/90"
+        )}
+      >
+        <div className={cn(isChatFullscreen && "max-w-4xl mx-auto w-full")}>
+          <PromptInput
+            onSubmit={submit}
+            className="rounded-2xl border-border/80 bg-card shadow-lg"
+          >
+            <PromptInputTextarea
+              ref={textareaRef}
+              placeholder="Ask Nila: '5 days in Kerala with family' or 'Romantic Kashmir honeymoon'..."
+              className={cn("text-sm", isChatFullscreen ? "min-h-[85px]" : "min-h-[74px]")}
+            />
+            <PromptInputFooter>
+              <PromptInputTools>
+                <span className="px-1 text-xs text-muted-foreground hidden sm:inline">
+                  Enter to send · Shift + Enter for new line
+                </span>
+              </PromptInputTools>
+              <PromptInputSubmit
+                status={isThinking ? "submitted" : "ready"}
+                disabled={isThinking}
+                className="shrink-0 rounded-xl gradient-accent text-accent-foreground border-0"
+              />
+            </PromptInputFooter>
+          </PromptInput>
+        </div>
       </div>
     </div>
   );
@@ -252,55 +456,343 @@ function PlannerChat({ thread, updateThread }: { thread: PlannerThread; updateTh
 export default function PlannerWorkspace({ activeThreadId }: { activeThreadId?: string }) {
   const navigate = useNavigate();
   const history = usePlannerHistory();
-  const activeThread = history.threads.find((thread) => thread.id === activeThreadId) ?? history.threads[0];
+  const dispatch = useAppDispatch();
+  const { toast } = useToast();
+  const { theme, toggleTheme } = useTheme();
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<"chat" | "map">("chat");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const { packages: reduxPackages } = useAppSelector((state) => state.packages);
+
+  useEffect(() => {
+    dispatch(fetchPackagesStart({}));
+  }, [dispatch]);
+
+  const activeThread =
+    history.threads.find((thread) => thread.id === activeThreadId) ?? history.threads[0];
 
   useEffect(() => {
     if (!activeThread) return;
-    if (!activeThreadId || activeThread.id !== activeThreadId) navigate(`/planner/${activeThread.id}`, { replace: true });
+    if (!activeThreadId || activeThread.id !== activeThreadId) {
+      navigate(`/planner/${activeThread.id}`, { replace: true });
+    }
   }, [activeThread, activeThreadId, navigate]);
 
+  const [activeStopIndex, setActiveStopIndex] = useState(0);
+
   if (!activeThread) return null;
-  const destination = activeThread.destination;
+
+  const destination: PlannerDestination = useMemo(() => {
+    const base = activeThread.destination || defaultKeralaDestination;
+    if (Array.isArray(reduxPackages) && reduxPackages.length > 0) {
+      const liveMatches = matchApiPackages(base.destination, base.stops, reduxPackages);
+      if (liveMatches.length > 0) {
+        return {
+          ...base,
+          matchedPackages: liveMatches,
+          totalEstimatedPrice: liveMatches[0].price || base.totalEstimatedPrice,
+        };
+      }
+    }
+    return base;
+  }, [activeThread.destination, reduxPackages]);
 
   const createTrip = () => {
     const thread = history.createThread();
     navigate(`/planner/${thread.id}`);
+    setIsSidebarOpen(false);
   };
 
-  const deleteTrip = (id: string) => {
+  const deleteTrip = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     const nextId = history.deleteThread(id);
     if (id === activeThread.id) navigate(`/planner/${nextId}`, { replace: true });
   };
 
+  const copyTripDetails = () => {
+    const text = `🌴 AI Trip Blueprint: ${destination.destination} (${destination.country})
+Duration: ${destination.durationDays || 4} Days
+Estimated Price: ₹${(destination.totalEstimatedPrice || 14999).toLocaleString("en-IN")} / person
+
+Route Stops:
+${destination.stops.map((s, i) => `${i + 1}. ${s.name} - ${s.description}`).join("\n")}
+
+Planned with dotravels AI Trip Studio.`;
+
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Trip Blueprint Copied! 📋",
+      description: "Full itinerary & route details copied to clipboard.",
+    });
+  };
+
+  const toggleBrowserFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+    }
+  };
+
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-glass">
-      <div className="grid lg:grid-cols-[220px_minmax(0,1fr)_minmax(340px,0.92fr)]">
-        <aside className="border-b border-border bg-muted/55 p-3 lg:border-b-0 lg:border-r">
-          <div className="mb-3 flex items-center justify-between gap-2 px-1">
-            <div><p className="font-display text-sm font-semibold text-foreground">Saved trips</p><p className="text-xs text-muted-foreground">Stored in this browser</p></div>
-            <Button size="icon-sm" onClick={createTrip} aria-label="Create new trip"><Plus className="h-4 w-4" /></Button>
+    <div className="h-full w-full flex flex-col overflow-hidden bg-background select-none">
+      {/* MODERN AI STUDIO APP BAR */}
+      <header className="h-14 border-b border-border/80 bg-card/90 backdrop-blur-md px-3 sm:px-5 flex items-center justify-between gap-2 z-30 shrink-0">
+        {/* Left: Brand & Controls */}
+        <div className="flex items-center gap-2">
+          <Link
+            to="/"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-muted/80 transition-colors group"
+            title="Return to dotravels Main Website"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-accent-foreground font-bold shadow-xs transition-transform group-hover:scale-105">
+              <Compass className="h-4 w-4" />
+            </div>
+            <div className="hidden sm:block">
+              <span className="font-display text-sm font-bold tracking-tight text-foreground">
+                dotravels
+              </span>
+              <span className="ml-1.5 rounded-md bg-accent/15 px-1.5 py-0.5 text-[9px] font-bold text-accent uppercase tracking-wider">
+                AI Studio
+              </span>
+            </div>
+          </Link>
+
+          <div className="h-4 w-px bg-border/80 hidden sm:block mx-1" />
+
+          {/* Toggle Saved Trips Drawer */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsSidebarOpen((prev) => !prev)}
+            className={cn(
+              "h-8 px-2.5 rounded-xl text-xs font-semibold gap-1.5 border border-border/70 hover:border-accent hover:text-accent transition-colors",
+              isSidebarOpen && "bg-accent/10 border-accent text-accent"
+            )}
+            title="Saved Trips History"
+          >
+            {isSidebarOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeft className="h-3.5 w-3.5" />}
+            <span className="hidden md:inline">Trips</span>
+            <span className="rounded-full bg-muted px-1.5 py-0.2 text-[10px] font-bold">
+              {history.threads.length}
+            </span>
+          </Button>
+
+          {/* New Trip Button */}
+          <Button
+            size="sm"
+            onClick={createTrip}
+            className="h-8 px-2.5 sm:px-3 rounded-xl gradient-accent text-accent-foreground font-semibold text-xs border-0 shadow-xs gap-1"
+            title="Start a new trip"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">New Trip</span>
+          </Button>
+        </div>
+
+        {/* Center: Dynamic Active Trip Badge */}
+        <div className="hidden md:flex items-center gap-2 rounded-full border border-border/80 bg-muted/40 px-3.5 py-1 shadow-2xs">
+          <MapPin className="h-3.5 w-3.5 text-accent shrink-0" />
+          <span className="font-display text-xs font-bold text-foreground truncate max-w-[180px] lg:max-w-[280px]">
+            {destination.destination}
+          </span>
+          <span className="text-[11px] text-muted-foreground font-medium">•</span>
+          <span className="text-[11px] text-muted-foreground font-medium">
+            {destination.durationDays || 4} Days
+          </span>
+          <span className="text-[11px] text-muted-foreground font-medium">•</span>
+          <span className="text-[11px] font-bold text-accent">
+            ₹{(destination.totalEstimatedPrice || 14999).toLocaleString("en-IN")}
+          </span>
+          <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold ml-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Synced
+          </span>
+        </div>
+
+        {/* Right: Actions & Theme & Mobile Toggle */}
+        <div className="flex items-center gap-1.5">
+          {/* Mobile View Switcher */}
+          <div className="flex items-center lg:hidden bg-muted/60 p-0.5 rounded-xl border border-border/60 mr-1">
+            <button
+              type="button"
+              onClick={() => setMobileView("chat")}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1",
+                mobileView === "chat"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <MessageSquare className="h-3 w-3 text-accent" />
+              <span>Chat</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileView("map")}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1",
+                mobileView === "map"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <MapIcon className="h-3 w-3 text-accent" />
+              <span>Map</span>
+            </button>
           </div>
-          <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1 lg:max-h-[652px] lg:flex-col lg:overflow-y-auto">
-            {history.threads.map((thread) => (
-              <div key={thread.id} className={`group flex min-w-[190px] items-center gap-1 rounded-md border p-1 transition-colors lg:min-w-0 ${thread.id === activeThread.id ? "border-primary/35 bg-primary/10" : "border-transparent bg-card hover:border-border"}`}>
-                <button type="button" onClick={() => navigate(`/planner/${thread.id}`)} className="min-w-0 flex-1 px-2 py-2 text-left">
-                  <span className="block truncate text-sm font-medium text-foreground">{thread.title}</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">{thread.destination?.destination ?? "Start planning"} · {formatDate(thread.updatedAt)}</span>
-                </button>
-                <Button type="button" variant="ghost" size="icon-sm" onClick={() => deleteTrip(thread.id)} aria-label={`Delete ${thread.title}`} className="shrink-0 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={copyTripDetails}
+            className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60"
+            title="Copy Trip Plan"
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.print()}
+            className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 hidden sm:inline-flex"
+            title="Print Itinerary"
+          >
+            <Printer className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60"
+            title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+          >
+            {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4 text-amber-400" />}
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleBrowserFullscreen}
+            className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 hidden sm:inline-flex"
+            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Studio"}
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+        </div>
+      </header>
+
+      {/* MAIN SPLIT WORKSPACE: CHAT & MAP STUDIO */}
+      <div className="flex-1 min-h-0 flex relative overflow-hidden">
+        {/* COLLAPSIBLE SAVED TRIPS DRAWER / SIDEBAR */}
+        {isSidebarOpen && (
+          <aside className="w-64 border-r border-border/80 bg-card/95 backdrop-blur-md p-3 flex flex-col h-full shrink-0 z-20 shadow-lg animate-in slide-in-from-left-2 duration-200">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <div>
+                <p className="font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">Saved Trips</p>
+                <p className="text-[11px] text-muted-foreground">{history.threads.length} trips in browser</p>
               </div>
-            ))}
-          </div>
-        </aside>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSidebarOpen(false)}
+                className="h-6 w-6 rounded-lg text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
 
-        <PlannerChat key={activeThread.id} thread={activeThread} updateThread={history.updateThread} />
+            <Button
+              size="sm"
+              onClick={createTrip}
+              className="w-full mb-3 h-8 rounded-xl gradient-accent text-accent-foreground font-semibold text-xs border-0 shadow-xs gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Start Fresh Trip</span>
+            </Button>
 
-        <div className="flex min-h-[590px] flex-col gap-3 border-t border-border bg-muted/35 p-3 lg:h-[720px] lg:border-l lg:border-t-0">
-          <div className="flex items-center justify-between gap-3 px-1">
-            <div><p className="flex items-center gap-2 font-display text-sm font-semibold text-foreground"><MapPin className="h-4 w-4 text-accent" /> Live trip view</p><p className="text-xs text-muted-foreground">Updates as your plan develops</p></div>
-          </div>
-          <div className="min-h-0 flex-1"><DestinationMap destination={destination} /></div>
-          <ItineraryCards destination={destination} />
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-1 pr-1">
+              {history.threads.map((thread) => {
+                const isCurrent = thread.id === activeThread.id;
+                return (
+                  <div
+                    key={thread.id}
+                    className={cn(
+                      "group flex items-center gap-1 rounded-xl border p-1.5 transition-all cursor-pointer",
+                      isCurrent
+                        ? "border-accent/40 bg-accent/10 shadow-2xs"
+                        : "border-transparent bg-muted/30 hover:border-border hover:bg-card"
+                    )}
+                    onClick={() => {
+                      navigate(`/planner/${thread.id}`);
+                      if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                    }}
+                  >
+                    <div className="min-w-0 flex-1 px-2 py-1">
+                      <span className="block truncate text-xs font-semibold text-foreground">
+                        {thread.title}
+                      </span>
+                      <span className="mt-0.5 block text-[10px] text-muted-foreground truncate">
+                        {thread.destination?.destination ?? "Trip"} · {formatDate(thread.updatedAt)}
+                      </span>
+                    </div>
+                    {history.threads.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => deleteTrip(thread.id, e)}
+                        className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Delete trip"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </aside>
+        )}
+
+        {/* CHAT COLUMN (LEFT PANE) */}
+        <div
+          className={cn(
+            "flex flex-col h-full min-h-0 border-r border-border/80 transition-all duration-200",
+            isSidebarOpen ? "w-[42%] xl:w-[40%]" : "w-[46%] xl:w-[43%]",
+            mobileView === "chat" ? "flex w-full" : "hidden lg:flex"
+          )}
+        >
+          <PlannerChat
+            key={activeThread.id}
+            thread={activeThread}
+            updateThread={history.updateThread}
+            apiPackages={reduxPackages}
+            onSelectDestination={(dest) => {
+              setActiveStopIndex(0);
+            }}
+          />
+        </div>
+
+        {/* MAP & ITINERARY STUDIO COLUMN (RIGHT PANE) */}
+        <div
+          className={cn(
+            "flex-1 min-w-0 h-full flex flex-col overflow-hidden bg-background",
+            mobileView === "map" ? "flex w-full" : "hidden lg:flex"
+          )}
+        >
+          <DestinationMap
+            destination={destination}
+            activeStopIndex={activeStopIndex}
+            apiPackages={reduxPackages}
+            onSelectStop={(idx) => {
+              setActiveStopIndex(idx);
+            }}
+          />
         </div>
       </div>
     </div>

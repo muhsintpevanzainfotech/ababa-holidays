@@ -43,6 +43,7 @@ const fallbackServiceLinks = [
 const quickLinks = [
   { label: "Home", path: "/" },
   { label: "About", path: "/about" },
+  { label: "AI Smart Trip Planner", path: "/planner" },
   { label: "Service", path: "/services" },
   { label: "Packages", path: "/packages" },
   { label: "Contact", path: "/contact" },
@@ -372,6 +373,8 @@ const Footer = () => {
                 <li key={link.label}>
                   <Link
                     to={link.path}
+                    target={link.path === "/planner" ? "_blank" : undefined}
+                    rel={link.path === "/planner" ? "noopener noreferrer" : undefined}
                     className="group flex items-center gap-2 text-slate-400 transition-colors duration-200 hover:text-white"
                   >
                     <ArrowRight className="h-3 w-3 text-slate-600 transition-all duration-200 group-hover:translate-x-1 group-hover:text-accent shrink-0" />

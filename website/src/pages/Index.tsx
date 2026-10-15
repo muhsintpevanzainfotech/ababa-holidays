@@ -13,6 +13,7 @@ import OfferModal from "@/components/OfferModal";
 import TopVendorsSection from "@/components/TopVendorsSection";
 import FeaturedServicesCarousel from "@/components/FeaturedServicesCarousel";
 import PackageCouponsSection from "@/components/PackageCouponsSection";
+import AIPlannerPreview from "@/components/planner/AIPlannerPreview";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { fetchHomeDataStart } from "@/store/slices/homeSlice";
 
@@ -90,6 +91,8 @@ const Index = () => {
       </section>
 
       <TopVendorsSection />
+
+      <AIPlannerPreview />
 
       <section className="py-6 md:py-8" data-reveal>
         <div className="container mx-auto px-4 lg:px-8">
